@@ -151,6 +151,7 @@ fn bridge_serves_scoped_tools_and_exits_on_eof() {
         [
             "memory_search",
             "memory_for_path",
+            "memory_for_file",
             "memory_get",
             "memory_graph",
             "memory_gather_batch",
@@ -165,6 +166,13 @@ fn bridge_serves_scoped_tools_and_exits_on_eof() {
     assert_eq!(r["structuredContent"]["hits"].as_array().unwrap().len(), 1);
     let r = mcp.tool("memory_for_path", json!({"path": "Cargo.toml"}));
     assert_eq!(r["structuredContent"]["hits"].as_array().unwrap().len(), 1);
+    let r = mcp.tool(
+        "memory_for_file",
+        json!({"path": "Cargo.toml", "showDeleted": false}),
+    );
+    assert_eq!(r["isError"], false, "{r}");
+    assert_eq!(r["structuredContent"]["filePath"], "Cargo.toml");
+    assert_eq!(r["structuredContent"]["totalCount"], 1);
 
     let args = json!({"action": "propose", "text": "Integration tests spawn the real daemon binary", "paths": ["crates/wrongmemoryd/tests"]});
     let p1 = mcp.tool("memory_candidates", args.clone());

@@ -15,8 +15,10 @@
 //! Not compared (documented):
 //! * `getStats.edges`: WrongMemory counts only edges owned by a memory
 //!   the viewer can see (WM-603), not the baseline's raw edge count.
-//! * `findMemoriesForFile`, `searchSageWithBreakdown`, the pure rerank
-//!   note: not exposed by the daemon (see docs/status.md, WM-403/405).
+//! * `searchSageWithBreakdown`, the pure rerank note: no vector channel
+//!   (see docs/status.md, WM-405).
+//! * `findMemoriesForFile`: compared bucket by bucket (ids, via, strength,
+//!   supersession head, pending review) plus the counts.
 //! * `searchSage` with `semanticRerank=false`: no semantic provider is
 //!   configured on either side, so it equals the default call; compared
 //!   the same way.
@@ -376,8 +378,53 @@ fn replay(name: &str, files: &[&str]) -> Vec<String> {
                 );
                 cmp("byKind", nonzero(&want["byKind"]), nonzero(&got["byKind"]));
             }
+            "findMemoriesForFile" => {
+                let q = wrongmemory_storage::find_file::FileQuery::default();
+                let got = r
+                    .store
+                    .find_memories_for_file(input["path"].as_str().unwrap(), &q, &v, &now)
+                    .unwrap();
+                let shape = |res: &Value, fixture: bool| -> Value {
+                    let bucket = |k: &str| -> Value {
+                        Value::Array(
+                            res[k]
+                                .as_array()
+                                .unwrap()
+                                .iter()
+                                .map(|e| {
+                                    let id = e["memory"]["id"].as_str().unwrap();
+                                    let head = e["supersededByActiveId"].as_str();
+                                    let lbl = |x: &str| {
+                                        if fixture {
+                                            Replay::label(x)
+                                        } else {
+                                            r.label_of(x)
+                                        }
+                                    };
+                                    json!([
+                                        lbl(id),
+                                        e["matchedVia"],
+                                        e["matchStrength"],
+                                        head.map(lbl),
+                                        e.get("pendingReview").is_some()
+                                    ])
+                                })
+                                .collect(),
+                        )
+                    };
+                    json!({
+                        "filePath": res["filePath"],
+                        "primary": bucket("primaryMatches"),
+                        "symbol": bucket("symbolMatches"),
+                        "related": bucket("relatedMatches"),
+                        "counts": [res["totalCount"], res["activeCount"],
+                                   res["supersededCount"], res["reviewPendingCount"]],
+                    })
+                };
+                cmp("findMemoriesForFile", shape(want, true), shape(&got, false));
+            }
             // Not exposed by the daemon; see module docs.
-            "findMemoriesForFile" | "searchSageWithBreakdown" => {}
+            "searchSageWithBreakdown" => {}
             other => panic!("unhandled oracle method {other}"),
         }
     }

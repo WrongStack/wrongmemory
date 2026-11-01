@@ -135,6 +135,24 @@ pub fn tools_for(profile: Option<PolicyProfile>) -> Vec<Tool> {
         )
         .with_annotations(ToolAnnotations::new().read_only(true).idempotent(true)),
         Tool::new(
+            "memory_for_file",
+            "Memories about one file, grouped by how they match (file/scope anchors, symbol anchors, mentions), with supersession and pending-review hints. A caret line range boosts overlapping symbol anchors.",
+            schema(json!({
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "minLength": 1, "description": "Project-relative file path"},
+                    "lineStart": {"type": "integer", "minimum": 1},
+                    "lineEnd": {"type": "integer", "minimum": 1},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 200},
+                    "showSuperseded": {"type": "boolean", "description": "Default true"},
+                    "showDeleted": {"type": "boolean", "description": "Default false"}
+                },
+                "required": ["path"],
+                "additionalProperties": false
+            })),
+        )
+        .with_annotations(ToolAnnotations::new().read_only(true).idempotent(true)),
+        Tool::new(
             "memory_get",
             "Fetch one memory record by id (full text). Hidden and absent ids both return not found.",
             schema(json!({
@@ -438,6 +456,24 @@ impl Bridge {
                     compact_hits(&mut v);
                     v
                 })
+            }
+            "memory_for_file" => {
+                let Some(path) = arg_str(&args, "path") else {
+                    return bad_input("path is required");
+                };
+                let mut params = json!({"path": path});
+                for (from, to) in [
+                    ("lineStart", "lineStart"),
+                    ("lineEnd", "lineEnd"),
+                    ("limit", "limit"),
+                    ("showSuperseded", "includeSuperseded"),
+                    ("showDeleted", "includeDeleted"),
+                ] {
+                    if let Some(v) = args.get(from) {
+                        params[to] = v.clone();
+                    }
+                }
+                self.call(method::MEMORY_FOR_FILE, params).await
             }
             "memory_get" => {
                 let Some(id) = arg_str(&args, "id") else {

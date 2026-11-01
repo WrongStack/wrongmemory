@@ -251,6 +251,7 @@ async fn grants_cannot_cross_projects_or_sessions() {
         method::MEMORY_LIST_PAGE,
         method::MEMORY_RELATED,
         method::MEMORY_FOR_AUDIENCE,
+        method::MEMORY_FOR_FILE,
         method::MEMORY_GRAPH,
         method::MEMORY_STATS,
         method::MEMORY_RECOVER,
@@ -439,6 +440,11 @@ async fn grants_cannot_cross_projects_or_sessions() {
         (
             method::MEMORY_FOR_AUDIENCE,
             json!({"context": {"role": "REVIEWER"}, "limit": 1}),
+        ),
+        (method::MEMORY_FOR_FILE, json!({"path": "src/a.rs"})),
+        (
+            method::MEMORY_FOR_FILE,
+            json!({"path": "src/a.rs", "includeDeleted": true, "lineStart": 1, "lineEnd": 99}),
         ),
         (method::MEMORY_STATS, json!({})),
         (method::EVENTS_SINCE, json!({"generation": 0})),
@@ -963,4 +969,56 @@ async fn legacy_bulk_mutations_are_curated_and_session_safe() {
     )
     .await;
     assert_eq!(public["status"], "deleted");
+}
+
+/// `memory.forFile` attaches pending-review hints to memories; a private
+/// review candidate of another session must not surface there.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn for_file_review_hints_respect_sessions() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("home");
+    let _d = start(&root).await;
+    let mut h = Client::connect_host(&dr(&root), "host").await.unwrap();
+    let w = world(&root, tmp.path(), &mut h).await;
+    call(
+        &mut h,
+        method::SESSION_ACQUIRE,
+        None,
+        json!({"hostSessionId": "host-s1"}),
+    )
+    .await;
+    let review = s(&call(
+        &mut h,
+        method::CANDIDATE_PROPOSE,
+        Some(&w.a),
+        json!({"text": format!("Private review of the gateway note {CAND_MARK}"), "scope": "session",
+               "kind": "memory_review", "targetMemoryId": w.public, "suggestedAction": "update",
+               "reviewReason": "private doubt"}),
+    )
+    .await["id"]);
+    // The owning session sees its own hint.
+    let own = call(
+        &mut h,
+        method::MEMORY_FOR_FILE,
+        Some(&w.a),
+        json!({"path": "src/a.rs"}),
+    )
+    .await;
+    assert_eq!(own["reviewPendingCount"], 1, "{own}");
+    // Another session sees the memory, but not the private review.
+    let mut rp = connect(&root, &w.rp).await;
+    let theirs = call(
+        &mut rp,
+        method::MEMORY_FOR_FILE,
+        Some(&w.a),
+        json!({"path": "src/a.rs"}),
+    )
+    .await;
+    assert_eq!(theirs["totalCount"], 1, "{theirs}");
+    assert_eq!(theirs["reviewPendingCount"], 0);
+    assert_clean(
+        "forFile review hint",
+        &theirs,
+        &[review.as_str(), CAND_MARK, "private doubt"],
+    );
 }

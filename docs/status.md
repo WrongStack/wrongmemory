@@ -98,7 +98,7 @@ Branch `feat/wrongmemory-adapter` in the worktree `D:/Codebox/PROJECTS/WrongStac
 | WM-400 | Done (branch) | `packages/sage/src/wrongmemory-port.ts`. Typed `UNAVAILABLE` errors; it never falls back to local SQLite. Port tests run against a real daemon. Still `NOT_IMPLEMENTED`: `verify`, `findMemoriesForFile`, and unified search with audience, anchor or freshness filters. |
 | WM-401 | Done (branch) | `Sage.service` is `local` (the default), `wrongmemory` or `auto`; a repo's own config cannot set it. |
 | WM-402 | Partial | The port binds `session.acquire{hostSessionId}` on every call. The host session id is not yet passed through the container. |
-| WM-403 | Partial | Audience retrieval is served by the daemon. Verify-for-paths and host session id wiring are still open. |
+| WM-403 | Partial | The daemon serves audience retrieval and `findMemoriesForFile`. Verify-for-paths and host session id wiring are still open. |
 | WM-404..408 | Not started | Capture/remap hooks; vector fusion; WebUI/slash/desktop; MCP connect migration; HQ sync. |
 | WM-409 | Partial | `local` mode leaves behaviour unchanged. `auto` uses WrongMemory only if a daemon is already running and the project is registered. Ownership-safe rollback is not exercised. |
 
@@ -114,7 +114,7 @@ These failures are not caused by the adapter. The main checkout was not modified
 | ID | State | Evidence / gap |
 |---|---|---|
 | WM-500 | Done | Search order is identical to the oracle for every query with one or more terms, including the hybrid rerank (`tests/oracle_parity.rs`). `\p{L}` is approximated by `char::is_alphabetic`. |
-| WM-501 | Done | `tests/oracle_retrieval_replay.rs` replays the oracle's graph-retrieval and audience scenarios and compares results. Path, related, graph, traverse, audience (including the truncation audit), search, list paging and stats `byStatus`/`byKind` all match. This replay found and fixed three gaps: `graphFor` now adds the anchors of every memory start, and `findRelated` is a full port of the baseline candidate collection (anchor-path ancestors, about_* targets, importance-ordered tags, command families, final ranking). `memory.forAudience` is exposed over IPC. |
+| WM-501 | Done | `tests/oracle_retrieval_replay.rs` replays the oracle's graph-retrieval and audience scenarios and compares results. Path, related, graph, traverse, audience (including the truncation audit), search, list paging and stats `byStatus`/`byKind` all match. This replay found and fixed three gaps: `graphFor` now adds the anchors of every memory start, and `findRelated` is a full port of the baseline candidate collection (anchor-path ancestors, about_* targets, importance-ordered tags, command families, final ranking). `memory.forAudience` is exposed over IPC. `findMemoriesForFile` is `memory.forFile` plus the MCP tool `memory_for_file`. It matches the oracle bucket by bucket and uses a ported `normalizeProjectPath` with realpath containment. Supersession heads and review hints are resolved among visible records only. |
 | WM-502 | Done | Remember, exact and near-duplicate merge, supersedes and contradicts, raw-JSON patch on update, revision guard (lifecycle oracle replay). |
 | WM-503 | Done | Feedback (up to 8 entries; session and principal set by the server), usage counters. |
 | WM-504 | Done | Candidates: propose with dedupe; accept, reject and resolve in one transaction; reverted resolution writes an audit record. Accepting a consolidation proposal supersedes its members. Legacy `consolidate(scope)` is `memory.legacyConsolidate` (see WM-510). |
@@ -208,7 +208,7 @@ Findings from the M run:
 |---|---|
 | `cargo fmt --all -- --check` | PASS |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo test --workspace --locked` ×5 | PASS 117/117 on each run; no leftover daemon processes |
+| `cargo test --workspace --locked` ×5 | PASS 119/119 on each run; no leftover daemon processes |
 | `bun run test:client` (TS client 10/10, contract parity) | PASS |
 | Adapter: wrongmemory-client 6/6, sage port 20/20 against the release daemon | PASS |
 | Hosted CI (`32f0e8b`) | PASS |

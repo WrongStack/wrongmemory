@@ -8,11 +8,13 @@
 
 pub mod backup;
 pub mod candidates;
+pub mod find_file;
 pub mod hygiene;
 pub mod inspect;
 pub mod legacy;
 pub mod mutate;
 pub mod owner;
+pub mod paths;
 pub mod recovery;
 pub mod retrieval;
 pub mod rules;

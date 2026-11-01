@@ -569,6 +569,7 @@ fn required_action(m: &str) -> Option<Action> {
         | method::MEMORY_LIST_PAGE
         | method::MEMORY_RELATED
         | method::MEMORY_FOR_AUDIENCE
+        | method::MEMORY_FOR_FILE
         | method::MEMORY_GRAPH
         | method::MEMORY_STATS
         | method::MAINTENANCE_STATUS
@@ -1182,6 +1183,7 @@ async fn dispatch_inner(
         method::MEMORY_LIST_PAGE
         | method::MEMORY_RELATED
         | method::MEMORY_FOR_AUDIENCE
+        | method::MEMORY_FOR_FILE
         | method::MEMORY_GRAPH
         | method::MEMORY_STATS => {
             let viewer = Viewer {
@@ -1270,6 +1272,22 @@ async fn dispatch_inner(
                             &viewer,
                             &now_iso(),
                         )?)
+                    }
+                    method::MEMORY_FOR_FILE => {
+                        let path = s("path")
+                            .filter(|p| !p.trim().is_empty())
+                            .ok_or_else(|| err(ErrorCode::InvalidRequest, "path is required"))?;
+                        let int = |k: &str| params.get(k).and_then(Value::as_i64);
+                        let q = wrongmemory_storage::find_file::FileQuery {
+                            include_superseded: params
+                                .get("includeSuperseded")
+                                .and_then(Value::as_bool),
+                            include_deleted: params.get("includeDeleted").and_then(Value::as_bool),
+                            limit: int("limit"),
+                            line_start: int("lineStart"),
+                            line_end: int("lineEnd"),
+                        };
+                        store.find_memories_for_file(&path, &q, &viewer, &now_iso())
                     }
                     method::MEMORY_GRAPH => to_value(store.graph_for(
                         &s("query").unwrap_or_default(),

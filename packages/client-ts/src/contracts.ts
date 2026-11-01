@@ -76,6 +76,7 @@ export const METHODS = {
   MEMORY_LIST_PAGE: 'memory.listPage',
   MEMORY_RELATED: 'memory.related',
   MEMORY_FOR_AUDIENCE: 'memory.forAudience',
+  MEMORY_FOR_FILE: 'memory.forFile',
   MEMORY_GRAPH: 'memory.graph',
   MEMORY_STATS: 'memory.stats',
   MEMORY_RECOVER: 'memory.recover',
