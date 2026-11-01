@@ -245,8 +245,70 @@ fn run_hygiene(shared: &Shared, job: &JobInfo) -> Result<Value, ErrorBody> {
         .store
         .lock()
         .map_err(|_| ErrorBody::new(ErrorCode::Internal, "store lock poisoned"))?;
+    // An export may have retired this handle while the job waited for the
+    // lane: the managed copy must not change after its snapshot.
+    if h.is_retired() {
+        return Err(ErrorBody::new(
+            ErrorCode::ProjectNotFound,
+            "project not found",
+        ));
+    }
     let report = store.hygiene(&opts, &ctx)?;
+    self_heal(&mut store, &opts, &ctx, &job.project_id);
     serde_json::to_value(report).map_err(|e| ErrorBody::new(ErrorCode::Internal, e.to_string()))
+}
+
+/// Repairs a scheduled pass applies on its own (`SELF_HEAL_FIXES` in the
+/// baseline project server): structural only, never `hygiene` again.
+const SELF_HEAL_FIXES: [&str; 4] = [
+    "graph-hubs",
+    "dangling-edges",
+    "audience-runtime-mode",
+    "fts-rebuild",
+];
+
+/// `selfHealAfterMaintenance`: run the doctor, apply the structural repairs
+/// its checks ask for, and log what remains. Failures are logged, never
+/// returned: they must not fail the scheduled hygiene run.
+fn self_heal(
+    store: &mut wrongmemory_storage::SageStore,
+    opts: &HygieneOptions,
+    ctx: &MutationCtx,
+    project_id: &str,
+) {
+    let mut run = || -> Result<Value, ErrorBody> {
+        let report = store.doctor(&[], opts, ctx)?;
+        let mut fix: Vec<String> = Vec::new();
+        for c in report["checks"].as_array().into_iter().flatten() {
+            if let Some(f) = c["fix"].as_str()
+                && c["severity"] != "ok"
+                && SELF_HEAL_FIXES.contains(&f)
+                && !fix.iter().any(|x| x == f)
+            {
+                fix.push(f.to_string());
+            }
+        }
+        if fix.is_empty() {
+            Ok(report)
+        } else {
+            store.doctor(&fix, opts, ctx)
+        }
+    };
+    match run() {
+        Ok(healed) => {
+            for a in healed["fixesApplied"].as_array().into_iter().flatten() {
+                info!("doctor_self_healed", {"projectId": project_id, "fix": a["fix"], "detail": a["detail"]});
+            }
+            for c in healed["checks"].as_array().into_iter().flatten() {
+                if c["severity"] == "warn" || c["severity"] == "error" {
+                    warn!("doctor_check", {"projectId": project_id, "severity": c["severity"], "check": c["id"], "summary": c["summary"]});
+                }
+            }
+        }
+        Err(e) => {
+            warn!("doctor_self_heal_failed", {"projectId": project_id, "code": e.code.as_str()})
+        }
+    }
 }
 
 /// Validate hygiene options JSON (rejects unknown shapes early).

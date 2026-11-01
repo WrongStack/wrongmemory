@@ -95,6 +95,13 @@ impl ProjectHandle {
         self.retired.store(true, Ordering::SeqCst);
     }
 
+    /// Whether the project was exported and detached under this handle.
+    /// Callers that take `store` directly (maintenance) must check it after
+    /// acquiring the lock.
+    pub fn is_retired(&self) -> bool {
+        self.retired.load(Ordering::SeqCst)
+    }
+
     /// Requests waiting for or holding the lane.
     pub fn waiting(&self) -> usize {
         self.waiting.load(Ordering::SeqCst)

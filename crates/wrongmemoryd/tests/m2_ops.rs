@@ -728,3 +728,65 @@ async fn managed_store_exports_to_the_legacy_location_and_detaches() {
     drop(c);
     d.stop(&home).await;
 }
+
+/// A scheduled maintenance pass self-heals like the baseline project server
+/// (`selfHealAfterMaintenance`): after hygiene it runs the doctor and applies
+/// the structural repairs it reports (here: a dangling edge).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn maintenance_pass_self_heals_structural_defects() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let d = Daemon::start(&home, &[]).await;
+    let mut h = host(&home).await;
+    let proj = mkdir(tmp.path().join("proj"));
+    let (pid, store) = register(&mut h, &proj).await;
+    let kept = remember(&mut h, &pid, "Self-heal keeps this memory", json!({})).await;
+    {
+        let db = rusqlite::Connection::open(&store).unwrap();
+        db.busy_timeout(Duration::from_secs(5)).unwrap();
+        db.execute(
+            "INSERT INTO edges (from_node, to_node, relation, weight, created_at)
+             VALUES ('mem:mem_doesnotexist', ?1, 'related_to', 0.5, '2026-11-01T00:00:00.000Z')",
+            [format!("mem:{kept}")],
+        )
+        .unwrap();
+    }
+    let before = call(&mut h, method::MEMORY_DOCTOR, Some(&pid), json!({})).await;
+    let dangling = |r: &Value| {
+        r["checks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["id"] == "dangling-edges")
+            .unwrap()["count"]
+            .as_i64()
+            .unwrap()
+    };
+    assert_eq!(dangling(&before), 1, "{before}");
+
+    let run = call(&mut h, method::MAINTENANCE_RUN, Some(&pid), json!({})).await;
+    let job = run["job"]["jobId"].as_str().unwrap().to_string();
+    wait_for(&mut h, method::JOBS_GET, None, json!({"jobId": job}), |v| {
+        v["state"] == "succeeded"
+    })
+    .await;
+    let after = call(&mut h, method::MEMORY_DOCTOR, Some(&pid), json!({})).await;
+    assert_eq!(dangling(&after), 0, "{after}");
+    let audit = call(
+        &mut h,
+        method::MEMORY_AUDIT,
+        Some(&pid),
+        json!({"limit": 20}),
+    )
+    .await;
+    assert!(
+        audit["records"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|r| r["event"] == "memory.doctor_fix"),
+        "{audit}"
+    );
+    drop(h);
+    d.stop(&home).await;
+}
