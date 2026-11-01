@@ -220,7 +220,7 @@ fn validity_fails(root: &Path, real_root: &Path, m: &SageRecord) -> bool {
 
 /// `applySemanticChange` over a raw record: patch, revision+1, updatedAt.
 /// A `None` value removes the key (JS `undefined`).
-fn semantic(
+pub(crate) fn semantic(
     conn: &Connection,
     id: &str,
     patch: Vec<(&str, Option<Value>)>,
@@ -512,7 +512,7 @@ fn plan_verification(
     Some(plan)
 }
 
-fn anchors_equal(a: &[MemoryAnchor], b: &[MemoryAnchor]) -> bool {
+pub(crate) fn anchors_equal(a: &[MemoryAnchor], b: &[MemoryAnchor]) -> bool {
     let key = |x: &[MemoryAnchor]| -> HashSet<String> {
         x.iter()
             .map(|a| sorted_key(&serde_json::to_value(a).unwrap_or(Value::Null)))

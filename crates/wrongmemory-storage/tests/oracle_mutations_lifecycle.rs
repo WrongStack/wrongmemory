@@ -931,3 +931,110 @@ fn legacy_bulk_scenario_matches_oracle() {
     }
     assert_no_diffs(diffs);
 }
+
+/// `verify` / `verifyForPaths` against the oracle (`verify.json`): per
+/// memory the aggregate status, per anchor the status, reason and content
+/// hash, then the reconciled state (status, revision, staleReason,
+/// freshness). The generator's file edits between steps are replayed here.
+#[test]
+fn verify_scenario_matches_oracle() {
+    let f = fixture("verify");
+    let mut r = Replay::new();
+    let write = |root: &Path, rel: &str, body: &str| {
+        let p = root.join(rel);
+        std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+        std::fs::write(p, body).unwrap();
+    };
+    write(
+        &r.root,
+        "src/app.ts",
+        "export function startServer() {}\nconst $ref = 1;\n",
+    );
+    write(&r.root, "src/lib/util.ts", "export const u = 1;\n");
+    write(&r.root, "docs/readme.md", "# readme\n");
+    std::fs::create_dir_all(r.root.join(".wrongstack/agents/release-manager")).unwrap();
+    let mut diffs = Vec::new();
+    let mut clock = "2026-11-01T00:00:00.000Z".to_string();
+    for st in f["steps"].as_array().unwrap() {
+        let step = st["step"].as_str().unwrap();
+        let input = &st["call"]["input"];
+        let method = st["call"]["method"].as_str().unwrap();
+        clock = bump_second(&clock);
+        let c = ctx(&clock, None);
+        let results: Option<Vec<Value>> = match method {
+            "rememberSage" => {
+                let (p, _) = remember_params(input);
+                let o = r.store.remember(&p, &c).unwrap();
+                r.ids.insert(
+                    Replay::fixture_label(st["result"]["id"].as_str().unwrap()),
+                    o.id,
+                );
+                continue;
+            }
+            "dump" => None,
+            "verify" => {
+                let id = input["id"].as_str().map(|x| r.real(x));
+                Some(r.store.verify(id.as_deref(), &c).unwrap())
+            }
+            "verifyForPaths" => {
+                let paths: Vec<String> = input["paths"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|p| p.as_str().unwrap().to_string())
+                    .collect();
+                Some(r.store.verify_for_paths(&paths, &c).unwrap())
+            }
+            "updateSage" => {
+                let id = r.real(input["id"].as_str().unwrap());
+                let mut patch = input.as_object().unwrap().clone();
+                patch.remove("id");
+                // Not an `UpdateSageInput` field: the baseline ignores it and
+                // derives `staleReason: manual` from `status: stale` itself.
+                patch.remove("staleReason");
+                r.store.update(&id, &patch, &c, false).unwrap();
+                None
+            }
+            other => panic!("unhandled oracle method {other}"),
+        };
+        if let Some(got) = results {
+            let shape = |v: &Value, fixture: bool| -> Value {
+                json!({
+                    "memory": if fixture {
+                        Replay::fixture_label(v["memoryId"].as_str().unwrap())
+                    } else {
+                        r.label_of(v["memoryId"].as_str().unwrap())
+                    },
+                    "status": v["status"],
+                    "anchors": v["anchors"].as_array().unwrap().iter().map(|a| json!([
+                        a["status"], a["reason"], a["contentHash"]
+                    ])).collect::<Vec<_>>(),
+                })
+            };
+            let want: Vec<Value> = st["result"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|v| shape(v, true))
+                .collect();
+            let got: Vec<Value> = got.iter().map(|v| shape(v, false)).collect();
+            if want != got {
+                diffs.push(format!(
+                    "{step}: results\n  oracle={}\n  ours  ={}",
+                    json!(want),
+                    json!(got)
+                ));
+            }
+        }
+        diffs.extend(r.compare_state(step, &st["state"]));
+        // File edits the generator made after these steps.
+        match step {
+            "verify-all" => std::fs::remove_file(r.root.join("src/app.ts")).unwrap(),
+            "verifyForPaths-deleted-file" => {
+                write(&r.root, "src/app.ts", "export function startServer() {}\n")
+            }
+            _ => {}
+        }
+    }
+    assert_no_diffs(diffs);
+}

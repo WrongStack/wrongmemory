@@ -343,6 +343,15 @@ fn curator_tools() -> Vec<Tool> {
             ),
         )
         .with_annotations(rw()),
+        Tool::new(
+            "memory_verify",
+            "Verify file, directory, symbol, content-hash, git-blob, command and agent anchors and update stale state (curator grant). Nothing is executed.",
+            obj_schema(
+                json!({"memory_id": {"type": "string", "minLength": 1, "description": "Optional memory id; omit to verify all."}}),
+                &[],
+            ),
+        )
+        .with_annotations(rw()),
     ]
 }
 
@@ -607,6 +616,13 @@ impl Bridge {
             "memory_hygiene" => {
                 self.call(method::MEMORY_HYGIENE, Value::Object(args.clone()))
                     .await
+            }
+            "memory_verify" => {
+                let mut params = json!({});
+                if let Some(id) = arg_str(&args, "memory_id") {
+                    params["id"] = json!(id);
+                }
+                self.call(method::MEMORY_VERIFY, params).await
             }
             other => return bad_input(&format!("unknown tool {other}")),
         };

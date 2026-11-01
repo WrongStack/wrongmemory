@@ -1022,3 +1022,76 @@ async fn for_file_review_hints_respect_sessions() {
         &[review.as_str(), CAND_MARK, "private doubt"],
     );
 }
+
+/// `memory.verify` is curator-only and never reaches (or reports) rows the
+/// caller's session cannot see.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn verify_is_curated_and_session_safe() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("home");
+    let _d = start(&root).await;
+    let mut h = Client::connect_host(&dr(&root), "host").await.unwrap();
+    let mut w = world(&root, tmp.path(), &mut h).await;
+    add_private(&mut h, &mut w).await; // private memory anchored to src/a.rs
+    let curator = grant(&mut h, "curator", &w.a).await;
+
+    let mut wr = connect(&root, &w.wr).await;
+    let (code, _) = fail(&mut wr, method::MEMORY_VERIFY, Some(&w.a), json!({})).await;
+    assert_eq!(code, ErrorCode::Forbidden);
+
+    // src/a.rs does not exist in proj-a, so every anchor on it is stale.
+    let mut cur = connect(&root, &curator).await;
+    let one = call(
+        &mut cur,
+        method::MEMORY_VERIFY,
+        Some(&w.a),
+        json!({"id": w.private}),
+    )
+    .await;
+    assert_eq!(one["results"], json!([]), "hidden id must look absent");
+    let all = call(&mut cur, method::MEMORY_VERIFY, Some(&w.a), json!({})).await;
+    let by_path = call(
+        &mut cur,
+        method::MEMORY_VERIFY,
+        Some(&w.a),
+        json!({"paths": ["src/a.rs"]}),
+    )
+    .await;
+    for v in [&all, &by_path] {
+        assert_clean(
+            "verify results",
+            v,
+            &[w.private.as_str(), PRIV_MARK, "gateway_private"],
+        );
+        assert_eq!(v["results"].as_array().unwrap().len(), 1, "{v}");
+    }
+    let private = call(
+        &mut h,
+        method::MEMORY_GET,
+        Some(&w.a),
+        json!({"id": w.private}),
+    )
+    .await;
+    assert_eq!(
+        private["status"], "active",
+        "another session flipped a private row"
+    );
+    let public = call(
+        &mut h,
+        method::MEMORY_GET,
+        Some(&w.a),
+        json!({"id": w.public}),
+    )
+    .await;
+    assert_eq!(public["status"], "stale");
+    assert_eq!(public["staleReason"], "verification");
+    // The owning session can verify its own row.
+    let own = call(
+        &mut h,
+        method::MEMORY_VERIFY,
+        Some(&w.a),
+        json!({"id": w.private}),
+    )
+    .await;
+    assert_eq!(own["results"][0]["status"], "stale");
+}

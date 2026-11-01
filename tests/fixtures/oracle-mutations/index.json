@@ -55,6 +55,12 @@
       "description": "legacy MemoryStore forget / consolidate / clear: scope filters, permanent safeguard, reference cleanup, audits",
       "steps": 21,
       "errors": 0
+    },
+    {
+      "scenario": "verify",
+      "description": "verify / verifyForPaths: file, symbol, directory, command and agent anchors; stale and reactivation reconciliation; manual stale kept",
+      "steps": 21,
+      "errors": 0
     }
   ],
   "warnings": 1

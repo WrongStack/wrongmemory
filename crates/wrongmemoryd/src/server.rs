@@ -588,6 +588,7 @@ fn required_action(m: &str) -> Option<Action> {
         | method::MEMORY_RECOVER
         | method::MEMORY_BACKFILL
         | method::MEMORY_HYGIENE
+        | method::MEMORY_VERIFY
         | method::MEMORY_LEGACY_FORGET
         | method::MEMORY_LEGACY_CONSOLIDATE
         | method::MEMORY_LEGACY_CLEAR
@@ -1015,6 +1016,7 @@ async fn dispatch_inner(
         | method::MEMORY_RECOVER
         | method::MEMORY_BACKFILL
         | method::MEMORY_HYGIENE
+        | method::MEMORY_VERIFY
         | method::MEMORY_LEGACY_FORGET
         | method::MEMORY_LEGACY_CONSOLIDATE
         | method::MEMORY_LEGACY_CLEAR => {
@@ -1124,6 +1126,31 @@ async fn dispatch_inner(
                                 err(ErrorCode::InvalidRequest, format!("invalid options: {e}"))
                             })?;
                         to_value(store.hygiene(&opts, &ctx)?)
+                    }
+                    method::MEMORY_VERIFY => {
+                        let results = match params.get("paths") {
+                            Some(p) => {
+                                let paths: Vec<String> = serde_json::from_value(p.clone())
+                                    .map_err(|_| {
+                                        err(
+                                            ErrorCode::InvalidRequest,
+                                            "paths must be an array of strings",
+                                        )
+                                    })?;
+                                if paths.len() > 1000 {
+                                    return Err(err(
+                                        ErrorCode::InvalidRequest,
+                                        "at most 1000 paths per call",
+                                    ));
+                                }
+                                store.verify_for_paths(&paths, &ctx)?
+                            }
+                            None => {
+                                let id = params.get("id").and_then(Value::as_str);
+                                store.verify(id, &ctx)?
+                            }
+                        };
+                        Ok(json!({ "results": results }))
                     }
                     method::MEMORY_LEGACY_FORGET => {
                         let query = params

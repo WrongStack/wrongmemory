@@ -33,6 +33,7 @@ rmcp = { version = "=3.8.0", default-features = false, features = ["server", "tr
 rusqlite = { version = "=0.41.1", features = ["bundled", "backup"] }
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = { version = "=1.0.154", features = ["preserve_order"] }
+sha1 = "=0.11.0"
 sha2 = "=0.11.1"
 tempfile = "=3.27.0"
 toml_edit = "=0.25.17"

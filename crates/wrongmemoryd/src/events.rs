@@ -224,6 +224,19 @@ pub fn drafts_for(m: &str, result: &Value) -> Vec<Entry> {
                 owner_session: None,
             }]
         }
+        method::MEMORY_VERIFY => {
+            if result
+                .get("results")
+                .and_then(Value::as_array)
+                .is_none_or(|r| r.is_empty())
+            {
+                return vec![];
+            }
+            vec![Entry {
+                event: draft(m),
+                owner_session: None,
+            }]
+        }
         method::MEMORY_LEGACY_FORGET
         | method::MEMORY_LEGACY_CONSOLIDATE
         | method::MEMORY_LEGACY_CLEAR => {

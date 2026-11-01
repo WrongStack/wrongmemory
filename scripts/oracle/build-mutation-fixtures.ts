@@ -749,6 +749,48 @@ const idOf = (v: unknown) => (v as { id?: string } | undefined)?.id;
   await s.run('clear-all', 'clear', {}, () => s.store.clear());
 }
 
+// ─── anchor verification ────────────────────────────────────────────────────
+{
+  const s = new Scenario(
+    'verify',
+    'verify / verifyForPaths: file, symbol, directory, command and agent anchors; stale and reactivation reconciliation; manual stale kept',
+  );
+  scenarios.push(s);
+  s.file('src/app.ts', 'export function startServer() {}\nconst $ref = 1;\n');
+  s.file('src/lib/util.ts', 'export const u = 1;\n');
+  s.file('docs/readme.md', '# readme\n');
+  mkdirSync(join(s.root, '.wrongstack', 'agents', 'release-manager'), { recursive: true });
+  const rem = async (label: string, input: Row) =>
+    s.label(idOf(await s.run(`remember-${label}`, 'rememberSage', input, () => s.store.rememberSage(input), { state: false })), label)!;
+  await rem('fileOk', { text: 'The application entry lives in src/app.ts.', anchors: [{ type: 'file', path: 'src/app.ts' }] });
+  await rem('symbolOk', { text: 'startServer binds before plugins load.', kind: 'symbol_note', anchors: [{ type: 'symbol', path: 'src/app.ts', symbol: 'startServer' }] });
+  await rem('dollarSymbol', { text: 'The $ref constant is a sentinel.', kind: 'symbol_note', anchors: [{ type: 'symbol', path: 'src/app.ts', symbol: '$ref' }] });
+  await rem('symbolGone', { text: 'removedHelper normalizes headers.', kind: 'symbol_note', anchors: [{ type: 'symbol', path: 'src/app.ts', symbol: 'removedHelper' }] });
+  await rem('dirOk', { text: 'Utilities under src/lib stay pure.', anchors: [{ type: 'directory', path: 'src/lib' }] });
+  const docsId = await rem('docs', { text: 'The readme is the onboarding entry point.', anchors: [{ type: 'file', path: 'docs/readme.md' }] });
+  await rem('cmdBuiltin', { text: 'Use echo to print the build banner.', anchors: [{ type: 'command', command: 'echo banner' }] });
+  await rem('cmdMissing', { text: 'Run the zz tool to regenerate fixtures.', anchors: [{ type: 'command', command: 'zz-wrongmemory-missing-tool --all' }] });
+  await rem('cmdNpx', { text: 'Generate docs with the doc tool through npx.', anchors: [{ type: 'command', command: 'npx zz-wrongmemory-missing-pkg build' }] });
+  await rem('cmdFlag', { text: 'Run the seeder through env with an unknown flag.', anchors: [{ type: 'command', command: 'env -x zz-wrongmemory-missing-seeder' }] });
+  await rem('agentRoster', { text: 'The critic reviews every plan.', kind: 'role_operational', anchors: [{ type: 'agent', role: 'critic' }] });
+  await rem('agentCustom', { text: 'The release manager signs tags.', kind: 'role_operational', anchors: [{ type: 'agent', role: 'release-manager' }] });
+  await rem('agentMissing', { text: 'The archivist prunes old branches.', kind: 'role_operational', anchors: [{ type: 'agent', role: 'archivist' }] });
+  await rem('noAnchors', { text: 'Prefer small pull requests.' });
+  await s.run('state', 'dump', {}, () => undefined);
+  await s.run('verify-all', 'verify', {}, () => s.store.verify());
+  rmSync(join(s.root, 'src/app.ts'));
+  await s.run('verifyForPaths-deleted-file', 'verifyForPaths', { paths: ['src/app.ts', '../outside.ts'] }, () =>
+    s.store.verifyForPaths(['src/app.ts', '../outside.ts']),
+  );
+  s.file('src/app.ts', 'export function startServer() {}\n');
+  await s.run('verify-all-after-restore', 'verify', {}, () => s.store.verify());
+  await s.run('manual-stale', 'updateSage', { id: docsId, status: 'stale', staleReason: 'manual' }, () =>
+    s.store.updateSage(docsId, { status: 'stale', staleReason: 'manual' }),
+  );
+  await s.run('verify-one-manual-stale', 'verify', { id: docsId }, () => s.store.verify(docsId));
+  await s.run('verify-unknown-id', 'verify', { id: 'mem_doesnotexist' }, () => s.store.verify('mem_doesnotexist'));
+}
+
 // ─── Write ──────────────────────────────────────────────────────────────────
 mkdirSync(outDir, { recursive: true });
 const index: Array<{ scenario: string; description: string; steps: number; errors: number }> = [];

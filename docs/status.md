@@ -98,7 +98,7 @@ Branch `feat/wrongmemory-adapter` in the worktree `D:/Codebox/PROJECTS/WrongStac
 | WM-400 | Done (branch) | `packages/sage/src/wrongmemory-port.ts`. Typed `UNAVAILABLE` errors; it never falls back to local SQLite. Port tests run against a real daemon. Still `NOT_IMPLEMENTED`: `verify`, `findMemoriesForFile`, and unified search with audience, anchor or freshness filters. |
 | WM-401 | Done (branch) | `Sage.service` is `local` (the default), `wrongmemory` or `auto`; a repo's own config cannot set it. |
 | WM-402 | Partial | The port binds `session.acquire{hostSessionId}` on every call. The host session id is not yet passed through the container. |
-| WM-403 | Partial | The daemon serves audience retrieval and `findMemoriesForFile`. Verify-for-paths and host session id wiring are still open. |
+| WM-403 | Partial | The daemon serves audience retrieval, `findMemoriesForFile`, `verify` and `verifyForPaths`. Host session id wiring and setup-time injection remain open. |
 | WM-404..408 | Not started | Capture/remap hooks; vector fusion; WebUI/slash/desktop; MCP connect migration; HQ sync. |
 | WM-409 | Partial | `local` mode leaves behaviour unchanged. `auto` uses WrongMemory only if a daemon is already running and the project is registered. Ownership-safe rollback is not exercised. |
 
@@ -119,7 +119,7 @@ These failures are not caused by the adapter. The main checkout was not modified
 | WM-503 | Done | Feedback (up to 8 entries; session and principal set by the server), usage counters. |
 | WM-504 | Done | Candidates: propose with dedupe; accept, reject and resolve in one transaction; reverted resolution writes an audit record. Accepting a consolidation proposal supersedes its members. Legacy `consolidate(scope)` is `memory.legacyConsolidate` (see WM-510). |
 | WM-505 | Done | Tombstone, cascade, recover, backfill. Tombstone purge runs through hygiene (`purgeDeletedAfterDays`), and the oracle's `hygiene-purge` step matches. |
-| WM-506 | Partial | Validity rules have no shell or regex evaluation. Verification of checkout evidence is not implemented. |
+| WM-506 | Done (with deviations) | `memory.verify` (`{id}` or `{paths}`) and the curator MCP tool `memory_verify`. A replay of the oracle's `verify` scenario matches verdicts, reason strings, content hashes and the reconciled state, including manual stale kept, reactivation and per-path selection. Nothing is executed. Deviations:<ul><li>Git blob ids are computed natively, and a mismatch on a file containing CR is reported `unknown`.</li><li>Command anchors are probed by `stat` on the daemon's `PATH`, which can differ from the client's.</li><li>Only rows visible to the caller's session are verified.</li></ul>Checkout evidence beyond anchors is not implemented. |
 | WM-507 | Done | Hygiene with protections for critical memories (oracle replay). Expiry is scheduled through jobs. |
 | WM-508 / 509 | Not started (optional L4) | Semantic provider and vector mirror. |
 | WM-510 | Partial | Corrupt rows read as absent. Legacy `MemoryStore` bulk mutations are curator-only, and the replay of the oracle's `legacy-bulk` scenario matches state, merged anchors and sources, counts and audit details:<ul><li>`memory.legacyForget`</li><li>`memory.legacyConsolidate`</li><li>`memory.legacyClear` (with no scope it needs `all=true`)</li></ul>Deliberate deviation: these only touch rows the caller's session can see, so one session cannot erase another session's private memories. `consolidate` also groups session rows only with rows of the same owning session, so a merge cannot copy private content or ids into shared rows. Older and JSONL stores are refused: open them with SAGE first. There is no conversion. |
@@ -208,7 +208,7 @@ Findings from the M run:
 |---|---|
 | `cargo fmt --all -- --check` | PASS |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo test --workspace --locked` ×5 | PASS 119/119 on each run; no leftover daemon processes |
+| `cargo test --workspace --locked` ×5 | PASS 125/125 on each run; no leftover daemon processes |
 | `bun run test:client` (TS client 10/10, contract parity) | PASS |
 | Adapter: wrongmemory-client 6/6, sage port 20/20 against the release daemon | PASS |
 | Hosted CI (`32f0e8b`) | PASS |
