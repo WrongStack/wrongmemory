@@ -84,11 +84,29 @@ pub async fn connect_host(
     autostart: bool,
 ) -> Result<Client, CallError> {
     match Client::connect_host(root, label).await {
-        Err(CallError::Unavailable(_)) if autostart => {
+        Err(e) if autostart && startable(&e) => {
             start_and_wait(root).await?;
             Client::connect_host(root, label).await
         }
         other => other,
+    }
+}
+
+/// Prefix of the error `Client::connect_grant` returns when the grant's
+/// secret is not in the data root.
+const GRANT_SECRET_MISSING: &str = "cannot read credential for grant";
+
+/// Whether a failed connect means "no ready daemon here (yet)" and the
+/// start-and-wait path should run. Unavailable covers a missing endpoint and
+/// a stale discovery record whose token a freshly bound daemon cannot prove
+/// (another client is starting it right now). Transport/Protocol cover a
+/// draining daemon that closed the connection mid-handshake. A missing
+/// grant secret and remote (authentication) errors are final.
+fn startable(e: &CallError) -> bool {
+    match e {
+        CallError::Unavailable(m) => !m.starts_with(GRANT_SECRET_MISSING),
+        CallError::Transport(_) | CallError::Protocol(_) => true,
+        CallError::Remote(_) => false,
     }
 }
 
@@ -100,7 +118,7 @@ pub async fn connect_grant(
     autostart: bool,
 ) -> Result<Client, CallError> {
     match Client::connect_grant(root, grant_id, label).await {
-        Err(CallError::Unavailable(m)) if autostart && !m.contains("credential") => {
+        Err(e) if autostart && startable(&e) => {
             start_and_wait(root).await?;
             Client::connect_grant(root, grant_id, label).await
         }
@@ -108,17 +126,35 @@ pub async fn connect_grant(
     }
 }
 
+/// Start the daemon and wait until it answers with the host credential.
+///
+/// A start can lose to a daemon that is still draining (its pipe instances
+/// hold the endpoint, so the new process exits as already running) or race
+/// another client's start. Until a daemon answers, the start is retried
+/// every second; extra starters exit without side effects.
 pub async fn start_and_wait(root: &DataRoot) -> Result<(), CallError> {
-    spawn_daemon(root).map_err(|e| CallError::Unavailable(format!("cannot start daemon: {e}")))?;
+    let spawn = || {
+        spawn_daemon(root).map_err(|e| CallError::Unavailable(format!("cannot start daemon: {e}")))
+    };
+    spawn()?;
     let deadline = Instant::now() + Duration::from_secs(10);
+    let mut last_spawn = Instant::now();
     loop {
         match Client::connect_host(root, "wrongmemory-start-probe").await {
             Ok(_) => return Ok(()),
-            Err(CallError::Unavailable(m)) => {
+            // Unavailable: nothing answering yet, or a stale discovery record
+            // the new daemon cannot prove. Transport/Protocol: a daemon that
+            // closed the connection mid-handshake (a draining one).
+            Err(e) if startable(&e) => {
+                let m = e.to_string();
                 if Instant::now() > deadline {
                     return Err(CallError::Unavailable(format!(
                         "daemon did not become ready within 10s: {m}"
                     )));
+                }
+                if last_spawn.elapsed() >= Duration::from_secs(1) {
+                    spawn()?;
+                    last_spawn = Instant::now();
                 }
                 tokio::time::sleep(Duration::from_millis(100)).await;
             }

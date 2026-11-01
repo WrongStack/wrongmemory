@@ -95,6 +95,7 @@ Branch `feat/wrongmemory-adapter` in the worktree `D:/Codebox/PROJECTS/WrongStac
 - `a9de6daed`: `findMemoriesForFile` through `memory.forFile`.
 - `3ee3ca973`: `verify` and `verifyForPaths` through `memory.verify`.
 - `488e07e8d`: `unifiedSearchService` through `memory.unifiedSearch`, with an invalid cursor mapped to `InvalidSearchCursorError`. Adapter tests: 25/25 against the real daemon.
+- `fff633d45`: `surface.importLegacy(files)` through `memory.importLegacy` (curator action). The client is re-vendored at `d78559e`, and the author field in its package.json is no longer mis-encoded. Adapter tests: 27/27 against the real daemon; sage and client typecheck and biome are clean.
 
 | ID | State | Evidence / gap |
 |---|---|---|
@@ -139,7 +140,11 @@ These failures are not caused by the adapter. The main checkout was not modified
 | WM-603 | Done (with gaps) | See the review results below. |
 | WM-604 | Done (local) | `wrongmemory-bench --soak-secs N` runs mixed search, forPath, propose, remember and listPage traffic with 8 clients across 40 projects. That is more than the cap of 32 open stores, so stores are evicted and reopened under load. Result: `benchmarks/results/2026-11-01-soak.json`.<ul><li>**Found and fixed:** concurrent requests for a closed project raced on its owner lock. 9% of requests (48,868 of 523,202) failed with `OWNER_CONFLICT` against the daemon's own lock. Store opens are now serialized behind one opening lock (cache hits are unaffected), and a regression test fails without the fix.</li><li>**After the fix (5 min):**<ul><li>260,142 operations, 0 errors.</li><li>Median latency is 0.5–3.5 ms per operation. p95 is about 40 ms, from the deliberate eviction churn.</li><li>Handles 285 → 293 (no leak); RSS 34 → 86 MB with 32 stores open.</li></ul></li></ul>WAL tuning and multi-hour soaks have not been run. |
 | WM-605 | Done (hand-written corpus) | `tests/fixtures/quality/corpus.json`: 40 project memories modeled on coding-agent memory (not real user data), each with a natural-language paraphrase query. It adds 5 hard negatives: superseded predecessors, a contradicted fact, and another session's private notes that match the queries lexically. `quality_budget.rs` enforces recall@1, recall@5 and MRR of at least 0.95 and allows zero negatives; measured 0.975 / 0.975 / 0.979. Not a held-out corpus of real tasks. |
-| WM-606 | Done (local) | `concurrent_bridges_share_one_native_daemon` does a cold start: three MCP bridges launch at once on one data root, each spawning the daemon on demand. They end up served by exactly one native `wrongmemoryd`. The only other processes on that data root are the three disclosed bridges, with no Bun or Node engine. Bridges exit on EOF and the daemon stays up. Passed 5 of 5 runs. The WrongStack side (no SAGE server in `wrongmemory` mode) is covered by the adapter's port tests, not certified in a full host run. |
+| WM-606 | Done (local) | `concurrent_bridges_share_one_native_daemon` does a cold start: three MCP bridges launch at once on one data root, each spawning the daemon on demand. They end up served by exactly one native `wrongmemoryd`. The only other processes on that data root are the three disclosed bridges, with no Bun or Node engine. Bridges exit on EOF and the daemon stays up. Passed 5 of 5 runs locally, then failed once on hosted CI (run 41318993711, `d78559e`): `daemon stop` returns while the old daemon is still draining, so its discovery record outlives its endpoint.
+  - A bridge that connected to the new daemon with the old token got "did not prove … no credential sent". `connect_grant` treated every message containing "credential" as final, so the bridge exited.
+  - A start that lost to a draining daemon (whose pipe instances still hold the endpoint) was never retried, so the bridge timed out after 10 s.
+  - Fix: only a missing grant secret or a remote authentication error is final. Transport and Protocol errors during the handshake also go through start-and-wait, which re-spawns every second until a daemon answers.
+  - The new debug fault `slow_lifecycle` (1.5 s before publish and before retract) makes the window deterministic. `bridge_waits_out_a_stale_discovery_during_restart` fails without the fix (bridge exits, broken pipe) and passes with it, and the bridge suite passed 10 of 10 runs with no leftover daemon. An interim variant of that test leaked one daemon once; it was not seen again. The WrongStack side (no SAGE server in `wrongmemory` mode) is covered by the adapter's port tests, not certified in a full host run. |
 
 **WM-603 isolation review.** Four leaks were found and fixed, each with a test that failed first:
 
@@ -212,7 +217,7 @@ Findings from the M run:
 |---|---|
 | `cargo fmt --all -- --check` | PASS |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo test --workspace --locked` ×5 | PASS 134/134 on each run (138 with the WM-510 import tests); no leftover daemon processes |
+| `cargo test --workspace --locked` ×5 | PASS 139/139 on each run; no leftover daemon processes |
 | `bun run test:client` (TS client 10/10, contract parity) | PASS |
 | Adapter: wrongmemory-client 6/6, sage port 20/20 against the release daemon | PASS |
 | Hosted CI (`32f0e8b`) | PASS |

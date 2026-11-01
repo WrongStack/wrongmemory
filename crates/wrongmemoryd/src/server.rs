@@ -246,6 +246,7 @@ pub async fn run(cfg: Config) -> Result<(), StartError> {
         protocol_minor: PROTOCOL_MINOR,
         started_at_ms,
     };
+    crate::fault::lifecycle_pause().await;
     Discovery::publish(&cfg.root, &info, &shared.host_token)?;
     info!("ready", {
         "instanceId": instance_id,
@@ -298,6 +299,7 @@ pub async fn run(cfg: Config) -> Result<(), StartError> {
     for handle in shared.stores.drain_all() {
         projects::release(handle, &shared.registry, &instance_id, "shutdown");
     }
+    crate::fault::lifecycle_pause().await;
     let retracted = Discovery::retract(&cfg.root, &instance_id).unwrap_or(false);
     info!("stopped", {"instanceId": instance_id, "discoveryRetracted": retracted});
     Ok(())

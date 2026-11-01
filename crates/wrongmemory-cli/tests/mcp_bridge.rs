@@ -18,7 +18,16 @@ fn wm(home: &Path) -> Command {
 }
 
 fn run_json(home: &Path, args: &[&str]) -> Value {
-    let out = wm(home).arg("--json").args(args).output().unwrap();
+    run_json_env(home, args, &[])
+}
+
+fn run_json_env(home: &Path, args: &[&str], env: &[(&str, &str)]) -> Value {
+    let out = wm(home)
+        .envs(env.iter().copied())
+        .arg("--json")
+        .args(args)
+        .output()
+        .unwrap();
     assert!(
         out.status.success(),
         "wrongmemory {args:?} failed: {}",
@@ -36,7 +45,12 @@ struct Mcp {
 
 impl Mcp {
     fn start(home: &Path, project: &str, grant: &str) -> Self {
+        Self::start_with_env(home, project, grant, &[])
+    }
+
+    fn start_with_env(home: &Path, project: &str, grant: &str, env: &[(&str, &str)]) -> Self {
         let mut child = wm(home)
+            .envs(env.iter().copied())
             .args([
                 "mcp",
                 "--project",
@@ -305,5 +319,65 @@ fn concurrent_bridges_share_one_native_daemon() {
         1,
         "{after:?}"
     );
+    run_json(&home, &["daemon", "stop"]);
+}
+
+/// WM-606 regression (seen on hosted CI): `daemon stop` returns while the
+/// old daemon is still draining, so its discovery record outlives its
+/// endpoint. A bridge that connects while another bridge's new daemon has
+/// bound the endpoint but not yet published discovery presents the old
+/// token, the new daemon cannot prove it, and the bridge must keep waiting
+/// for the new daemon instead of exiting. Every daemon here runs with the
+/// `slow_lifecycle` fault (1.5 s before publish and before retract), which
+/// makes that window deterministic.
+#[test]
+fn bridge_waits_out_a_stale_discovery_during_restart() {
+    let fault = [("WRONGMEMORY_FAULT", "slow_lifecycle")];
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let proj = tmp.path().join("proj");
+    std::fs::create_dir_all(&proj).unwrap();
+    let reg = run_json_env(
+        &home,
+        &["project", "add", proj.to_str().unwrap(), "--managed"],
+        &fault,
+    );
+    let project = reg["project"]["projectId"].as_str().unwrap().to_string();
+    let g = run_json(
+        &home,
+        &[
+            "grants",
+            "create",
+            "--label",
+            "agent",
+            "--project",
+            &project,
+        ],
+    );
+    let grant = g["grant"]["grantId"].as_str().unwrap().to_string();
+    // The old daemon keeps its discovery record for 1.5 s after this.
+    run_json(&home, &["daemon", "stop"]);
+    std::thread::sleep(std::time::Duration::from_millis(200));
+
+    // The first bridge finds no endpoint and starts a new daemon, which
+    // waits 1.5 s before publishing. The second bridge meanwhile reads the
+    // old record and reaches the new daemon with the old token.
+    let mut first = Mcp::start_with_env(&home, &project, &grant, &fault);
+    std::thread::sleep(std::time::Duration::from_millis(600));
+    let mut second = Mcp::start_with_env(&home, &project, &grant, &fault);
+    for b in [&mut first, &mut second] {
+        let init = b.send(
+            "initialize",
+            json!({"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "0"}}),
+        );
+        assert!(init.get("result").is_some(), "{init}");
+        b.notify("notifications/initialized");
+        let r = b.tool("memory_search", json!({"query": "anything"}));
+        assert_eq!(r["isError"], false, "{r}");
+    }
+    for mut b in [first, second] {
+        drop(b.stdin.take());
+        assert!(b.child.wait().unwrap().success());
+    }
     run_json(&home, &["daemon", "stop"]);
 }

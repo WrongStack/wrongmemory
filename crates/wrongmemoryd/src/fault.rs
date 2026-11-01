@@ -16,6 +16,11 @@
 //!   `with_receipt`): the outermost receipt transaction fails with an
 //!   injected I/O error before `COMMIT`, so the mutation must roll back.
 //!
+//! * `slow_lifecycle` — the daemon waits 1.5 s after binding its endpoint
+//!   before publishing discovery, and 1.5 s after it stops accepting before
+//!   retracting it. Widens the restart windows in which a client reads the
+//!   previous daemon's discovery record (WM-606).
+//!
 //! The optional `<method>` restricts the fault to one IPC method.
 
 use std::sync::OnceLock;
@@ -59,5 +64,15 @@ pub fn after_commit_before_reply(method: &str) {
     {
         eprintln!("wrongmemoryd: injected fault after_commit_before_reply ({method})");
         std::process::abort();
+    }
+}
+
+/// Called between binding the endpoint and publishing discovery, and
+/// between leaving the accept loop and retracting discovery.
+pub async fn lifecycle_pause() {
+    if let Some((point, _)) = spec()
+        && point == "slow_lifecycle"
+    {
+        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
     }
 }
