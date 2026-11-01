@@ -100,7 +100,7 @@ Branch `feat/wrongmemory-adapter` in the worktree `D:/Codebox/PROJECTS/WrongStac
 |---|---|---|
 | WM-400 | Done (branch) | `packages/sage/src/wrongmemory-port.ts`. Typed `UNAVAILABLE` errors; it never falls back to local SQLite. Port tests run against a real daemon. No operation throws `NOT_IMPLEMENTED` any more; unified search goes through `memory.unifiedSearch`. `searchSageWithBreakdown` is lexical-only because there is no vector channel (WM-405). |
 | WM-401 | Done (branch) | `Sage.service` is `local` (the default), `wrongmemory` or `auto`; a repo's own config cannot set it. |
-| WM-402 | Partial | The port binds `session.acquire{hostSessionId}` on every call. The host session id is not yet passed through the container. |
+| WM-402 | Done (branch) | Session ids reach the port per call from the host middleware (`host-wiring`, tool-call and turn memory), and the port binds them with `session.acquire{hostSessionId}`. Like the baseline container, the WrongMemory port gets no container-level resolver. A call without a session releases the binding, so it under-reports and cannot leak. |
 | WM-403 | Partial | The daemon serves audience retrieval, `findMemoriesForFile`, `verify` and `verifyForPaths`. Host session id wiring and setup-time injection remain open. |
 | WM-404..408 | Not started | Capture/remap hooks; vector fusion; WebUI/slash/desktop; MCP connect migration; HQ sync. |
 | WM-409 | Partial | `local` mode leaves behaviour unchanged. `auto` uses WrongMemory only if a daemon is already running and the project is registered. Ownership-safe rollback is not exercised. |
