@@ -38,14 +38,14 @@ Legend: **Done**, meaning implemented and covered by an automated test or record
 | WM-008 | Partial | The existing SAGE suites run green in the adapter worktree (see M4). The SAGE vector and host suites have no WrongMemory counterpart. |
 | WM-009 | Done | `contracts/profiles/` |
 | WM-010 | Done (synthetic) | `wrongmemory-bench` (see Performance). No baseline taken from SAGE running in process. |
-| WM-011 | Partial | Repository is MIT. Dependency licences are not audited automatically. |
+| WM-011 | Done | The repository is MIT. `scripts/inventory/licenses.ts` writes `contracts/inventory/licenses.json`: 143 third-party crates, every one with a permissive SPDX alternative. CI fails on any crate without one. The TS client has no runtime dependencies. Model licenses are not applicable (no models ship). |
 
 ## M1 — repository and safe storage
 
 | ID | State | Evidence / gap |
 |---|---|---|
 | WM-100 | Done | Workspace, toolchain 1.93.0, `AGENTS.md`, Windows CI. |
-| WM-101 | Partial | All dependencies pinned to exact versions. MSRV review NOT RUN. |
+| WM-101 | Done | Every workspace dependency is pinned exactly (`getrandom` was the last loose one, now `=0.3.4`). MSRV is declared as `rust-version = "1.93"`, equal to the pinned toolchain; older toolchains are not supported or tested. |
 | WM-102 | Done | Rust contracts. `packages/client-ts` mirrors them; `scripts/check-contract-parity.ts` passes (38 methods, 22 error codes). |
 | WM-103 | Done | Read-only inspector. A byte-unchanged test proves it writes nothing. |
 | WM-104 | Done | Native DDL, codec, FTS and Unicode projection. |

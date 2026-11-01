@@ -26,7 +26,7 @@ wrongmemory-ipc = { path = "crates/wrongmemory-ipc" }
 
 anyhow = "=1.0.104"
 clap = { version = "=4.6.7", features = ["derive"] }
-getrandom = "0.3"
+getrandom = "=0.3.4"
 fancy-regex = "=0.20.0"
 hex = "=0.4.3"
 rmcp = { version = "=3.8.0", default-features = false, features = ["server", "transport-io"] }
