@@ -71,7 +71,7 @@ Run `wrongmemory migrate inspect <store>` before adopting. It is read-only and p
 `wrongmemory ui` opens a read-only dashboard in the browser. It shows the daemon status, the projects with memory counts, each project's memories (search, status and kind filters, full record), candidates, live activity, audit trail, health check, maintenance schedule and semantic provider, and the client grants.
 
 - It only reads. The page can call read methods only; the health check never applies repairs.
-- It is local to this user: it listens on `127.0.0.1` only and opens with a fresh random key printed on start. The key becomes an `HttpOnly`, `SameSite=Strict` cookie, requests naming another host are refused, and grant secrets and the host token never reach the page.
+- It is local to this user: it listens on `127.0.0.1` only and opens with a fresh one-time link printed on start. The first visit trades it for a session cookie (`HttpOnly`, `SameSite=Strict`) and the link stops working; to open the dashboard in another browser, restart `wrongmemory ui`. Requests naming another host are refused, and grant secrets and the host token never reach the page.
 - `--port <n>` picks the port (default: a free one); `--no-open` prints the link without opening a browser. Ctrl+C stops it; the daemon keeps running.
 - Session-private memories are not listed: the dashboard has no session.
 

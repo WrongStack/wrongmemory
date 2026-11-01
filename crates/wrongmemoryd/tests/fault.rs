@@ -604,3 +604,39 @@ async fn restart_waits_for_the_predecessor_to_release_its_stores() {
     drop(c);
     new.stop(&root).await;
 }
+
+/// WM-606: an exiting predecessor's check-then-delete retract can remove the
+/// discovery files a new daemon just published (hosted-CI flake, run
+/// 41342819145). The live daemon restores them; a graceful stop still
+/// retracts them for good.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn live_daemon_restores_deleted_discovery_and_stop_still_retracts() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("home");
+    let daemon = Daemon::start(&root, None).await;
+    let d = dr(&root);
+    let instance = wrongmemory_ipc::Discovery::load(&d)
+        .unwrap()
+        .info
+        .daemon_instance_id;
+    // What a racing predecessor's retract does.
+    std::fs::remove_file(d.endpoint_file()).unwrap();
+    std::fs::remove_file(d.token_file()).unwrap();
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        if let Ok(found) = wrongmemory_ipc::Discovery::load(&d) {
+            assert_eq!(found.info.daemon_instance_id, instance);
+            break;
+        }
+        assert!(Instant::now() < deadline, "discovery was not restored");
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    let mut c = host(&root).await;
+    c.call_raw(method::DAEMON_HEALTH, None, json!({}), None)
+        .await
+        .unwrap();
+    drop(c);
+    daemon.stop(&root).await;
+    assert!(!d.endpoint_file().exists(), "stop must retract discovery");
+    assert!(!d.token_file().exists());
+}

@@ -1,7 +1,7 @@
 //! WM-800 (partial): `wrongmemory ui` serves a read-only dashboard on
 //! loopback. This drives the real command over raw HTTP and checks its
-//! access rules: no access without the run's key, the key traded for an
-//! `HttpOnly`/`SameSite=Strict` cookie, foreign `Host` headers refused (DNS
+//! access rules: no access without the run's key, the one-time key traded
+//! for a separate `HttpOnly`/`SameSite=Strict` session cookie, foreign `Host` headers refused (DNS
 //! rebinding), GET only, read-only method allowlist, and no secret in any
 //! response.
 
@@ -154,7 +154,30 @@ fn dashboard_is_loopback_keyed_and_read_only() {
         .find(|l| l.starts_with("Set-Cookie:"))
         .unwrap();
     assert!(set_cookie.contains("HttpOnly") && set_cookie.contains("SameSite=Strict"));
-    let cookie = format!("wm_ui={key}");
+    // The cookie carries a separate session secret, never the link key.
+    let session = set_cookie
+        .split_once("wm_ui=")
+        .unwrap()
+        .1
+        .split(';')
+        .next()
+        .unwrap()
+        .to_string();
+    assert_eq!(session.len(), 64);
+    assert_ne!(session, key, "the cookie must not reuse the link key");
+    // The link is single-use: a second exchange and the key as a cookie fail.
+    assert!(
+        http(port, "GET", &format!("/?key={key}"), &[])
+            .0
+            .contains(" 401 ")
+    );
+    let key_cookie = format!("wm_ui={key}");
+    assert!(
+        http(port, "GET", "/", &[("Cookie", key_cookie.as_str())])
+            .0
+            .contains(" 401 ")
+    );
+    let cookie = format!("wm_ui={session}");
     let auth = [("Cookie", cookie.as_str())];
 
     let (status, headers, body) = http(port, "GET", "/", &auth);

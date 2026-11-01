@@ -260,6 +260,12 @@ pub async fn run(cfg: Config) -> Result<(), StartError> {
         "dataRoot": cfg.root.path().display().to_string(),
         "sqlite": wrongmemory_storage::sqlite_version(),
     });
+    let discovery_guard = tokio::spawn(guard_discovery(
+        shared.clone(),
+        cfg.root.clone(),
+        info.clone(),
+        shutdown_rx.clone(),
+    ));
 
     // 4. Accept loop.
     #[cfg(windows)]
@@ -306,10 +312,50 @@ pub async fn run(cfg: Config) -> Result<(), StartError> {
     for handle in shared.stores.drain_all() {
         projects::release(handle, &shared.registry, &instance_id, "shutdown");
     }
+    // The guard must be gone before we retract, or it would republish.
+    discovery_guard.abort();
+    let _ = discovery_guard.await;
     crate::fault::lifecycle_pause().await;
     let retracted = Discovery::retract(&cfg.root, &instance_id).unwrap_or(false);
     info!("stopped", {"instanceId": instance_id, "discoveryRetracted": retracted});
     Ok(())
+}
+
+/// How often the live daemon checks that discovery still names it.
+const DISCOVERY_CHECK: Duration = Duration::from_millis(500);
+
+/// Keep this daemon's discovery metadata in place while it serves.
+///
+/// An exiting predecessor retracts discovery with a check-then-delete
+/// (`Discovery::retract`); if this daemon publishes inside that window, the
+/// predecessor deletes the new files and clients find no daemon although one
+/// runs (hosted CI run 41342819145). Only the daemon that owns the endpoint
+/// is live, so it simply republishes whatever is missing or foreign.
+async fn guard_discovery(
+    shared: Arc<Shared>,
+    root: DataRoot,
+    info: EndpointInfo,
+    mut shutdown: watch::Receiver<bool>,
+) {
+    loop {
+        tokio::select! {
+            _ = tokio::time::sleep(DISCOVERY_CHECK) => {}
+            _ = shutdown.changed() => return,
+        }
+        if shared.draining.load(Ordering::SeqCst) {
+            return;
+        }
+        let intact = Discovery::load(&root).is_ok_and(|d| {
+            d.info.daemon_instance_id == info.daemon_instance_id
+                && token_eq(&d.token, &shared.host_token)
+        });
+        if !intact {
+            match Discovery::publish(&root, &info, &shared.host_token) {
+                Ok(()) => warn!("discovery_restored", {"instanceId": info.daemon_instance_id}),
+                Err(e) => warn!("discovery_restore_failed", {"error": e.to_string()}),
+            }
+        }
+    }
 }
 
 struct ConnectionGuard(Arc<Shared>);

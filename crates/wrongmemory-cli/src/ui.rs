@@ -7,9 +7,13 @@
 //!
 //! Exposure is limited to this user on this machine:
 //! * loopback only, on an ephemeral port unless `--port` is given;
-//! * a fresh 256-bit access key per run, exchanged once from the printed URL
-//!   for an `HttpOnly`, `SameSite=Strict` cookie, then compared in constant
-//!   time on every request;
+//! * a fresh 256-bit one-time key per run. Its first use trades it for a
+//!   separate 256-bit session secret in an `HttpOnly`, `SameSite=Strict`
+//!   cookie, and the key stops working, so a key seen in a terminal, a
+//!   browser history or a process listing is worthless once the page opened;
+//! * the browser is opened through a launcher file in the owner-only runtime
+//!   directory, never with the key in a process argument (`/proc/*/cmdline`
+//!   and process listings are visible to other local users);
 //! * the `Host` header must name the loopback listener (no DNS rebinding);
 //! * GET only, a 16 KiB request cap, a strict Content-Security-Policy,
 //!   `frame-ancestors 'none'` and `no-store` caching.
@@ -56,9 +60,18 @@ const ALLOWED: &[(&str, bool)] = &[
 
 struct Ui {
     root: DataRoot,
-    key: String,
+    /// One-time key from the printed link; `None` once exchanged.
+    url_key: std::sync::Mutex<Option<String>>,
+    /// Cookie value issued by the exchange.
+    session: String,
     port: u16,
     client: Mutex<Option<Client>>,
+}
+
+fn random_hex() -> anyhow::Result<String> {
+    let mut raw = [0u8; 32];
+    getrandom::fill(&mut raw).map_err(|e| anyhow::anyhow!("random: {e}"))?;
+    Ok(raw.iter().map(|b| format!("{b:02x}")).collect())
 }
 
 pub async fn run(root: DataRoot, port: u16, open: bool) -> anyhow::Result<()> {
@@ -67,20 +80,19 @@ pub async fn run(root: DataRoot, port: u16, open: bool) -> anyhow::Result<()> {
         .map_err(|e| anyhow::anyhow!("cannot reach the daemon: {e}"))?;
     let listener = TcpListener::bind(("127.0.0.1", port)).await?;
     let port = listener.local_addr()?.port();
-    let mut raw = [0u8; 32];
-    getrandom::fill(&mut raw).map_err(|e| anyhow::anyhow!("random: {e}"))?;
-    let key = raw.iter().map(|b| format!("{b:02x}")).collect::<String>();
+    let key = random_hex()?;
+    let url = format!("http://127.0.0.1:{port}/?key={key}");
     let ui = Arc::new(Ui {
         root,
-        key,
+        url_key: std::sync::Mutex::new(Some(key)),
+        session: random_hex()?,
         port,
         client: Mutex::new(Some(client)),
     });
-    let url = format!("http://127.0.0.1:{port}/?key={}", ui.key);
     println!("WrongMemory dashboard (read-only): {url}");
-    println!("Only this link opens it; press Ctrl+C to stop.");
+    println!("The link works once; press Ctrl+C to stop.");
     if open {
-        open_browser(&url);
+        open_browser(&ui.root, port, &url);
     }
     loop {
         let (stream, peer) = listener.accept().await?;
@@ -94,13 +106,30 @@ pub async fn run(root: DataRoot, port: u16, open: bool) -> anyhow::Result<()> {
     }
 }
 
-fn open_browser(url: &str) {
+/// Path of the launcher page for `port` (owner-only runtime directory).
+fn launcher_path(root: &DataRoot, port: u16) -> std::path::PathBuf {
+    root.runtime_dir().join(format!("ui-{port}.html"))
+}
+
+/// Open the browser on a private launcher page that redirects to `url`, so
+/// the key never appears in a process argument.
+fn open_browser(root: &DataRoot, port: u16, url: &str) {
+    let page = launcher_path(root, port);
+    let html = format!(
+        "<!doctype html><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"0; url={url}\">         <title>WrongMemory</title><a href=\"{url}\">Open the WrongMemory dashboard</a>"
+    );
+    if let Err(e) = wrongmemory_ipc::endpoint::write_private_atomic(&page, html.as_bytes()) {
+        eprintln!("Could not write the launcher ({e}); open the link above yourself.");
+        return;
+    }
     #[cfg(windows)]
-    let r = std::process::Command::new("explorer.exe").arg(url).spawn();
+    let r = std::process::Command::new("explorer.exe")
+        .arg(&page)
+        .spawn();
     #[cfg(target_os = "macos")]
-    let r = std::process::Command::new("open").arg(url).spawn();
+    let r = std::process::Command::new("open").arg(&page).spawn();
     #[cfg(all(unix, not(target_os = "macos")))]
-    let r = std::process::Command::new("xdg-open").arg(url).spawn();
+    let r = std::process::Command::new("xdg-open").arg(&page).spawn();
     if r.is_err() {
         eprintln!("Could not open a browser; open the link above yourself.");
     }
@@ -249,10 +278,20 @@ async fn serve(ui: Arc<Ui>, mut stream: TcpStream) {
         )
         .await;
     }
-    // First visit: trade the URL key for a cookie and drop it from the address bar.
+    // First visit: trade the one-time key for a session cookie, retire the
+    // key, and drop it from the address bar.
     if let Some(k) = req.query.get("key") {
-        if req.path == "/" && constant_eq(k, &ui.key) {
-            let cookie = format!("{COOKIE}={}; HttpOnly; SameSite=Strict; Path=/", ui.key);
+        let accepted = req.path == "/" && {
+            let mut slot = ui.url_key.lock().unwrap_or_else(|p| p.into_inner());
+            let ok = slot.as_deref().is_some_and(|key| constant_eq(k, key));
+            if ok {
+                *slot = None;
+            }
+            ok
+        };
+        if accepted {
+            let _ = std::fs::remove_file(launcher_path(&ui.root, ui.port));
+            let cookie = format!("{COOKIE}={}; HttpOnly; SameSite=Strict; Path=/", ui.session);
             return respond(
                 &mut stream,
                 "303 See Other",
@@ -271,7 +310,7 @@ async fn serve(ui: Arc<Ui>, mut stream: TcpStream) {
         )
         .await;
     }
-    if !cookie_key(&req).is_some_and(|k| constant_eq(k, &ui.key)) {
+    if !cookie_key(&req).is_some_and(|k| constant_eq(k, &ui.session)) {
         return respond(
             &mut stream,
             "401 Unauthorized",
