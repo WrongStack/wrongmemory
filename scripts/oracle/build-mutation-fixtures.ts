@@ -910,6 +910,73 @@ const idOf = (v: unknown) => (v as { id?: string } | undefined)?.id;
   await s.run('read-audit-default', 'readAudit', {}, () => s.store.readAudit(), { state: false });
 }
 
+// ─── HQ sync projection ─────────────────────────────────────────────────────
+{
+  const s = new Scenario(
+    'hq-sync',
+    'HQ sync projection: version, paged list of shared scopes, local re-versioning, applyHqSync (new, stale, newer, private-id collision, tombstone with reference cleanup, deleted-status record, invalid batch)',
+  );
+  scenarios.push(s);
+  const known = new Set(['a', 'b', 'c', 'd', 'e', 'f'].map((ch) => ch.repeat(32)));
+  // Locally generated change ids and the clock epoch are random.
+  const mask = (records: Array<Record<string, unknown>>) =>
+    records.map((r) => ({ ...r, changeId: known.has(String(r.changeId)) ? r.changeId : '<local>' }));
+  const version = async (step: string) => {
+    tick();
+    const v = String(await s.store.getHqSyncVersion());
+    s.note(step, v.replace(/^[0-9a-f]+:/, '<epoch>:'));
+  };
+  const list = async (step: string, after = '') =>
+    s.run(step, 'listHqSync', { after }, async () => mask((await s.store.listHqSync(after)) as never), { state: false });
+  const rem = async (label: string, input: Row) =>
+    s.label(idOf(await s.run(`remember-${label}`, 'rememberSage', input, () => s.store.rememberSage(input), { state: false })), label)!;
+  const a = await rem('sharedA', { text: 'HQ: releases are cut from main.', importance: 0.6 });
+  const b = await rem('sharedB', { text: 'HQ: the API lives in src/api.', anchors: [{ type: 'file', path: 'src/api.ts' }] });
+  const priv = await rem('private', { text: 'HQ: my scratch note.', scope: 'session', ownerSessionId: 'sess-1' });
+  await s.run('state', 'dump', {}, () => undefined);
+  await version('version-initial');
+  await list('list-initial');
+  await s.run('update-sharedA', 'updateSage', { id: a, importance: 0.9 }, () => s.store.updateSage(a, { importance: 0.9 }));
+  await list('list-after-update');
+  const at = new Date(clock).toISOString();
+  const mem = (id: string, text: string, extra: Row = {}) => ({
+    schemaVersion: 1,
+    id,
+    revision: 1,
+    text,
+    kind: 'fact',
+    scope: 'project',
+    status: 'active',
+    importance: 0.5,
+    confidence: 0.8,
+    freshness: 1,
+    tags: [],
+    anchors: [],
+    sources: [{ type: 'user' }],
+    createdAt: at,
+    updatedAt: at,
+    ...extra,
+  });
+  const remoteId = '01HQREMOTE00000000000000001';
+  const batch1 = [
+    { id: remoteId, revision: 1, changeId: 'a'.repeat(32), memory: mem(remoteId, 'HQ remote: deploys need a ticket.', { anchors: [{ type: 'file', path: 'src/deploy.ts' }], contradicts: [a] }) },
+    { id: a, revision: 1, changeId: 'b'.repeat(32), memory: mem(a, 'HQ remote: a stale edit that must lose.') },
+    { id: b, revision: 5, changeId: 'c'.repeat(32), memory: mem(b, 'HQ remote: the API moved to src/http.', { anchors: [{ type: 'file', path: 'src/http.ts' }], revision: 4 }) },
+    { id: priv, revision: 9, changeId: 'd'.repeat(32), memory: mem(priv, 'HQ remote: must not overwrite a private note.') },
+  ];
+  await s.run('apply-batch1', 'applyHqSync', { records: batch1 }, () => s.store.applyHqSync(batch1 as never));
+  await list('list-after-batch1');
+  const batch2 = [
+    { id: a, revision: 3, changeId: 'e'.repeat(32), memory: null },
+    { id: b, revision: 6, changeId: 'f'.repeat(32), memory: mem(b, 'HQ remote: the API moved to src/http.', { status: 'deleted', revision: 5, supersedes: [remoteId] }) },
+  ];
+  await s.run('apply-batch2-tombstone-and-deleted', 'applyHqSync', { records: batch2 }, () => s.store.applyHqSync(batch2 as never));
+  await list('list-after-batch2');
+  const bad = [{ id: remoteId, revision: 2, changeId: 'not-hex', memory: null }];
+  await s.run('apply-invalid', 'applyHqSync', { records: bad }, () => s.store.applyHqSync(bad as never));
+  await version('version-final');
+}
+
 // ─── Write ──────────────────────────────────────────────────────────────────
 mkdirSync(outDir, { recursive: true });
 const index: Array<{ scenario: string; description: string; steps: number; errors: number }> = [];

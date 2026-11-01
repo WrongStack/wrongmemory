@@ -73,6 +73,12 @@
       "description": "doctor(): metrics and checks over planted defects (expired active, graph hub, dangling edges, runtime-mode audience, heavy never-used, pending backlog), each named fix, the post-fix report, and readAudit",
       "steps": 20,
       "errors": 0
+    },
+    {
+      "scenario": "hq-sync",
+      "description": "HQ sync projection: version, paged list of shared scopes, local re-versioning, applyHqSync (new, stale, newer, private-id collision, tombstone with reference cleanup, deleted-status record, invalid batch)",
+      "steps": 14,
+      "errors": 1
     }
   ],
   "warnings": 1

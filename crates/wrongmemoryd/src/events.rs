@@ -264,6 +264,15 @@ pub fn drafts_for(m: &str, result: &Value) -> Vec<Entry> {
         }
         // A doctor run that applied a repair changed the store (edges,
         // audiences, the text index, or a hygiene pass): one coarse event.
+        method::MEMORY_HQ_SYNC_APPLY => {
+            if result["changed"].as_array().is_none_or(|c| c.is_empty()) {
+                return vec![];
+            }
+            vec![Entry {
+                event: draft(m),
+                owner_session: None,
+            }]
+        }
         method::MEMORY_DOCTOR => {
             let changed = result
                 .get("fixesApplied")

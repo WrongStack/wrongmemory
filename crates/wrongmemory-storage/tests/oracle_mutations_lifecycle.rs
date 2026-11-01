@@ -1240,3 +1240,176 @@ fn doctor_scenario_matches_oracle() {
     assert_eq!(compared, 8, "every doctor step is compared");
     assert_no_diffs(diffs);
 }
+
+/// HQ sync projection against the oracle's `hq-sync` scenario: the clock
+/// version, the paged list (session rows never projected), local
+/// re-versioning, and `applyHqSync` (stale loses, newer wins, private-id
+/// collision refused, tombstone with reference cleanup, deleted-status
+/// record, invalid batch refused). Change ids generated locally and the
+/// clock epoch are random and masked like the generator does.
+#[test]
+fn hq_sync_scenario_matches_oracle() {
+    let f = fixture("hq-sync");
+    let mut r = Replay::new();
+    let mut diffs = Vec::new();
+    let mut clock = "2026-11-01T00:00:00.000Z".to_string();
+    let known: Vec<String> = ["a", "b", "c", "d", "e", "f"]
+        .iter()
+        .map(|c| c.repeat(32))
+        .collect();
+    // Fixture `<id:x>` strings -> our ids, recursively.
+    fn to_real(r: &Replay, v: &Value) -> Value {
+        match v {
+            Value::String(s) if s.starts_with("<id:") => json!(r.real(s)),
+            Value::Array(a) => Value::Array(a.iter().map(|x| to_real(r, x)).collect()),
+            Value::Object(o) => {
+                Value::Object(o.iter().map(|(k, x)| (k.clone(), to_real(r, x))).collect())
+            }
+            other => other.clone(),
+        }
+    }
+    let shape = |r: &Replay, list: &[Value], fixture: bool| -> Vec<Value> {
+        list.iter()
+            .map(|x| {
+                let id = x["id"].as_str().unwrap();
+                let change = x["changeId"].as_str().unwrap();
+                json!([
+                    if fixture {
+                        Replay::fixture_label(id)
+                    } else {
+                        r.label_of(id)
+                    },
+                    x["revision"],
+                    if known.iter().any(|k| k == change) {
+                        change
+                    } else {
+                        "<local>"
+                    },
+                    x["memory"]["text"],
+                    x["memory"]["status"],
+                ])
+            })
+            .collect()
+    };
+    let mut compared = 0;
+    for st in f["steps"].as_array().unwrap() {
+        let step = st["step"].as_str().unwrap();
+        clock = bump_second(&clock);
+        if step.starts_with("version") {
+            let ours = r.store.hq_sync_version().unwrap();
+            let want = st["result"].as_str().unwrap();
+            let ours_rev = ours.rsplit(':').next().unwrap();
+            if want.rsplit(':').next().unwrap() != ours_rev {
+                diffs.push(format!("{step}: oracle={want} ours={ours}"));
+            }
+            compared += 1;
+            continue;
+        }
+        let input = &st["call"]["input"];
+        let method = st["call"]["method"].as_str().unwrap();
+        match method {
+            "rememberSage" => {
+                let (p, session) = remember_params(input);
+                let o = r
+                    .store
+                    .remember(&p, &ctx(&clock, session.as_deref()))
+                    .unwrap();
+                r.ids.insert(
+                    Replay::fixture_label(st["result"]["id"].as_str().unwrap()),
+                    o.id,
+                );
+            }
+            "dump" => {
+                r.new_audit_events();
+            }
+            "updateSage" => {
+                let id = r.real(input["id"].as_str().unwrap());
+                let mut patch = input.as_object().unwrap().clone();
+                patch.remove("id");
+                r.store
+                    .update(&id, &patch, &ctx(&clock, None), false)
+                    .unwrap();
+                r.new_audit_events();
+            }
+            "listHqSync" => {
+                let got = r
+                    .store
+                    .list_hq_sync(input["after"].as_str().unwrap())
+                    .unwrap();
+                let want = shape(&r, st["result"].as_array().unwrap(), true);
+                let got = shape(&r, &got, false);
+                if got != want {
+                    diffs.push(format!("{step}:\n  oracle={want:?}\n  ours  ={got:?}"));
+                }
+                compared += 1;
+            }
+            "applyHqSync" => {
+                let records: Vec<Value> = input["records"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|x| to_real(&r, x))
+                    .collect();
+                let out = r.store.apply_hq_sync(&records, &ctx(&clock, None));
+                if out.is_err() != st.get("error").is_some() {
+                    diffs.push(format!(
+                        "{step}: outcome oracle error={} ours={out:?}",
+                        st.get("error").is_some()
+                    ));
+                }
+                diffs.extend(r.compare_state(step, &st["state"]));
+                let want_hq: Vec<Value> = st["state"]["hq"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|h| {
+                        json!([
+                            Replay::fixture_label(h["id"].as_str().unwrap()),
+                            h["revision"],
+                            h["tombstone"]
+                        ])
+                    })
+                    .collect();
+                let c = r.conn();
+                let mut got_hq: Vec<Value> = c
+                    .prepare("SELECT id, revision, data IS NULL FROM hq_memory_sync")
+                    .unwrap()
+                    .query_map([], |x| {
+                        Ok((
+                            x.get::<_, String>(0)?,
+                            x.get::<_, i64>(1)?,
+                            x.get::<_, i64>(2)?,
+                        ))
+                    })
+                    .unwrap()
+                    .map(|x| {
+                        let (id, rev, t) = x.unwrap();
+                        json!([r.label_of(&id), rev, t])
+                    })
+                    .collect();
+                let mut want_hq = want_hq;
+                want_hq.sort_by_key(|v| v.to_string());
+                got_hq.sort_by_key(|v| v.to_string());
+                if got_hq != want_hq {
+                    diffs.push(format!("{step}: hq oracle={want_hq:?} ours={got_hq:?}"));
+                }
+                let ours = r.new_audit_events();
+                let want_events: Vec<String> = st["state"]["auditEvents"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|e| e["event"].as_str().unwrap().to_string())
+                    .collect();
+                if ours != want_events {
+                    diffs.push(format!(
+                        "{step}: audit oracle={want_events:?} ours={ours:?}"
+                    ));
+                }
+                compared += 1;
+            }
+            other => panic!("unhandled oracle method {other}"),
+        }
+    }
+    assert_eq!(compared, 9, "every list/apply/version step is compared");
+    assert_no_diffs(diffs);
+}

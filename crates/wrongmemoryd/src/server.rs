@@ -611,6 +611,10 @@ fn required_action(m: &str) -> Option<Action> {
         // Store-wide report / audit trail across every session: host only.
         | method::MEMORY_DOCTOR
         | method::MEMORY_AUDIT
+        // HQ replication of shared memories: the trusted host's publisher only.
+        | method::MEMORY_HQ_SYNC_VERSION
+        | method::MEMORY_HQ_SYNC_LIST
+        | method::MEMORY_HQ_SYNC_APPLY
         | method::GRANT_CREATE
         | method::GRANT_LIST
         | method::GRANT_REVOKE => Action::Admin,
@@ -1110,6 +1114,10 @@ async fn dispatch_inner(
         | method::MEMORY_IMPORT_LEGACY
         | method::MEMORY_DOCTOR
         | method::MEMORY_AUDIT
+        // HQ replication of shared memories: the trusted host's publisher only.
+        | method::MEMORY_HQ_SYNC_VERSION
+        | method::MEMORY_HQ_SYNC_LIST
+        | method::MEMORY_HQ_SYNC_APPLY
         | method::MEMORY_LEGACY_FORGET
         | method::MEMORY_LEGACY_CONSOLIDATE
         | method::MEMORY_LEGACY_CLEAR => {
@@ -1240,6 +1248,27 @@ async fn dispatch_inner(
                                 )
                             })?;
                         store.doctor(&fix, &opts, &ctx)
+                    }
+                    method::MEMORY_HQ_SYNC_VERSION => {
+                        to_value(json!({"version": store.hq_sync_version()?}))
+                    }
+                    method::MEMORY_HQ_SYNC_LIST => {
+                        let after = match params.get("after") {
+                            None | Some(Value::Null) => String::new(),
+                            Some(Value::String(s)) => s.clone(),
+                            Some(_) => {
+                                return Err(err(ErrorCode::InvalidRequest, "Invalid SAGE sync cursor"));
+                            }
+                        };
+                        to_value(json!({"records": store.list_hq_sync(&after)?}))
+                    }
+                    method::MEMORY_HQ_SYNC_APPLY => {
+                        let records = params
+                            .get("records")
+                            .and_then(Value::as_array)
+                            .ok_or_else(|| err(ErrorCode::InvalidRequest, "Invalid SAGE sync records"))?;
+                        let changed = store.apply_hq_sync(records, &ctx)?;
+                        to_value(json!({"changed": changed}))
                     }
                     method::MEMORY_AUDIT => {
                         let limit = params.get("limit").and_then(Value::as_f64);

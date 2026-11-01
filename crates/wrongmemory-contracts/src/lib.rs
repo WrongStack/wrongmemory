@@ -390,6 +390,9 @@ pub mod method {
     pub const MEMORY_IMPORT_LEGACY: &str = "memory.importLegacy";
     pub const MEMORY_DOCTOR: &str = "memory.doctor";
     pub const MEMORY_AUDIT: &str = "memory.audit";
+    pub const MEMORY_HQ_SYNC_VERSION: &str = "memory.hqSyncVersion";
+    pub const MEMORY_HQ_SYNC_LIST: &str = "memory.hqSyncList";
+    pub const MEMORY_HQ_SYNC_APPLY: &str = "memory.hqSyncApply";
     /// Legacy `MemoryStore` bulk mutations (curator only).
     pub const MEMORY_LEGACY_FORGET: &str = "memory.legacyForget";
     pub const MEMORY_LEGACY_CONSOLIDATE: &str = "memory.legacyConsolidate";
@@ -443,6 +446,9 @@ pub mod method {
         MEMORY_IMPORT_LEGACY,
         MEMORY_DOCTOR,
         MEMORY_AUDIT,
+        MEMORY_HQ_SYNC_VERSION,
+        MEMORY_HQ_SYNC_LIST,
+        MEMORY_HQ_SYNC_APPLY,
         MEMORY_LEGACY_FORGET,
         MEMORY_LEGACY_CONSOLIDATE,
         MEMORY_LEGACY_CLEAR,

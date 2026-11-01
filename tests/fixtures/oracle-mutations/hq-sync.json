@@ -1,0 +1,1601 @@
+{
+  "scenario": "hq-sync",
+  "description": "HQ sync projection: version, paged list of shared scopes, local re-versioning, applyHqSync (new, stale, newer, private-id collision, tombstone with reference cleanup, deleted-status record, invalid batch)",
+  "baseline": "222d23a90ae9c67c2433d7734c6966be7ee4e696",
+  "clockEpoch": "2026-11-01T00:00:00.000Z",
+  "steps": [
+    {
+      "step": "remember-sharedA",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "HQ: releases are cut from main.",
+          "importance": 0.6
+        }
+      },
+      "result": {
+        "id": "<id:sharedA>",
+        "revision": 1,
+        "text": "HQ: releases are cut from main.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-12-11T00:31:35.000Z",
+        "updatedAt": "2026-12-11T00:31:35.000Z"
+      }
+    },
+    {
+      "step": "remember-sharedB",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "HQ: the API lives in src/api.",
+          "anchors": [
+            {
+              "type": "file",
+              "path": "src/api.ts"
+            }
+          ]
+        }
+      },
+      "result": {
+        "id": "<id:sharedB>",
+        "revision": 1,
+        "text": "HQ: the API lives in src/api.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [
+          {
+            "type": "file",
+            "path": "src/api.ts"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "createdAt": "2026-12-11T00:31:36.000Z",
+        "updatedAt": "2026-12-11T00:31:36.000Z"
+      }
+    },
+    {
+      "step": "remember-private",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "HQ: my scratch note.",
+          "scope": "session",
+          "ownerSessionId": "sess-1"
+        }
+      },
+      "result": {
+        "id": "<id:private>",
+        "revision": 1,
+        "text": "HQ: my scratch note.",
+        "kind": "fact",
+        "scope": "session",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.6,
+        "freshness": 1,
+        "createdAt": "2026-12-11T00:31:37.000Z",
+        "updatedAt": "2026-12-11T00:31:37.000Z",
+        "ownerSessionId": "sess-1"
+      }
+    },
+    {
+      "step": "state",
+      "call": {
+        "method": "dump",
+        "input": {}
+      },
+      "result": "<undefined>",
+      "state": {
+        "memories": [
+          {
+            "id": "<id:sharedA>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "hq: releases are cut from main.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:31:35.000Z",
+            "created_at": "2026-12-11T00:31:35.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:sharedA>",
+              "revision": 1,
+              "text": "HQ: releases are cut from main.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:31:35.000Z",
+              "updatedAt": "2026-12-11T00:31:35.000Z"
+            }
+          },
+          {
+            "id": "<id:sharedB>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "hq: the api lives in src/api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:31:36.000Z",
+            "created_at": "2026-12-11T00:31:36.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:sharedB>",
+              "revision": 1,
+              "text": "HQ: the API lives in src/api.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/api.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:31:36.000Z",
+              "updatedAt": "2026-12-11T00:31:36.000Z"
+            }
+          },
+          {
+            "id": "<id:private>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "session",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.6,
+            "freshness": 1,
+            "owner_session_id": "sess-1",
+            "canonical_text": "hq: my scratch note.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:31:37.000Z",
+            "created_at": "2026-12-11T00:31:37.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:private>",
+              "revision": 1,
+              "text": "HQ: my scratch note.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.6,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:31:37.000Z",
+              "updatedAt": "2026-12-11T00:31:37.000Z",
+              "ownerSessionId": "sess-1"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/api.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:31:36.000Z"
+          },
+          {
+            "from_node": "mem:<id:sharedB>",
+            "to_node": "file:src/api.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:31:36.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:sharedA>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:sharedB>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 2,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "version-initial",
+      "result": "<epoch>:2"
+    },
+    {
+      "step": "list-initial",
+      "call": {
+        "method": "listHqSync",
+        "input": {
+          "after": ""
+        }
+      },
+      "result": [
+        {
+          "id": "<id:sharedA>",
+          "revision": 1,
+          "changeId": "<local>",
+          "memory": {
+            "id": "<id:sharedA>",
+            "revision": 1,
+            "text": "HQ: releases are cut from main.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-12-11T00:31:35.000Z",
+            "updatedAt": "2026-12-11T00:31:35.000Z"
+          }
+        },
+        {
+          "id": "<id:sharedB>",
+          "revision": 1,
+          "changeId": "<local>",
+          "memory": {
+            "id": "<id:sharedB>",
+            "revision": 1,
+            "text": "HQ: the API lives in src/api.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/api.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-11T00:31:36.000Z",
+            "updatedAt": "2026-12-11T00:31:36.000Z"
+          }
+        }
+      ]
+    },
+    {
+      "step": "update-sharedA",
+      "call": {
+        "method": "updateSage",
+        "input": {
+          "id": "<id:sharedA>",
+          "importance": 0.9
+        }
+      },
+      "result": {
+        "id": "<id:sharedA>",
+        "revision": 2,
+        "text": "HQ: releases are cut from main.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.9,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-12-11T00:31:35.000Z",
+        "updatedAt": "2026-12-11T00:31:41.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:sharedA>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.9,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "hq: releases are cut from main.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:31:41.000Z",
+            "created_at": "2026-12-11T00:31:35.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:sharedA>",
+              "revision": 2,
+              "text": "HQ: releases are cut from main.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.9,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:31:35.000Z",
+              "updatedAt": "2026-12-11T00:31:41.000Z"
+            }
+          },
+          {
+            "id": "<id:sharedB>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "hq: the api lives in src/api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:31:36.000Z",
+            "created_at": "2026-12-11T00:31:36.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:sharedB>",
+              "revision": 1,
+              "text": "HQ: the API lives in src/api.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/api.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:31:36.000Z",
+              "updatedAt": "2026-12-11T00:31:36.000Z"
+            }
+          },
+          {
+            "id": "<id:private>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "session",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.6,
+            "freshness": 1,
+            "owner_session_id": "sess-1",
+            "canonical_text": "hq: my scratch note.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:31:37.000Z",
+            "created_at": "2026-12-11T00:31:37.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:private>",
+              "revision": 1,
+              "text": "HQ: my scratch note.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.6,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:31:37.000Z",
+              "updatedAt": "2026-12-11T00:31:37.000Z",
+              "ownerSessionId": "sess-1"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/api.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:31:36.000Z"
+          },
+          {
+            "from_node": "mem:<id:sharedB>",
+            "to_node": "file:src/api.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:31:36.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:sharedA>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:sharedB>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 3,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "list-after-update",
+      "call": {
+        "method": "listHqSync",
+        "input": {
+          "after": ""
+        }
+      },
+      "result": [
+        {
+          "id": "<id:sharedA>",
+          "revision": 2,
+          "changeId": "<local>",
+          "memory": {
+            "id": "<id:sharedA>",
+            "revision": 2,
+            "text": "HQ: releases are cut from main.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.9,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-12-11T00:31:35.000Z",
+            "updatedAt": "2026-12-11T00:31:41.000Z"
+          }
+        },
+        {
+          "id": "<id:sharedB>",
+          "revision": 1,
+          "changeId": "<local>",
+          "memory": {
+            "id": "<id:sharedB>",
+            "revision": 1,
+            "text": "HQ: the API lives in src/api.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/api.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-11T00:31:36.000Z",
+            "updatedAt": "2026-12-11T00:31:36.000Z"
+          }
+        }
+      ]
+    },
+    {
+      "step": "apply-batch1",
+      "call": {
+        "method": "applyHqSync",
+        "input": {
+          "records": [
+            {
+              "id": "01HQREMOTE00000000000000001",
+              "revision": 1,
+              "changeId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "memory": {
+                "schemaVersion": 1,
+                "id": "01HQREMOTE00000000000000001",
+                "revision": 1,
+                "text": "HQ remote: deploys need a ticket.",
+                "kind": "fact",
+                "scope": "project",
+                "status": "active",
+                "importance": 0.5,
+                "confidence": 0.8,
+                "freshness": 1,
+                "tags": [],
+                "anchors": [
+                  {
+                    "type": "file",
+                    "path": "src/deploy.ts"
+                  }
+                ],
+                "sources": [
+                  {
+                    "type": "user"
+                  }
+                ],
+                "createdAt": "2026-12-11T00:31:42.000Z",
+                "updatedAt": "2026-12-11T00:31:42.000Z",
+                "contradicts": [
+                  "<id:sharedA>"
+                ]
+              }
+            },
+            {
+              "id": "<id:sharedA>",
+              "revision": 1,
+              "changeId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "memory": {
+                "schemaVersion": 1,
+                "id": "<id:sharedA>",
+                "revision": 1,
+                "text": "HQ remote: a stale edit that must lose.",
+                "kind": "fact",
+                "scope": "project",
+                "status": "active",
+                "importance": 0.5,
+                "confidence": 0.8,
+                "freshness": 1,
+                "tags": [],
+                "anchors": [],
+                "sources": [
+                  {
+                    "type": "user"
+                  }
+                ],
+                "createdAt": "2026-12-11T00:31:42.000Z",
+                "updatedAt": "2026-12-11T00:31:42.000Z"
+              }
+            },
+            {
+              "id": "<id:sharedB>",
+              "revision": 5,
+              "changeId": "cccccccccccccccccccccccccccccccc",
+              "memory": {
+                "schemaVersion": 1,
+                "id": "<id:sharedB>",
+                "revision": 4,
+                "text": "HQ remote: the API moved to src/http.",
+                "kind": "fact",
+                "scope": "project",
+                "status": "active",
+                "importance": 0.5,
+                "confidence": 0.8,
+                "freshness": 1,
+                "tags": [],
+                "anchors": [
+                  {
+                    "type": "file",
+                    "path": "src/http.ts"
+                  }
+                ],
+                "sources": [
+                  {
+                    "type": "user"
+                  }
+                ],
+                "createdAt": "2026-12-11T00:31:42.000Z",
+                "updatedAt": "2026-12-11T00:31:42.000Z"
+              }
+            },
+            {
+              "id": "<id:private>",
+              "revision": 9,
+              "changeId": "dddddddddddddddddddddddddddddddd",
+              "memory": {
+                "schemaVersion": 1,
+                "id": "<id:private>",
+                "revision": 1,
+                "text": "HQ remote: must not overwrite a private note.",
+                "kind": "fact",
+                "scope": "project",
+                "status": "active",
+                "importance": 0.5,
+                "confidence": 0.8,
+                "freshness": 1,
+                "tags": [],
+                "anchors": [],
+                "sources": [
+                  {
+                    "type": "user"
+                  }
+                ],
+                "createdAt": "2026-12-11T00:31:42.000Z",
+                "updatedAt": "2026-12-11T00:31:42.000Z"
+              }
+            }
+          ]
+        }
+      },
+      "result": "<undefined>",
+      "state": {
+        "memories": [
+          {
+            "id": "<id:sharedA>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.9,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "hq: releases are cut from main.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:31:41.000Z",
+            "created_at": "2026-12-11T00:31:35.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:sharedA>",
+              "revision": 2,
+              "text": "HQ: releases are cut from main.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.9,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:31:35.000Z",
+              "updatedAt": "2026-12-11T00:31:41.000Z"
+            }
+          },
+          {
+            "id": "<id:sharedB>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "hq remote: the api moved to src/http.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:31:42.000Z",
+            "created_at": "2026-12-11T00:31:42.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "schemaVersion": 1,
+              "id": "<id:sharedB>",
+              "revision": 4,
+              "text": "HQ remote: the API moved to src/http.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "importance": 0.5,
+              "confidence": 0.8,
+              "freshness": 1,
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/http.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "createdAt": "2026-12-11T00:31:42.000Z",
+              "updatedAt": "2026-12-11T00:31:42.000Z"
+            }
+          },
+          {
+            "id": "<id:private>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "session",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.6,
+            "freshness": 1,
+            "owner_session_id": "sess-1",
+            "canonical_text": "hq: my scratch note.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:31:37.000Z",
+            "created_at": "2026-12-11T00:31:37.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:private>",
+              "revision": 1,
+              "text": "HQ: my scratch note.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.6,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:31:37.000Z",
+              "updatedAt": "2026-12-11T00:31:37.000Z",
+              "ownerSessionId": "sess-1"
+            }
+          },
+          {
+            "id": "01HQREMOTE00000000000000001",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "hq remote: deploys need a ticket.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:31:42.000Z",
+            "created_at": "2026-12-11T00:31:42.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "schemaVersion": 1,
+              "id": "01HQREMOTE00000000000000001",
+              "revision": 1,
+              "text": "HQ remote: deploys need a ticket.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "importance": 0.5,
+              "confidence": 0.8,
+              "freshness": 1,
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/deploy.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "createdAt": "2026-12-11T00:31:42.000Z",
+              "updatedAt": "2026-12-11T00:31:42.000Z",
+              "contradicts": [
+                "<id:sharedA>"
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/api.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:31:36.000Z"
+          },
+          {
+            "from_node": "file:src/deploy.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:31:43.000Z"
+          },
+          {
+            "from_node": "file:src/http.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:31:43.000Z"
+          },
+          {
+            "from_node": "mem:<id:sharedB>",
+            "to_node": "file:src/http.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:31:43.000Z"
+          },
+          {
+            "from_node": "mem:01HQREMOTE00000000000000001",
+            "to_node": "file:src/deploy.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:31:43.000Z"
+          },
+          {
+            "from_node": "mem:01HQREMOTE00000000000000001",
+            "to_node": "mem:<id:sharedA>",
+            "relation": "contradicts",
+            "weight": 1,
+            "created_at": "2026-12-11T00:31:43.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [
+          {
+            "event": "memory.hq_synced",
+            "data": {
+              "memoryId": "01HQREMOTE00000000000000001"
+            }
+          },
+          {
+            "event": "memory.hq_synced",
+            "data": {
+              "memoryId": "<id:sharedB>"
+            }
+          }
+        ],
+        "hq": [
+          {
+            "id": "<id:sharedA>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:sharedB>",
+            "revision": 5,
+            "tombstone": 0
+          },
+          {
+            "id": "01HQREMOTE00000000000000001",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 7,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "list-after-batch1",
+      "call": {
+        "method": "listHqSync",
+        "input": {
+          "after": ""
+        }
+      },
+      "result": [
+        {
+          "id": "01HQREMOTE00000000000000001",
+          "revision": 1,
+          "changeId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "memory": {
+            "schemaVersion": 1,
+            "id": "01HQREMOTE00000000000000001",
+            "revision": 1,
+            "text": "HQ remote: deploys need a ticket.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "importance": 0.5,
+            "confidence": 0.8,
+            "freshness": 1,
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/deploy.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "createdAt": "2026-12-11T00:31:42.000Z",
+            "updatedAt": "2026-12-11T00:31:42.000Z",
+            "contradicts": [
+              "<id:sharedA>"
+            ]
+          }
+        },
+        {
+          "id": "<id:sharedA>",
+          "revision": 2,
+          "changeId": "<local>",
+          "memory": {
+            "id": "<id:sharedA>",
+            "revision": 2,
+            "text": "HQ: releases are cut from main.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.9,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-12-11T00:31:35.000Z",
+            "updatedAt": "2026-12-11T00:31:41.000Z"
+          }
+        },
+        {
+          "id": "<id:sharedB>",
+          "revision": 5,
+          "changeId": "cccccccccccccccccccccccccccccccc",
+          "memory": {
+            "schemaVersion": 1,
+            "id": "<id:sharedB>",
+            "revision": 4,
+            "text": "HQ remote: the API moved to src/http.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "importance": 0.5,
+            "confidence": 0.8,
+            "freshness": 1,
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/http.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "createdAt": "2026-12-11T00:31:42.000Z",
+            "updatedAt": "2026-12-11T00:31:42.000Z"
+          }
+        }
+      ]
+    },
+    {
+      "step": "apply-batch2-tombstone-and-deleted",
+      "call": {
+        "method": "applyHqSync",
+        "input": {
+          "records": [
+            {
+              "id": "<id:sharedA>",
+              "revision": 3,
+              "changeId": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "memory": null
+            },
+            {
+              "id": "<id:sharedB>",
+              "revision": 6,
+              "changeId": "ffffffffffffffffffffffffffffffff",
+              "memory": {
+                "schemaVersion": 1,
+                "id": "<id:sharedB>",
+                "revision": 5,
+                "text": "HQ remote: the API moved to src/http.",
+                "kind": "fact",
+                "scope": "project",
+                "status": "deleted",
+                "importance": 0.5,
+                "confidence": 0.8,
+                "freshness": 1,
+                "tags": [],
+                "anchors": [],
+                "sources": [
+                  {
+                    "type": "user"
+                  }
+                ],
+                "createdAt": "2026-12-11T00:31:42.000Z",
+                "updatedAt": "2026-12-11T00:31:42.000Z",
+                "supersedes": [
+                  "01HQREMOTE00000000000000001"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "result": "<undefined>",
+      "state": {
+        "memories": [
+          {
+            "id": "<id:sharedB>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "hq remote: the api moved to src/http.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:31:42.000Z",
+            "created_at": "2026-12-11T00:31:42.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "schemaVersion": 1,
+              "id": "<id:sharedB>",
+              "revision": 5,
+              "text": "HQ remote: the API moved to src/http.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "importance": 0.5,
+              "confidence": 0.8,
+              "freshness": 1,
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "createdAt": "2026-12-11T00:31:42.000Z",
+              "updatedAt": "2026-12-11T00:31:42.000Z"
+            }
+          },
+          {
+            "id": "<id:private>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "session",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.6,
+            "freshness": 1,
+            "owner_session_id": "sess-1",
+            "canonical_text": "hq: my scratch note.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:31:37.000Z",
+            "created_at": "2026-12-11T00:31:37.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:private>",
+              "revision": 1,
+              "text": "HQ: my scratch note.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.6,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:31:37.000Z",
+              "updatedAt": "2026-12-11T00:31:37.000Z",
+              "ownerSessionId": "sess-1"
+            }
+          },
+          {
+            "id": "01HQREMOTE00000000000000001",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "hq remote: deploys need a ticket.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T17:09:37.027Z",
+            "created_at": "2026-12-11T00:31:42.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "schemaVersion": 1,
+              "id": "01HQREMOTE00000000000000001",
+              "revision": 2,
+              "text": "HQ remote: deploys need a ticket.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "importance": 0.5,
+              "confidence": 0.8,
+              "freshness": 1,
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/deploy.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "createdAt": "2026-12-11T00:31:42.000Z",
+              "updatedAt": "2026-11-01T17:09:37.027Z",
+              "contradicts": []
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/api.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:31:36.000Z"
+          },
+          {
+            "from_node": "file:src/deploy.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:31:43.000Z"
+          },
+          {
+            "from_node": "file:src/http.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:31:43.000Z"
+          },
+          {
+            "from_node": "mem:01HQREMOTE00000000000000001",
+            "to_node": "file:src/deploy.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:31:43.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [
+          {
+            "event": "memory.hq_synced",
+            "data": {
+              "memoryId": "<id:sharedA>"
+            }
+          },
+          {
+            "event": "memory.hq_synced",
+            "data": {
+              "memoryId": "<id:sharedB>"
+            }
+          }
+        ],
+        "hq": [
+          {
+            "id": "<id:sharedA>",
+            "revision": 3,
+            "tombstone": 1
+          },
+          {
+            "id": "<id:sharedB>",
+            "revision": 6,
+            "tombstone": 0
+          },
+          {
+            "id": "01HQREMOTE00000000000000001",
+            "revision": 2,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 12,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "list-after-batch2",
+      "call": {
+        "method": "listHqSync",
+        "input": {
+          "after": ""
+        }
+      },
+      "result": [
+        {
+          "id": "01HQREMOTE00000000000000001",
+          "revision": 2,
+          "changeId": "<local>",
+          "memory": {
+            "schemaVersion": 1,
+            "id": "01HQREMOTE00000000000000001",
+            "revision": 2,
+            "text": "HQ remote: deploys need a ticket.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "importance": 0.5,
+            "confidence": 0.8,
+            "freshness": 1,
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/deploy.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "createdAt": "2026-12-11T00:31:42.000Z",
+            "updatedAt": "2026-11-01T17:09:37.027Z",
+            "contradicts": []
+          }
+        },
+        {
+          "id": "<id:sharedA>",
+          "revision": 3,
+          "changeId": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "memory": null
+        },
+        {
+          "id": "<id:sharedB>",
+          "revision": 6,
+          "changeId": "ffffffffffffffffffffffffffffffff",
+          "memory": {
+            "schemaVersion": 1,
+            "id": "<id:sharedB>",
+            "revision": 5,
+            "text": "HQ remote: the API moved to src/http.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "deleted",
+            "importance": 0.5,
+            "confidence": 0.8,
+            "freshness": 1,
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "createdAt": "2026-12-11T00:31:42.000Z",
+            "updatedAt": "2026-12-11T00:31:42.000Z",
+            "supersedes": [
+              "01HQREMOTE00000000000000001"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "step": "apply-invalid",
+      "call": {
+        "method": "applyHqSync",
+        "input": {
+          "records": [
+            {
+              "id": "01HQREMOTE00000000000000001",
+              "revision": 2,
+              "changeId": "not-hex",
+              "memory": null
+            }
+          ]
+        }
+      },
+      "error": {
+        "name": "Error",
+        "message": "Invalid SAGE sync records"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:sharedB>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "hq remote: the api moved to src/http.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:31:42.000Z",
+            "created_at": "2026-12-11T00:31:42.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "schemaVersion": 1,
+              "id": "<id:sharedB>",
+              "revision": 5,
+              "text": "HQ remote: the API moved to src/http.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "importance": 0.5,
+              "confidence": 0.8,
+              "freshness": 1,
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "createdAt": "2026-12-11T00:31:42.000Z",
+              "updatedAt": "2026-12-11T00:31:42.000Z"
+            }
+          },
+          {
+            "id": "<id:private>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "session",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.6,
+            "freshness": 1,
+            "owner_session_id": "sess-1",
+            "canonical_text": "hq: my scratch note.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:31:37.000Z",
+            "created_at": "2026-12-11T00:31:37.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:private>",
+              "revision": 1,
+              "text": "HQ: my scratch note.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.6,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:31:37.000Z",
+              "updatedAt": "2026-12-11T00:31:37.000Z",
+              "ownerSessionId": "sess-1"
+            }
+          },
+          {
+            "id": "01HQREMOTE00000000000000001",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "hq remote: deploys need a ticket.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T17:09:37.027Z",
+            "created_at": "2026-12-11T00:31:42.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "schemaVersion": 1,
+              "id": "01HQREMOTE00000000000000001",
+              "revision": 2,
+              "text": "HQ remote: deploys need a ticket.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "importance": 0.5,
+              "confidence": 0.8,
+              "freshness": 1,
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/deploy.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "createdAt": "2026-12-11T00:31:42.000Z",
+              "updatedAt": "2026-11-01T17:09:37.027Z",
+              "contradicts": []
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/api.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:31:36.000Z"
+          },
+          {
+            "from_node": "file:src/deploy.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:31:43.000Z"
+          },
+          {
+            "from_node": "file:src/http.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:31:43.000Z"
+          },
+          {
+            "from_node": "mem:01HQREMOTE00000000000000001",
+            "to_node": "file:src/deploy.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:31:43.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:sharedA>",
+            "revision": 3,
+            "tombstone": 1
+          },
+          {
+            "id": "<id:sharedB>",
+            "revision": 6,
+            "tombstone": 0
+          },
+          {
+            "id": "01HQREMOTE00000000000000001",
+            "revision": 2,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 12,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "version-final",
+      "result": "<epoch>:12"
+    }
+  ]
+}

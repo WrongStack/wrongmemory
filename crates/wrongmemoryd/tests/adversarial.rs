@@ -264,6 +264,9 @@ async fn grants_cannot_cross_projects_or_sessions() {
         method::MEMORY_IMPORT_LEGACY,
         method::MEMORY_DOCTOR,
         method::MEMORY_AUDIT,
+        method::MEMORY_HQ_SYNC_VERSION,
+        method::MEMORY_HQ_SYNC_LIST,
+        method::MEMORY_HQ_SYNC_APPLY,
         method::MEMORY_VERIFY,
         method::CANDIDATE_LIST,
         method::CANDIDATE_PROPOSE,
@@ -1297,6 +1300,87 @@ async fn doctor_and_audit_are_host_only() {
         method::MEMORY_AUDIT,
         Some(&w.a),
         json!({"limit": 0}),
+    )
+    .await;
+    assert_eq!(code, ErrorCode::InvalidRequest);
+}
+
+/// HQ sync (WM-408) replicates shared memories for the trusted host's
+/// publisher only: grants are refused, session-scoped rows are never
+/// projected, and a remote record cannot overwrite a session-private id.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn hq_sync_is_host_only_and_never_projects_sessions() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("home");
+    let _d = start(&root).await;
+    let mut h = Client::connect_host(&dr(&root), "host").await.unwrap();
+    let mut w = world(&root, tmp.path(), &mut h).await;
+    add_private(&mut h, &mut w).await;
+    assert!(!w.private.is_empty());
+    let curator = grant(&mut h, "curator", &w.a).await;
+    let mut cur = connect(&root, &curator).await;
+    for m in [
+        method::MEMORY_HQ_SYNC_VERSION,
+        method::MEMORY_HQ_SYNC_LIST,
+        method::MEMORY_HQ_SYNC_APPLY,
+    ] {
+        let (code, _) = fail(&mut cur, m, Some(&w.a), json!({"records": []})).await;
+        assert_eq!(code, ErrorCode::Forbidden, "{m}");
+    }
+
+    let v = call(
+        &mut h,
+        method::MEMORY_HQ_SYNC_VERSION,
+        Some(&w.a),
+        json!({}),
+    )
+    .await;
+    assert!(v["version"].as_str().unwrap().contains(':'), "{v}");
+    let mut ids = Vec::new();
+    let mut after = String::new();
+    loop {
+        let page = call(
+            &mut h,
+            method::MEMORY_HQ_SYNC_LIST,
+            Some(&w.a),
+            json!({"after": after}),
+        )
+        .await;
+        let records = page["records"].as_array().unwrap().clone();
+        if records.is_empty() {
+            break;
+        }
+        for r in &records {
+            assert!(
+                !r.to_string().contains(PRIV_MARK),
+                "session row projected: {r}"
+            );
+            ids.push(r["id"].as_str().unwrap().to_string());
+        }
+        after = ids.last().unwrap().clone();
+    }
+    assert!(ids.contains(&w.public), "{ids:?}");
+    assert!(!ids.contains(&w.private), "{ids:?}");
+
+    // A remote record naming the session-private id is refused silently.
+    let now = "2026-11-01T00:00:00.000Z";
+    let rec = json!({"id": w.private, "revision": 99, "changeId": "a".repeat(32), "memory": {
+        "id": w.private, "scope": "project", "text": "overwritten", "kind": "fact", "status": "active",
+        "createdAt": now, "updatedAt": now, "importance": 0.5, "confidence": 0.5, "freshness": 1,
+        "tags": [], "anchors": [], "sources": [{"type": "user"}], "revision": 1, "schemaVersion": 1}});
+    let out = call(
+        &mut h,
+        method::MEMORY_HQ_SYNC_APPLY,
+        Some(&w.a),
+        json!({"records": [rec]}),
+    )
+    .await;
+    assert_eq!(out["changed"], json!([]));
+    let (code, _) = fail(
+        &mut h,
+        method::MEMORY_HQ_SYNC_APPLY,
+        Some(&w.a),
+        json!({"records": [{"id": "x", "revision": 1, "changeId": "nothex", "memory": null}]}),
     )
     .await;
     assert_eq!(code, ErrorCode::InvalidRequest);

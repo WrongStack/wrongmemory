@@ -10,6 +10,7 @@ pub mod backup;
 pub mod candidates;
 pub mod doctor;
 pub mod find_file;
+pub mod hq_sync;
 pub mod hygiene;
 pub mod inspect;
 pub mod legacy;
