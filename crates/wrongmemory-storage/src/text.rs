@@ -115,6 +115,97 @@ pub fn js_length(text: &str) -> usize {
     text.encode_utf16().count()
 }
 
+/// `tokenize` (memory-text.ts): NFKC + lowercase, split on
+/// `[^\p{L}\p{N}_.-]+`, keep terms of at least 3 UTF-16 units, dedupe.
+pub fn tokenize_default(text: &str) -> Vec<String> {
+    let folded = unicode_fold(text);
+    let mut out: Vec<String> = Vec::new();
+    for t in folded
+        .split(|c: char| !(c.is_alphabetic() || c.is_numeric() || matches!(c, '_' | '.' | '-')))
+    {
+        if js_length(t) >= 3 && !out.iter().any(|x| x == t) {
+            out.push(t.to_string());
+        }
+    }
+    out
+}
+
+/// Lenient ISO-8601 parse to epoch milliseconds, covering the shapes
+/// `Date.parse` accepts in SAGE data: `YYYY-MM-DD`, optional `THH:MM`,
+/// `:SS`, fraction, and `Z` / `±HH:MM` (no offset = UTC, as for date-only).
+pub fn parse_iso_ms(s: &str) -> Option<i64> {
+    let b = s.trim().as_bytes();
+    let num = |r: std::ops::Range<usize>| -> Option<i64> {
+        let t = std::str::from_utf8(b.get(r)?).ok()?;
+        if t.bytes().all(|c| c.is_ascii_digit()) {
+            t.parse().ok()
+        } else {
+            None
+        }
+    };
+    if b.len() < 10 || b[4] != b'-' || b[7] != b'-' {
+        return None;
+    }
+    let (y, mo, d) = (num(0..4)?, num(5..7)?, num(8..10)?);
+    if !(1..=12).contains(&mo) || !(1..=31).contains(&d) {
+        return None;
+    }
+    let (mut h, mut mi, mut sec, mut ms, mut off) = (0, 0, 0, 0i64, 0i64);
+    let mut i = 10;
+    if i < b.len() {
+        if b[i] != b'T' && b[i] != b' ' {
+            return None;
+        }
+        h = num(i + 1..i + 3)?;
+        if b.get(i + 3) != Some(&b':') {
+            return None;
+        }
+        mi = num(i + 4..i + 6)?;
+        i += 6;
+        if b.get(i) == Some(&b':') {
+            sec = num(i + 1..i + 3)?;
+            i += 3;
+            if b.get(i) == Some(&b'.') {
+                let start = i + 1;
+                let mut end = start;
+                while end < b.len() && b[end].is_ascii_digit() {
+                    end += 1;
+                }
+                if end == start {
+                    return None;
+                }
+                let frac = std::str::from_utf8(&b[start..end.min(start + 3)]).ok()?;
+                ms = format!("{frac:0<3}").parse().ok()?;
+                i = end;
+            }
+        }
+        match b.get(i) {
+            None => {}
+            Some(b'Z') if i + 1 == b.len() => {}
+            Some(&c) if (c == b'+' || c == b'-') && b.len() == i + 6 && b[i + 3] == b':' => {
+                let oh = num(i + 1..i + 3)?;
+                let om = num(i + 4..i + 6)?;
+                off = (oh * 60 + om) * if c == b'+' { 1 } else { -1 };
+            }
+            _ => return None,
+        }
+    }
+    if h > 23 || mi > 59 || sec > 59 {
+        return None;
+    }
+    let (yy, m) = if mo <= 2 {
+        (y - 1, mo + 9)
+    } else {
+        (y, mo - 3)
+    };
+    let era = yy.div_euclid(400);
+    let yoe = yy - era * 400;
+    let doy = (153 * m + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let days = era * 146_097 + doe - 719_468;
+    Some(((days * 86_400 + h * 3600 + mi * 60 + sec) - off * 60) * 1000 + ms)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -148,5 +239,16 @@ mod tests {
         assert_eq!(posix_dirname("a.ts"), ".");
         assert_eq!(posix_dirname("src/x/a.ts"), "src/x");
         assert_eq!(js_length("🚀a"), 3);
+        assert_eq!(parse_iso_ms("1970-01-01T00:00:00.000Z"), Some(0));
+        assert_eq!(
+            parse_iso_ms("2026-11-01T12:00:00.123Z"),
+            Some(1_793_534_400_123)
+        );
+        assert_eq!(parse_iso_ms("2026-11-01"), Some(1_793_491_200_000));
+        assert_eq!(
+            parse_iso_ms("2026-11-01T14:00:00+02:00"),
+            Some(1_793_534_400_000)
+        );
+        assert!(parse_iso_ms("not a date").is_none());
     }
 }

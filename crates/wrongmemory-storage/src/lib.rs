@@ -7,8 +7,11 @@
 //! * [`text`] — JS-compatible text/path normalization.
 
 pub mod inspect;
+pub mod mutate;
 pub mod owner;
+pub mod rules;
 pub mod schema;
+pub mod similarity;
 pub mod store;
 pub mod text;
 

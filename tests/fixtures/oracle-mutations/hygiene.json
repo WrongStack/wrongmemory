@@ -1,0 +1,5195 @@
+{
+  "scenario": "hygiene",
+  "description": "default hygiene: verification, exact/near dedup, contradictions, session GC, expiry, review candidates, permanent safeguard",
+  "baseline": "222d23a90ae9c67c2433d7734c6966be7ee4e696",
+  "clockEpoch": "2026-11-01T00:00:00.000Z",
+  "steps": [
+    {
+      "step": "remember-anchoredPresent",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "present.ts exports the present flag used by the router.",
+          "anchors": [
+            {
+              "type": "file",
+              "path": "src/present.ts"
+            }
+          ]
+        }
+      },
+      "result": {
+        "id": "<id:anchoredPresent>",
+        "revision": 1,
+        "text": "present.ts exports the present flag used by the router.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [
+          {
+            "type": "file",
+            "path": "src/present.ts"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "createdAt": "2026-11-01T00:02:10.000Z",
+        "updatedAt": "2026-11-01T00:02:10.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:anchoredPresent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "present.ts exports the present flag used by the router.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:10.000Z",
+            "created_at": "2026-11-01T00:02:10.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredPresent>",
+              "revision": 1,
+              "text": "present.ts exports the present flag used by the router.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/present.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:10.000Z",
+              "updatedAt": "2026-11-01T00:02:10.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/present.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredPresent>",
+            "to_node": "file:src/present.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:anchoredPresent>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 1,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "remember-anchoredGone",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "gone.ts holds the temporary migration helper for v2.",
+          "anchors": [
+            {
+              "type": "file",
+              "path": "src/gone.ts"
+            }
+          ]
+        }
+      },
+      "result": {
+        "id": "<id:anchoredGone>",
+        "revision": 1,
+        "text": "gone.ts holds the temporary migration helper for v2.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [
+          {
+            "type": "file",
+            "path": "src/gone.ts"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "createdAt": "2026-11-01T00:02:11.000Z",
+        "updatedAt": "2026-11-01T00:02:11.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:anchoredPresent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "present.ts exports the present flag used by the router.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:10.000Z",
+            "created_at": "2026-11-01T00:02:10.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredPresent>",
+              "revision": 1,
+              "text": "present.ts exports the present flag used by the router.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/present.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:10.000Z",
+              "updatedAt": "2026-11-01T00:02:10.000Z"
+            }
+          },
+          {
+            "id": "<id:anchoredGone>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "gone.ts holds the temporary migration helper for v2.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:11.000Z",
+            "created_at": "2026-11-01T00:02:11.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredGone>",
+              "revision": 1,
+              "text": "gone.ts holds the temporary migration helper for v2.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/gone.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:11.000Z",
+              "updatedAt": "2026-11-01T00:02:11.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/gone.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "file:src/present.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredGone>",
+            "to_node": "file:src/gone.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredPresent>",
+            "to_node": "file:src/present.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:anchoredGone>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:anchoredPresent>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 2,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "remember-dupA",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Logs are shipped to the central collector every minute.",
+          "importance": 0.5
+        }
+      },
+      "result": {
+        "id": "<id:dupA>",
+        "revision": 1,
+        "text": "Logs are shipped to the central collector every minute.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.5,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-11-01T00:02:12.000Z",
+        "updatedAt": "2026-11-01T00:02:12.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:anchoredPresent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "present.ts exports the present flag used by the router.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:10.000Z",
+            "created_at": "2026-11-01T00:02:10.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredPresent>",
+              "revision": 1,
+              "text": "present.ts exports the present flag used by the router.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/present.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:10.000Z",
+              "updatedAt": "2026-11-01T00:02:10.000Z"
+            }
+          },
+          {
+            "id": "<id:anchoredGone>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "gone.ts holds the temporary migration helper for v2.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:11.000Z",
+            "created_at": "2026-11-01T00:02:11.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredGone>",
+              "revision": 1,
+              "text": "gone.ts holds the temporary migration helper for v2.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/gone.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:11.000Z",
+              "updatedAt": "2026-11-01T00:02:11.000Z"
+            }
+          },
+          {
+            "id": "<id:dupA>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "logs are shipped to the central collector every minute.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:12.000Z",
+            "created_at": "2026-11-01T00:02:12.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:dupA>",
+              "revision": 1,
+              "text": "Logs are shipped to the central collector every minute.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:12.000Z",
+              "updatedAt": "2026-11-01T00:02:12.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/gone.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "file:src/present.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredGone>",
+            "to_node": "file:src/gone.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredPresent>",
+            "to_node": "file:src/present.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:anchoredGone>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:anchoredPresent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:dupA>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 3,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "remember-session",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Session scratch about the local proxy configuration.",
+          "scope": "session",
+          "ownerSessionId": "sess-old"
+        }
+      },
+      "result": {
+        "id": "<id:session>",
+        "revision": 1,
+        "text": "Session scratch about the local proxy configuration.",
+        "kind": "fact",
+        "scope": "session",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-11-01T00:02:13.000Z",
+        "updatedAt": "2026-11-01T00:02:13.000Z",
+        "ownerSessionId": "sess-old"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:anchoredPresent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "present.ts exports the present flag used by the router.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:10.000Z",
+            "created_at": "2026-11-01T00:02:10.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredPresent>",
+              "revision": 1,
+              "text": "present.ts exports the present flag used by the router.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/present.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:10.000Z",
+              "updatedAt": "2026-11-01T00:02:10.000Z"
+            }
+          },
+          {
+            "id": "<id:anchoredGone>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "gone.ts holds the temporary migration helper for v2.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:11.000Z",
+            "created_at": "2026-11-01T00:02:11.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredGone>",
+              "revision": 1,
+              "text": "gone.ts holds the temporary migration helper for v2.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/gone.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:11.000Z",
+              "updatedAt": "2026-11-01T00:02:11.000Z"
+            }
+          },
+          {
+            "id": "<id:dupA>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "logs are shipped to the central collector every minute.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:12.000Z",
+            "created_at": "2026-11-01T00:02:12.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:dupA>",
+              "revision": 1,
+              "text": "Logs are shipped to the central collector every minute.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:12.000Z",
+              "updatedAt": "2026-11-01T00:02:12.000Z"
+            }
+          },
+          {
+            "id": "<id:session>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "session",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": "sess-old",
+            "canonical_text": "session scratch about the local proxy configuration.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:13.000Z",
+            "created_at": "2026-11-01T00:02:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:session>",
+              "revision": 1,
+              "text": "Session scratch about the local proxy configuration.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:13.000Z",
+              "updatedAt": "2026-11-01T00:02:13.000Z",
+              "ownerSessionId": "sess-old"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/gone.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "file:src/present.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredGone>",
+            "to_node": "file:src/gone.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredPresent>",
+            "to_node": "file:src/present.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:anchoredGone>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:anchoredPresent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:dupA>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 3,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "remember-expiring",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Temporary freeze on dependency upgrades until the audit completes.",
+          "expiresAt": "2026-11-04T00:00:00.000Z"
+        }
+      },
+      "result": {
+        "id": "<id:expiring>",
+        "revision": 1,
+        "text": "Temporary freeze on dependency upgrades until the audit completes.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-11-01T00:02:14.000Z",
+        "updatedAt": "2026-11-01T00:02:14.000Z",
+        "expiresAt": "2026-11-04T00:00:00.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:anchoredPresent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "present.ts exports the present flag used by the router.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:10.000Z",
+            "created_at": "2026-11-01T00:02:10.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredPresent>",
+              "revision": 1,
+              "text": "present.ts exports the present flag used by the router.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/present.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:10.000Z",
+              "updatedAt": "2026-11-01T00:02:10.000Z"
+            }
+          },
+          {
+            "id": "<id:anchoredGone>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "gone.ts holds the temporary migration helper for v2.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:11.000Z",
+            "created_at": "2026-11-01T00:02:11.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredGone>",
+              "revision": 1,
+              "text": "gone.ts holds the temporary migration helper for v2.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/gone.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:11.000Z",
+              "updatedAt": "2026-11-01T00:02:11.000Z"
+            }
+          },
+          {
+            "id": "<id:dupA>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "logs are shipped to the central collector every minute.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:12.000Z",
+            "created_at": "2026-11-01T00:02:12.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:dupA>",
+              "revision": 1,
+              "text": "Logs are shipped to the central collector every minute.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:12.000Z",
+              "updatedAt": "2026-11-01T00:02:12.000Z"
+            }
+          },
+          {
+            "id": "<id:session>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "session",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": "sess-old",
+            "canonical_text": "session scratch about the local proxy configuration.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:13.000Z",
+            "created_at": "2026-11-01T00:02:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:session>",
+              "revision": 1,
+              "text": "Session scratch about the local proxy configuration.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:13.000Z",
+              "updatedAt": "2026-11-01T00:02:13.000Z",
+              "ownerSessionId": "sess-old"
+            }
+          },
+          {
+            "id": "<id:expiring>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "temporary freeze on dependency upgrades until the audit completes.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:14.000Z",
+            "created_at": "2026-11-01T00:02:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:expiring>",
+              "revision": 1,
+              "text": "Temporary freeze on dependency upgrades until the audit completes.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:14.000Z",
+              "updatedAt": "2026-11-01T00:02:14.000Z",
+              "expiresAt": "2026-11-04T00:00:00.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/gone.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "file:src/present.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredGone>",
+            "to_node": "file:src/gone.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredPresent>",
+            "to_node": "file:src/present.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:anchoredGone>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:anchoredPresent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:dupA>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:expiring>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 4,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "remember-permanent",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Customer data never leaves the EU region.",
+          "persistence": "permanent",
+          "expiresAt": "2026-11-02T00:00:00.000Z"
+        }
+      },
+      "result": {
+        "id": "<id:permanent>",
+        "revision": 1,
+        "text": "Customer data never leaves the EU region.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "persistence": "permanent",
+        "createdAt": "2026-11-01T00:02:15.000Z",
+        "updatedAt": "2026-11-01T00:02:15.000Z",
+        "expiresAt": "2026-11-02T00:00:00.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:anchoredPresent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "present.ts exports the present flag used by the router.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:10.000Z",
+            "created_at": "2026-11-01T00:02:10.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredPresent>",
+              "revision": 1,
+              "text": "present.ts exports the present flag used by the router.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/present.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:10.000Z",
+              "updatedAt": "2026-11-01T00:02:10.000Z"
+            }
+          },
+          {
+            "id": "<id:anchoredGone>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "gone.ts holds the temporary migration helper for v2.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:11.000Z",
+            "created_at": "2026-11-01T00:02:11.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredGone>",
+              "revision": 1,
+              "text": "gone.ts holds the temporary migration helper for v2.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/gone.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:11.000Z",
+              "updatedAt": "2026-11-01T00:02:11.000Z"
+            }
+          },
+          {
+            "id": "<id:dupA>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "logs are shipped to the central collector every minute.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:12.000Z",
+            "created_at": "2026-11-01T00:02:12.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:dupA>",
+              "revision": 1,
+              "text": "Logs are shipped to the central collector every minute.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:12.000Z",
+              "updatedAt": "2026-11-01T00:02:12.000Z"
+            }
+          },
+          {
+            "id": "<id:session>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "session",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": "sess-old",
+            "canonical_text": "session scratch about the local proxy configuration.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:13.000Z",
+            "created_at": "2026-11-01T00:02:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:session>",
+              "revision": 1,
+              "text": "Session scratch about the local proxy configuration.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:13.000Z",
+              "updatedAt": "2026-11-01T00:02:13.000Z",
+              "ownerSessionId": "sess-old"
+            }
+          },
+          {
+            "id": "<id:expiring>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "temporary freeze on dependency upgrades until the audit completes.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:14.000Z",
+            "created_at": "2026-11-01T00:02:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:expiring>",
+              "revision": 1,
+              "text": "Temporary freeze on dependency upgrades until the audit completes.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:14.000Z",
+              "updatedAt": "2026-11-01T00:02:14.000Z",
+              "expiresAt": "2026-11-04T00:00:00.000Z"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "customer data never leaves the eu region.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:15.000Z",
+            "created_at": "2026-11-01T00:02:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Customer data never leaves the EU region.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:02:15.000Z",
+              "updatedAt": "2026-11-01T00:02:15.000Z",
+              "expiresAt": "2026-11-02T00:00:00.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/gone.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "file:src/present.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredGone>",
+            "to_node": "file:src/gone.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredPresent>",
+            "to_node": "file:src/present.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:anchoredGone>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:anchoredPresent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:dupA>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:expiring>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 5,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "remember-lowConfidence",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "The analytics job might use a separate replica database.",
+          "confidence": 0.3
+        }
+      },
+      "result": {
+        "id": "<id:lowConfidence>",
+        "revision": 1,
+        "text": "The analytics job might use a separate replica database.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.3,
+        "freshness": 1,
+        "createdAt": "2026-11-01T00:02:16.000Z",
+        "updatedAt": "2026-11-01T00:02:16.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:anchoredPresent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "present.ts exports the present flag used by the router.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:10.000Z",
+            "created_at": "2026-11-01T00:02:10.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredPresent>",
+              "revision": 1,
+              "text": "present.ts exports the present flag used by the router.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/present.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:10.000Z",
+              "updatedAt": "2026-11-01T00:02:10.000Z"
+            }
+          },
+          {
+            "id": "<id:anchoredGone>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "gone.ts holds the temporary migration helper for v2.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:11.000Z",
+            "created_at": "2026-11-01T00:02:11.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredGone>",
+              "revision": 1,
+              "text": "gone.ts holds the temporary migration helper for v2.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/gone.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:11.000Z",
+              "updatedAt": "2026-11-01T00:02:11.000Z"
+            }
+          },
+          {
+            "id": "<id:dupA>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "logs are shipped to the central collector every minute.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:12.000Z",
+            "created_at": "2026-11-01T00:02:12.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:dupA>",
+              "revision": 1,
+              "text": "Logs are shipped to the central collector every minute.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:12.000Z",
+              "updatedAt": "2026-11-01T00:02:12.000Z"
+            }
+          },
+          {
+            "id": "<id:session>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "session",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": "sess-old",
+            "canonical_text": "session scratch about the local proxy configuration.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:13.000Z",
+            "created_at": "2026-11-01T00:02:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:session>",
+              "revision": 1,
+              "text": "Session scratch about the local proxy configuration.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:13.000Z",
+              "updatedAt": "2026-11-01T00:02:13.000Z",
+              "ownerSessionId": "sess-old"
+            }
+          },
+          {
+            "id": "<id:expiring>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "temporary freeze on dependency upgrades until the audit completes.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:14.000Z",
+            "created_at": "2026-11-01T00:02:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:expiring>",
+              "revision": 1,
+              "text": "Temporary freeze on dependency upgrades until the audit completes.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:14.000Z",
+              "updatedAt": "2026-11-01T00:02:14.000Z",
+              "expiresAt": "2026-11-04T00:00:00.000Z"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "customer data never leaves the eu region.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:15.000Z",
+            "created_at": "2026-11-01T00:02:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Customer data never leaves the EU region.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:02:15.000Z",
+              "updatedAt": "2026-11-01T00:02:15.000Z",
+              "expiresAt": "2026-11-02T00:00:00.000Z"
+            }
+          },
+          {
+            "id": "<id:lowConfidence>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.3,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the analytics job might use a separate replica database.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:16.000Z",
+            "created_at": "2026-11-01T00:02:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:lowConfidence>",
+              "revision": 1,
+              "text": "The analytics job might use a separate replica database.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.3,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:16.000Z",
+              "updatedAt": "2026-11-01T00:02:16.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/gone.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "file:src/present.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredGone>",
+            "to_node": "file:src/gone.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredPresent>",
+            "to_node": "file:src/present.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:anchoredGone>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:anchoredPresent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:dupA>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:expiring>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:lowConfidence>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 6,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "remember-polarityA",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "The cache layer is invalidated on every deploy of the api service."
+        }
+      },
+      "result": {
+        "id": "<id:polarityA>",
+        "revision": 1,
+        "text": "The cache layer is invalidated on every deploy of the api service.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-11-01T00:02:17.000Z",
+        "updatedAt": "2026-11-01T00:02:17.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:anchoredPresent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "present.ts exports the present flag used by the router.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:10.000Z",
+            "created_at": "2026-11-01T00:02:10.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredPresent>",
+              "revision": 1,
+              "text": "present.ts exports the present flag used by the router.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/present.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:10.000Z",
+              "updatedAt": "2026-11-01T00:02:10.000Z"
+            }
+          },
+          {
+            "id": "<id:anchoredGone>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "gone.ts holds the temporary migration helper for v2.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:11.000Z",
+            "created_at": "2026-11-01T00:02:11.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredGone>",
+              "revision": 1,
+              "text": "gone.ts holds the temporary migration helper for v2.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/gone.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:11.000Z",
+              "updatedAt": "2026-11-01T00:02:11.000Z"
+            }
+          },
+          {
+            "id": "<id:dupA>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "logs are shipped to the central collector every minute.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:12.000Z",
+            "created_at": "2026-11-01T00:02:12.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:dupA>",
+              "revision": 1,
+              "text": "Logs are shipped to the central collector every minute.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:12.000Z",
+              "updatedAt": "2026-11-01T00:02:12.000Z"
+            }
+          },
+          {
+            "id": "<id:session>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "session",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": "sess-old",
+            "canonical_text": "session scratch about the local proxy configuration.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:13.000Z",
+            "created_at": "2026-11-01T00:02:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:session>",
+              "revision": 1,
+              "text": "Session scratch about the local proxy configuration.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:13.000Z",
+              "updatedAt": "2026-11-01T00:02:13.000Z",
+              "ownerSessionId": "sess-old"
+            }
+          },
+          {
+            "id": "<id:expiring>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "temporary freeze on dependency upgrades until the audit completes.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:14.000Z",
+            "created_at": "2026-11-01T00:02:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:expiring>",
+              "revision": 1,
+              "text": "Temporary freeze on dependency upgrades until the audit completes.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:14.000Z",
+              "updatedAt": "2026-11-01T00:02:14.000Z",
+              "expiresAt": "2026-11-04T00:00:00.000Z"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "customer data never leaves the eu region.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:15.000Z",
+            "created_at": "2026-11-01T00:02:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Customer data never leaves the EU region.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:02:15.000Z",
+              "updatedAt": "2026-11-01T00:02:15.000Z",
+              "expiresAt": "2026-11-02T00:00:00.000Z"
+            }
+          },
+          {
+            "id": "<id:lowConfidence>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.3,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the analytics job might use a separate replica database.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:16.000Z",
+            "created_at": "2026-11-01T00:02:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:lowConfidence>",
+              "revision": 1,
+              "text": "The analytics job might use a separate replica database.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.3,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:16.000Z",
+              "updatedAt": "2026-11-01T00:02:16.000Z"
+            }
+          },
+          {
+            "id": "<id:polarityA>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the cache layer is invalidated on every deploy of the api service.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:17.000Z",
+            "created_at": "2026-11-01T00:02:17.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:polarityA>",
+              "revision": 1,
+              "text": "The cache layer is invalidated on every deploy of the api service.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:17.000Z",
+              "updatedAt": "2026-11-01T00:02:17.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/gone.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "file:src/present.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredGone>",
+            "to_node": "file:src/gone.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredPresent>",
+            "to_node": "file:src/present.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:anchoredGone>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:anchoredPresent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:dupA>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:expiring>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:lowConfidence>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:polarityA>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 7,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "remember-polarityB",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "The cache layer is not invalidated on every deploy of the api service."
+        }
+      },
+      "result": {
+        "id": "<id:polarityB>",
+        "revision": 1,
+        "text": "The cache layer is not invalidated on every deploy of the api service.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-11-01T00:02:18.000Z",
+        "updatedAt": "2026-11-01T00:02:18.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:anchoredPresent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "present.ts exports the present flag used by the router.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:10.000Z",
+            "created_at": "2026-11-01T00:02:10.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredPresent>",
+              "revision": 1,
+              "text": "present.ts exports the present flag used by the router.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/present.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:10.000Z",
+              "updatedAt": "2026-11-01T00:02:10.000Z"
+            }
+          },
+          {
+            "id": "<id:anchoredGone>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "gone.ts holds the temporary migration helper for v2.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:11.000Z",
+            "created_at": "2026-11-01T00:02:11.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredGone>",
+              "revision": 1,
+              "text": "gone.ts holds the temporary migration helper for v2.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/gone.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:11.000Z",
+              "updatedAt": "2026-11-01T00:02:11.000Z"
+            }
+          },
+          {
+            "id": "<id:dupA>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "logs are shipped to the central collector every minute.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:12.000Z",
+            "created_at": "2026-11-01T00:02:12.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:dupA>",
+              "revision": 1,
+              "text": "Logs are shipped to the central collector every minute.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:12.000Z",
+              "updatedAt": "2026-11-01T00:02:12.000Z"
+            }
+          },
+          {
+            "id": "<id:session>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "session",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": "sess-old",
+            "canonical_text": "session scratch about the local proxy configuration.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:13.000Z",
+            "created_at": "2026-11-01T00:02:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:session>",
+              "revision": 1,
+              "text": "Session scratch about the local proxy configuration.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:13.000Z",
+              "updatedAt": "2026-11-01T00:02:13.000Z",
+              "ownerSessionId": "sess-old"
+            }
+          },
+          {
+            "id": "<id:expiring>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "temporary freeze on dependency upgrades until the audit completes.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:14.000Z",
+            "created_at": "2026-11-01T00:02:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:expiring>",
+              "revision": 1,
+              "text": "Temporary freeze on dependency upgrades until the audit completes.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:14.000Z",
+              "updatedAt": "2026-11-01T00:02:14.000Z",
+              "expiresAt": "2026-11-04T00:00:00.000Z"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "customer data never leaves the eu region.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:15.000Z",
+            "created_at": "2026-11-01T00:02:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Customer data never leaves the EU region.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:02:15.000Z",
+              "updatedAt": "2026-11-01T00:02:15.000Z",
+              "expiresAt": "2026-11-02T00:00:00.000Z"
+            }
+          },
+          {
+            "id": "<id:lowConfidence>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.3,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the analytics job might use a separate replica database.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:16.000Z",
+            "created_at": "2026-11-01T00:02:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:lowConfidence>",
+              "revision": 1,
+              "text": "The analytics job might use a separate replica database.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.3,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:16.000Z",
+              "updatedAt": "2026-11-01T00:02:16.000Z"
+            }
+          },
+          {
+            "id": "<id:polarityA>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the cache layer is invalidated on every deploy of the api service.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:17.000Z",
+            "created_at": "2026-11-01T00:02:17.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:polarityA>",
+              "revision": 1,
+              "text": "The cache layer is invalidated on every deploy of the api service.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:17.000Z",
+              "updatedAt": "2026-11-01T00:02:17.000Z"
+            }
+          },
+          {
+            "id": "<id:polarityB>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the cache layer is not invalidated on every deploy of the api service.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:18.000Z",
+            "created_at": "2026-11-01T00:02:18.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:polarityB>",
+              "revision": 1,
+              "text": "The cache layer is not invalidated on every deploy of the api service.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:18.000Z",
+              "updatedAt": "2026-11-01T00:02:18.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/gone.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "file:src/present.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredGone>",
+            "to_node": "file:src/gone.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredPresent>",
+            "to_node": "file:src/present.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:anchoredGone>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:anchoredPresent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:dupA>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:expiring>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:lowConfidence>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:polarityA>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:polarityB>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 8,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "hygiene-default",
+      "call": {
+        "method": "hygiene",
+        "input": {}
+      },
+      "result": {
+        "startedAt": "2026-11-09T00:02:19.000Z",
+        "completedAt": "2026-11-09T00:02:19.000Z",
+        "examined": 10,
+        "deduplicated": 1,
+        "superseded": 1,
+        "contradicted": 1,
+        "staled": 1,
+        "reviewCandidatesCreated": 1,
+        "archived": 0,
+        "archivedUnused": 0,
+        "deleted": 1,
+        "purgedDeleted": 0,
+        "verified": 9,
+        "reactivated": 0,
+        "transitiveMerges": 0
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:anchoredPresent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "present.ts exports the present flag used by the router.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:10.000Z",
+            "created_at": "2026-11-01T00:02:10.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredPresent>",
+              "revision": 1,
+              "text": "present.ts exports the present flag used by the router.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/present.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:10.000Z",
+              "updatedAt": "2026-11-01T00:02:10.000Z",
+              "lastVerifiedAt": "2026-11-09T00:02:19.000Z"
+            }
+          },
+          {
+            "id": "<id:anchoredGone>",
+            "status": "stale",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "gone.ts holds the temporary migration helper for v2.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "created_at": "2026-11-01T00:02:11.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredGone>",
+              "revision": 2,
+              "text": "gone.ts holds the temporary migration helper for v2.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "stale",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/gone.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:11.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z",
+              "lastVerifiedAt": "2026-11-09T00:02:19.000Z",
+              "staleReason": "verification"
+            }
+          },
+          {
+            "id": "<id:dupA>",
+            "status": "superseded",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "logs are shipped to the central collector every minute.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "created_at": "2026-11-01T00:02:12.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:dupA>",
+              "revision": 2,
+              "text": "Logs are shipped to the central collector every minute.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "superseded",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:12.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z",
+              "supersededBy": "01DUPLICATECOPY00000000000B"
+            }
+          },
+          {
+            "id": "<id:session>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "session",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": "sess-old",
+            "canonical_text": "session scratch about the local proxy configuration.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "created_at": "2026-11-01T00:02:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:session>",
+              "revision": 2,
+              "text": "Session scratch about the local proxy configuration.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:13.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z",
+              "ownerSessionId": "sess-old",
+              "contextPolicy": "never"
+            }
+          },
+          {
+            "id": "<id:expiring>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "temporary freeze on dependency upgrades until the audit completes.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:14.000Z",
+            "created_at": "2026-11-01T00:02:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:expiring>",
+              "revision": 1,
+              "text": "Temporary freeze on dependency upgrades until the audit completes.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:14.000Z",
+              "updatedAt": "2026-11-01T00:02:14.000Z",
+              "expiresAt": "2026-11-04T00:00:00.000Z"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "customer data never leaves the eu region.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:15.000Z",
+            "created_at": "2026-11-01T00:02:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Customer data never leaves the EU region.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:02:15.000Z",
+              "updatedAt": "2026-11-01T00:02:15.000Z",
+              "expiresAt": "2026-11-02T00:00:00.000Z"
+            }
+          },
+          {
+            "id": "<id:lowConfidence>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.3,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the analytics job might use a separate replica database.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:16.000Z",
+            "created_at": "2026-11-01T00:02:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:lowConfidence>",
+              "revision": 1,
+              "text": "The analytics job might use a separate replica database.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.3,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:16.000Z",
+              "updatedAt": "2026-11-01T00:02:16.000Z"
+            }
+          },
+          {
+            "id": "<id:polarityA>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the cache layer is invalidated on every deploy of the api service.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:17.000Z",
+            "created_at": "2026-11-01T00:02:17.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:polarityA>",
+              "revision": 1,
+              "text": "The cache layer is invalidated on every deploy of the api service.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:17.000Z",
+              "updatedAt": "2026-11-01T00:02:17.000Z"
+            }
+          },
+          {
+            "id": "<id:polarityB>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the cache layer is not invalidated on every deploy of the api service.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "created_at": "2026-11-01T00:02:18.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:polarityB>",
+              "revision": 2,
+              "text": "The cache layer is not invalidated on every deploy of the api service.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:18.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z",
+              "contradicts": [
+                "<id:polarityA>"
+              ]
+            }
+          },
+          {
+            "id": "01DUPLICATECOPY00000000000B",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "logs are shipped to the central collector every minute.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "created_at": "2026-11-01T00:02:18.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "01DUPLICATECOPY00000000000B",
+              "revision": 2,
+              "text": "Logs are shipped to the central collector every minute.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.7,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:18.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z",
+              "supersedes": [
+                "<id:dupA>"
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/gone.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "file:src/present.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredGone>",
+            "to_node": "file:src/gone.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredPresent>",
+            "to_node": "file:src/present.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          },
+          {
+            "from_node": "mem:<id:polarityB>",
+            "to_node": "mem:<id:polarityA>",
+            "relation": "contradicts",
+            "weight": 1,
+            "created_at": "2026-11-09T00:02:19.000Z"
+          },
+          {
+            "from_node": "mem:01DUPLICATECOPY00000000000B",
+            "to_node": "mem:<id:dupA>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-09T00:02:19.000Z"
+          }
+        ],
+        "candidates": [
+          {
+            "id": "<ulid:1>",
+            "status": "pending",
+            "created_at": "2026-11-09T00:02:19.000Z",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "canonical_text": "the cache layer is not invalidated on every deploy of the api service.",
+            "data": {
+              "id": "<ulid:1>",
+              "schemaVersion": 1,
+              "targetMemoryId": "<id:polarityB>",
+              "text": "The cache layer is not invalidated on every deploy of the api service.",
+              "kind": "memory_review",
+              "status": "pending",
+              "scope": "project",
+              "confidence": 0.75,
+              "importance": 0.6,
+              "reviewReason": "Possible contradiction with memory <id:polarityA>",
+              "suggestedAction": "investigate",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "session"
+                }
+              ],
+              "createdAt": "2026-11-09T00:02:19.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z"
+            }
+          },
+          {
+            "id": "<ulid:2>",
+            "status": "pending",
+            "created_at": "2026-11-09T00:02:19.000Z",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "canonical_text": "temporary freeze on dependency upgrades until the audit completes.",
+            "data": {
+              "id": "<ulid:2>",
+              "schemaVersion": 1,
+              "targetMemoryId": "<id:expiring>",
+              "text": "Temporary freeze on dependency upgrades until the audit completes.",
+              "kind": "memory_review",
+              "status": "pending",
+              "scope": "project",
+              "confidence": 0.6,
+              "importance": 0.4,
+              "reviewReason": "expires_at_passed",
+              "suggestedAction": "delete",
+              "tags": [
+                "persistence:long_lived"
+              ],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "session"
+                }
+              ],
+              "createdAt": "2026-11-09T00:02:19.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z"
+            }
+          }
+        ],
+        "auditEvents": [
+          {
+            "event": "memory.hygiene_dedup",
+            "data": {
+              "details": {
+                "deduplicated": 1,
+                "superseded": 1
+              }
+            }
+          },
+          {
+            "event": "memory.hygiene_contradictions",
+            "data": {
+              "details": {
+                "candidates": 1
+              }
+            }
+          },
+          {
+            "event": "memory.review_candidate_created",
+            "data": {
+              "memoryId": "<id:expiring>",
+              "reason": "expires_at_passed",
+              "details": {
+                "suggestedAction": "delete",
+                "ageDays": 8,
+                "persistence": "long_lived",
+                "status": "active",
+                "confidence": 0.75
+              }
+            }
+          },
+          {
+            "event": "memory.session_gc",
+            "data": {
+              "memoryId": "<id:session>",
+              "reason": "session_retention",
+              "details": {
+                "updatedAt": "2026-11-01T00:02:13.000Z",
+                "sessionRetentionDays": 7
+              }
+            }
+          },
+          {
+            "event": "memory.hygiene_completed",
+            "data": {
+              "details": {
+                "startedAt": "2026-11-09T00:02:19.000Z",
+                "completedAt": "2026-11-09T00:02:19.000Z",
+                "examined": 10,
+                "deduplicated": 1,
+                "superseded": 1,
+                "contradicted": 1,
+                "staled": 1,
+                "reviewCandidatesCreated": 1,
+                "archived": 0,
+                "archivedUnused": 0,
+                "deleted": 1,
+                "purgedDeleted": 0,
+                "verified": 9,
+                "reactivated": 0,
+                "transitiveMerges": 0
+              }
+            }
+          }
+        ],
+        "hq": [
+          {
+            "id": "<id:anchoredGone>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:anchoredPresent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:dupA>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:expiring>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:lowConfidence>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:polarityA>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:polarityB>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "01DUPLICATECOPY00000000000B",
+            "revision": 2,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 13,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "hygiene-after-31-days",
+      "call": {
+        "method": "hygiene",
+        "input": {}
+      },
+      "result": {
+        "startedAt": "2026-12-10T00:02:20.000Z",
+        "completedAt": "2026-12-10T00:02:20.000Z",
+        "examined": 7,
+        "deduplicated": 0,
+        "superseded": 0,
+        "contradicted": 0,
+        "staled": 0,
+        "reviewCandidatesCreated": 1,
+        "archived": 0,
+        "archivedUnused": 0,
+        "deleted": 0,
+        "purgedDeleted": 0,
+        "verified": 7,
+        "reactivated": 0,
+        "transitiveMerges": 0
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:anchoredPresent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "present.ts exports the present flag used by the router.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:10.000Z",
+            "created_at": "2026-11-01T00:02:10.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredPresent>",
+              "revision": 1,
+              "text": "present.ts exports the present flag used by the router.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/present.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:10.000Z",
+              "updatedAt": "2026-11-01T00:02:10.000Z",
+              "lastVerifiedAt": "2026-12-10T00:02:20.000Z"
+            }
+          },
+          {
+            "id": "<id:anchoredGone>",
+            "status": "stale",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "gone.ts holds the temporary migration helper for v2.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "created_at": "2026-11-01T00:02:11.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredGone>",
+              "revision": 2,
+              "text": "gone.ts holds the temporary migration helper for v2.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "stale",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/gone.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:11.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z",
+              "lastVerifiedAt": "2026-11-09T00:02:19.000Z",
+              "staleReason": "verification"
+            }
+          },
+          {
+            "id": "<id:dupA>",
+            "status": "superseded",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "logs are shipped to the central collector every minute.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "created_at": "2026-11-01T00:02:12.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:dupA>",
+              "revision": 2,
+              "text": "Logs are shipped to the central collector every minute.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "superseded",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:12.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z",
+              "supersededBy": "01DUPLICATECOPY00000000000B"
+            }
+          },
+          {
+            "id": "<id:session>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "session",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": "sess-old",
+            "canonical_text": "session scratch about the local proxy configuration.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "created_at": "2026-11-01T00:02:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:session>",
+              "revision": 2,
+              "text": "Session scratch about the local proxy configuration.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:13.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z",
+              "ownerSessionId": "sess-old",
+              "contextPolicy": "never"
+            }
+          },
+          {
+            "id": "<id:expiring>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "temporary freeze on dependency upgrades until the audit completes.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:14.000Z",
+            "created_at": "2026-11-01T00:02:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:expiring>",
+              "revision": 1,
+              "text": "Temporary freeze on dependency upgrades until the audit completes.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:14.000Z",
+              "updatedAt": "2026-11-01T00:02:14.000Z",
+              "expiresAt": "2026-11-04T00:00:00.000Z"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "customer data never leaves the eu region.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:15.000Z",
+            "created_at": "2026-11-01T00:02:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Customer data never leaves the EU region.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:02:15.000Z",
+              "updatedAt": "2026-11-01T00:02:15.000Z",
+              "expiresAt": "2026-11-02T00:00:00.000Z"
+            }
+          },
+          {
+            "id": "<id:lowConfidence>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.3,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the analytics job might use a separate replica database.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:16.000Z",
+            "created_at": "2026-11-01T00:02:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:lowConfidence>",
+              "revision": 1,
+              "text": "The analytics job might use a separate replica database.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.3,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:16.000Z",
+              "updatedAt": "2026-11-01T00:02:16.000Z"
+            }
+          },
+          {
+            "id": "<id:polarityA>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the cache layer is invalidated on every deploy of the api service.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:17.000Z",
+            "created_at": "2026-11-01T00:02:17.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:polarityA>",
+              "revision": 1,
+              "text": "The cache layer is invalidated on every deploy of the api service.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:17.000Z",
+              "updatedAt": "2026-11-01T00:02:17.000Z"
+            }
+          },
+          {
+            "id": "<id:polarityB>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the cache layer is not invalidated on every deploy of the api service.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "created_at": "2026-11-01T00:02:18.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:polarityB>",
+              "revision": 2,
+              "text": "The cache layer is not invalidated on every deploy of the api service.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:18.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z",
+              "contradicts": [
+                "<id:polarityA>"
+              ]
+            }
+          },
+          {
+            "id": "01DUPLICATECOPY00000000000B",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "logs are shipped to the central collector every minute.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "created_at": "2026-11-01T00:02:18.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "01DUPLICATECOPY00000000000B",
+              "revision": 2,
+              "text": "Logs are shipped to the central collector every minute.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.7,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:18.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z",
+              "supersedes": [
+                "<id:dupA>"
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/gone.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "file:src/present.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredGone>",
+            "to_node": "file:src/gone.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredPresent>",
+            "to_node": "file:src/present.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          },
+          {
+            "from_node": "mem:<id:polarityB>",
+            "to_node": "mem:<id:polarityA>",
+            "relation": "contradicts",
+            "weight": 1,
+            "created_at": "2026-11-09T00:02:19.000Z"
+          },
+          {
+            "from_node": "mem:01DUPLICATECOPY00000000000B",
+            "to_node": "mem:<id:dupA>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-09T00:02:19.000Z"
+          }
+        ],
+        "candidates": [
+          {
+            "id": "<ulid:1>",
+            "status": "pending",
+            "created_at": "2026-11-09T00:02:19.000Z",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "canonical_text": "the cache layer is not invalidated on every deploy of the api service.",
+            "data": {
+              "id": "<ulid:1>",
+              "schemaVersion": 1,
+              "targetMemoryId": "<id:polarityB>",
+              "text": "The cache layer is not invalidated on every deploy of the api service.",
+              "kind": "memory_review",
+              "status": "pending",
+              "scope": "project",
+              "confidence": 0.75,
+              "importance": 0.6,
+              "reviewReason": "Possible contradiction with memory <id:polarityA>",
+              "suggestedAction": "investigate",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "session"
+                }
+              ],
+              "createdAt": "2026-11-09T00:02:19.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z"
+            }
+          },
+          {
+            "id": "<ulid:2>",
+            "status": "pending",
+            "created_at": "2026-11-09T00:02:19.000Z",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "canonical_text": "temporary freeze on dependency upgrades until the audit completes.",
+            "data": {
+              "id": "<ulid:2>",
+              "schemaVersion": 1,
+              "targetMemoryId": "<id:expiring>",
+              "text": "Temporary freeze on dependency upgrades until the audit completes.",
+              "kind": "memory_review",
+              "status": "pending",
+              "scope": "project",
+              "confidence": 0.6,
+              "importance": 0.4,
+              "reviewReason": "expires_at_passed",
+              "suggestedAction": "delete",
+              "tags": [
+                "persistence:long_lived"
+              ],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "session"
+                }
+              ],
+              "createdAt": "2026-11-09T00:02:19.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z"
+            }
+          },
+          {
+            "id": "<ulid:3>",
+            "status": "pending",
+            "created_at": "2026-12-10T00:02:20.000Z",
+            "updated_at": "2026-12-10T00:02:20.000Z",
+            "canonical_text": "the analytics job might use a separate replica database.",
+            "data": {
+              "id": "<ulid:3>",
+              "schemaVersion": 1,
+              "targetMemoryId": "<id:lowConfidence>",
+              "text": "The analytics job might use a separate replica database.",
+              "kind": "memory_review",
+              "status": "pending",
+              "scope": "project",
+              "confidence": 0.6,
+              "importance": 0.4,
+              "reviewReason": "confidence_low",
+              "suggestedAction": "investigate",
+              "tags": [
+                "persistence:long_lived"
+              ],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "session"
+                }
+              ],
+              "createdAt": "2026-12-10T00:02:20.000Z",
+              "updatedAt": "2026-12-10T00:02:20.000Z"
+            }
+          }
+        ],
+        "auditEvents": [
+          {
+            "event": "memory.hygiene_dedup",
+            "data": {
+              "details": {
+                "deduplicated": 0,
+                "superseded": 0
+              }
+            }
+          },
+          {
+            "event": "memory.review_candidate_created",
+            "data": {
+              "memoryId": "<id:lowConfidence>",
+              "reason": "confidence_low",
+              "details": {
+                "suggestedAction": "investigate",
+                "ageDays": 39,
+                "persistence": "long_lived",
+                "status": "active",
+                "confidence": 0.3
+              }
+            }
+          },
+          {
+            "event": "memory.hygiene_completed",
+            "data": {
+              "details": {
+                "startedAt": "2026-12-10T00:02:20.000Z",
+                "completedAt": "2026-12-10T00:02:20.000Z",
+                "examined": 7,
+                "deduplicated": 0,
+                "superseded": 0,
+                "contradicted": 0,
+                "staled": 0,
+                "reviewCandidatesCreated": 1,
+                "archived": 0,
+                "archivedUnused": 0,
+                "deleted": 0,
+                "purgedDeleted": 0,
+                "verified": 7,
+                "reactivated": 0,
+                "transitiveMerges": 0
+              }
+            }
+          }
+        ],
+        "hq": [
+          {
+            "id": "<id:anchoredGone>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:anchoredPresent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:dupA>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:expiring>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:lowConfidence>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:polarityA>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:polarityB>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "01DUPLICATECOPY00000000000B",
+            "revision": 2,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 13,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "hygiene-purge",
+      "call": {
+        "method": "hygiene",
+        "input": {
+          "purgeDeletedAfterDays": 1
+        }
+      },
+      "result": {
+        "startedAt": "2026-12-10T00:02:21.000Z",
+        "completedAt": "2026-12-10T00:02:21.000Z",
+        "examined": 7,
+        "deduplicated": 0,
+        "superseded": 0,
+        "contradicted": 0,
+        "staled": 0,
+        "reviewCandidatesCreated": 0,
+        "archived": 0,
+        "archivedUnused": 0,
+        "deleted": 0,
+        "purgedDeleted": 1,
+        "verified": 7,
+        "reactivated": 0,
+        "transitiveMerges": 0
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:anchoredPresent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "present.ts exports the present flag used by the router.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:10.000Z",
+            "created_at": "2026-11-01T00:02:10.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredPresent>",
+              "revision": 1,
+              "text": "present.ts exports the present flag used by the router.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/present.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:10.000Z",
+              "updatedAt": "2026-11-01T00:02:10.000Z",
+              "lastVerifiedAt": "2026-12-10T00:02:21.000Z"
+            }
+          },
+          {
+            "id": "<id:anchoredGone>",
+            "status": "stale",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "gone.ts holds the temporary migration helper for v2.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "created_at": "2026-11-01T00:02:11.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredGone>",
+              "revision": 2,
+              "text": "gone.ts holds the temporary migration helper for v2.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "stale",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/gone.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:11.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z",
+              "lastVerifiedAt": "2026-11-09T00:02:19.000Z",
+              "staleReason": "verification"
+            }
+          },
+          {
+            "id": "<id:dupA>",
+            "status": "superseded",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "logs are shipped to the central collector every minute.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "created_at": "2026-11-01T00:02:12.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:dupA>",
+              "revision": 2,
+              "text": "Logs are shipped to the central collector every minute.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "superseded",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:12.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z",
+              "supersededBy": "01DUPLICATECOPY00000000000B"
+            }
+          },
+          {
+            "id": "<id:expiring>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "temporary freeze on dependency upgrades until the audit completes.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:14.000Z",
+            "created_at": "2026-11-01T00:02:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:expiring>",
+              "revision": 1,
+              "text": "Temporary freeze on dependency upgrades until the audit completes.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:14.000Z",
+              "updatedAt": "2026-11-01T00:02:14.000Z",
+              "expiresAt": "2026-11-04T00:00:00.000Z"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "customer data never leaves the eu region.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:15.000Z",
+            "created_at": "2026-11-01T00:02:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Customer data never leaves the EU region.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:02:15.000Z",
+              "updatedAt": "2026-11-01T00:02:15.000Z",
+              "expiresAt": "2026-11-02T00:00:00.000Z"
+            }
+          },
+          {
+            "id": "<id:lowConfidence>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.3,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the analytics job might use a separate replica database.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:16.000Z",
+            "created_at": "2026-11-01T00:02:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:lowConfidence>",
+              "revision": 1,
+              "text": "The analytics job might use a separate replica database.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.3,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:16.000Z",
+              "updatedAt": "2026-11-01T00:02:16.000Z"
+            }
+          },
+          {
+            "id": "<id:polarityA>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the cache layer is invalidated on every deploy of the api service.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:17.000Z",
+            "created_at": "2026-11-01T00:02:17.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:polarityA>",
+              "revision": 1,
+              "text": "The cache layer is invalidated on every deploy of the api service.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:17.000Z",
+              "updatedAt": "2026-11-01T00:02:17.000Z"
+            }
+          },
+          {
+            "id": "<id:polarityB>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the cache layer is not invalidated on every deploy of the api service.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "created_at": "2026-11-01T00:02:18.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:polarityB>",
+              "revision": 2,
+              "text": "The cache layer is not invalidated on every deploy of the api service.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:18.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z",
+              "contradicts": [
+                "<id:polarityA>"
+              ]
+            }
+          },
+          {
+            "id": "01DUPLICATECOPY00000000000B",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "logs are shipped to the central collector every minute.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "created_at": "2026-11-01T00:02:18.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "01DUPLICATECOPY00000000000B",
+              "revision": 2,
+              "text": "Logs are shipped to the central collector every minute.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.7,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:18.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z",
+              "supersedes": [
+                "<id:dupA>"
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/gone.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "file:src/present.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredGone>",
+            "to_node": "file:src/gone.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredPresent>",
+            "to_node": "file:src/present.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          },
+          {
+            "from_node": "mem:<id:polarityB>",
+            "to_node": "mem:<id:polarityA>",
+            "relation": "contradicts",
+            "weight": 1,
+            "created_at": "2026-11-09T00:02:19.000Z"
+          },
+          {
+            "from_node": "mem:01DUPLICATECOPY00000000000B",
+            "to_node": "mem:<id:dupA>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-09T00:02:19.000Z"
+          }
+        ],
+        "candidates": [
+          {
+            "id": "<ulid:1>",
+            "status": "pending",
+            "created_at": "2026-11-09T00:02:19.000Z",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "canonical_text": "the cache layer is not invalidated on every deploy of the api service.",
+            "data": {
+              "id": "<ulid:1>",
+              "schemaVersion": 1,
+              "targetMemoryId": "<id:polarityB>",
+              "text": "The cache layer is not invalidated on every deploy of the api service.",
+              "kind": "memory_review",
+              "status": "pending",
+              "scope": "project",
+              "confidence": 0.75,
+              "importance": 0.6,
+              "reviewReason": "Possible contradiction with memory <id:polarityA>",
+              "suggestedAction": "investigate",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "session"
+                }
+              ],
+              "createdAt": "2026-11-09T00:02:19.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z"
+            }
+          },
+          {
+            "id": "<ulid:2>",
+            "status": "pending",
+            "created_at": "2026-11-09T00:02:19.000Z",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "canonical_text": "temporary freeze on dependency upgrades until the audit completes.",
+            "data": {
+              "id": "<ulid:2>",
+              "schemaVersion": 1,
+              "targetMemoryId": "<id:expiring>",
+              "text": "Temporary freeze on dependency upgrades until the audit completes.",
+              "kind": "memory_review",
+              "status": "pending",
+              "scope": "project",
+              "confidence": 0.6,
+              "importance": 0.4,
+              "reviewReason": "expires_at_passed",
+              "suggestedAction": "delete",
+              "tags": [
+                "persistence:long_lived"
+              ],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "session"
+                }
+              ],
+              "createdAt": "2026-11-09T00:02:19.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z"
+            }
+          },
+          {
+            "id": "<ulid:3>",
+            "status": "pending",
+            "created_at": "2026-12-10T00:02:20.000Z",
+            "updated_at": "2026-12-10T00:02:20.000Z",
+            "canonical_text": "the analytics job might use a separate replica database.",
+            "data": {
+              "id": "<ulid:3>",
+              "schemaVersion": 1,
+              "targetMemoryId": "<id:lowConfidence>",
+              "text": "The analytics job might use a separate replica database.",
+              "kind": "memory_review",
+              "status": "pending",
+              "scope": "project",
+              "confidence": 0.6,
+              "importance": 0.4,
+              "reviewReason": "confidence_low",
+              "suggestedAction": "investigate",
+              "tags": [
+                "persistence:long_lived"
+              ],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "session"
+                }
+              ],
+              "createdAt": "2026-12-10T00:02:20.000Z",
+              "updatedAt": "2026-12-10T00:02:20.000Z"
+            }
+          }
+        ],
+        "auditEvents": [
+          {
+            "event": "memory.hygiene_dedup",
+            "data": {
+              "details": {
+                "deduplicated": 0,
+                "superseded": 0
+              }
+            }
+          },
+          {
+            "event": "memory.purge_deleted",
+            "data": {
+              "details": {
+                "purgedDeleted": 1,
+                "purgeDeletedAfterDays": 1
+              }
+            }
+          },
+          {
+            "event": "memory.hygiene_completed",
+            "data": {
+              "details": {
+                "startedAt": "2026-12-10T00:02:21.000Z",
+                "completedAt": "2026-12-10T00:02:21.000Z",
+                "examined": 7,
+                "deduplicated": 0,
+                "superseded": 0,
+                "contradicted": 0,
+                "staled": 0,
+                "reviewCandidatesCreated": 0,
+                "archived": 0,
+                "archivedUnused": 0,
+                "deleted": 0,
+                "purgedDeleted": 1,
+                "verified": 7,
+                "reactivated": 0,
+                "transitiveMerges": 0
+              }
+            }
+          }
+        ],
+        "hq": [
+          {
+            "id": "<id:anchoredGone>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:anchoredPresent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:dupA>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:expiring>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:lowConfidence>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:polarityA>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:polarityB>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "01DUPLICATECOPY00000000000B",
+            "revision": 2,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 13,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "hygiene-reactivates-verification-stale",
+      "call": {
+        "method": "hygiene",
+        "input": {
+          "nearDedup": false
+        }
+      },
+      "result": {
+        "startedAt": "2026-12-10T00:02:22.000Z",
+        "completedAt": "2026-12-10T00:02:22.000Z",
+        "examined": 7,
+        "deduplicated": 0,
+        "superseded": 0,
+        "contradicted": 0,
+        "staled": 0,
+        "reviewCandidatesCreated": 0,
+        "archived": 0,
+        "archivedUnused": 0,
+        "deleted": 0,
+        "purgedDeleted": 0,
+        "verified": 7,
+        "reactivated": 1,
+        "transitiveMerges": 0
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:anchoredPresent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "present.ts exports the present flag used by the router.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:10.000Z",
+            "created_at": "2026-11-01T00:02:10.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredPresent>",
+              "revision": 1,
+              "text": "present.ts exports the present flag used by the router.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/present.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:10.000Z",
+              "updatedAt": "2026-11-01T00:02:10.000Z",
+              "lastVerifiedAt": "2026-12-10T00:02:22.000Z"
+            }
+          },
+          {
+            "id": "<id:anchoredGone>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "gone.ts holds the temporary migration helper for v2.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-10T00:02:22.000Z",
+            "created_at": "2026-11-01T00:02:11.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:anchoredGone>",
+              "revision": 3,
+              "text": "gone.ts holds the temporary migration helper for v2.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/gone.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:11.000Z",
+              "updatedAt": "2026-12-10T00:02:22.000Z",
+              "lastVerifiedAt": "2026-12-10T00:02:22.000Z"
+            }
+          },
+          {
+            "id": "<id:dupA>",
+            "status": "superseded",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "logs are shipped to the central collector every minute.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "created_at": "2026-11-01T00:02:12.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:dupA>",
+              "revision": 2,
+              "text": "Logs are shipped to the central collector every minute.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "superseded",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:12.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z",
+              "supersededBy": "01DUPLICATECOPY00000000000B"
+            }
+          },
+          {
+            "id": "<id:expiring>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "temporary freeze on dependency upgrades until the audit completes.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:14.000Z",
+            "created_at": "2026-11-01T00:02:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:expiring>",
+              "revision": 1,
+              "text": "Temporary freeze on dependency upgrades until the audit completes.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:14.000Z",
+              "updatedAt": "2026-11-01T00:02:14.000Z",
+              "expiresAt": "2026-11-04T00:00:00.000Z"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "customer data never leaves the eu region.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:15.000Z",
+            "created_at": "2026-11-01T00:02:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Customer data never leaves the EU region.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:02:15.000Z",
+              "updatedAt": "2026-11-01T00:02:15.000Z",
+              "expiresAt": "2026-11-02T00:00:00.000Z"
+            }
+          },
+          {
+            "id": "<id:lowConfidence>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.3,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the analytics job might use a separate replica database.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:16.000Z",
+            "created_at": "2026-11-01T00:02:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:lowConfidence>",
+              "revision": 1,
+              "text": "The analytics job might use a separate replica database.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.3,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:16.000Z",
+              "updatedAt": "2026-11-01T00:02:16.000Z"
+            }
+          },
+          {
+            "id": "<id:polarityA>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the cache layer is invalidated on every deploy of the api service.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:02:17.000Z",
+            "created_at": "2026-11-01T00:02:17.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:polarityA>",
+              "revision": 1,
+              "text": "The cache layer is invalidated on every deploy of the api service.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:17.000Z",
+              "updatedAt": "2026-11-01T00:02:17.000Z"
+            }
+          },
+          {
+            "id": "<id:polarityB>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the cache layer is not invalidated on every deploy of the api service.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "created_at": "2026-11-01T00:02:18.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:polarityB>",
+              "revision": 2,
+              "text": "The cache layer is not invalidated on every deploy of the api service.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:18.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z",
+              "contradicts": [
+                "<id:polarityA>"
+              ]
+            }
+          },
+          {
+            "id": "01DUPLICATECOPY00000000000B",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "logs are shipped to the central collector every minute.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "created_at": "2026-11-01T00:02:18.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "01DUPLICATECOPY00000000000B",
+              "revision": 2,
+              "text": "Logs are shipped to the central collector every minute.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.7,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:02:18.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z",
+              "supersedes": [
+                "<id:dupA>"
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/gone.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "file:src/present.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredGone>",
+            "to_node": "file:src/gone.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:11.000Z"
+          },
+          {
+            "from_node": "mem:<id:anchoredPresent>",
+            "to_node": "file:src/present.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:02:10.000Z"
+          },
+          {
+            "from_node": "mem:<id:polarityB>",
+            "to_node": "mem:<id:polarityA>",
+            "relation": "contradicts",
+            "weight": 1,
+            "created_at": "2026-11-09T00:02:19.000Z"
+          },
+          {
+            "from_node": "mem:01DUPLICATECOPY00000000000B",
+            "to_node": "mem:<id:dupA>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-09T00:02:19.000Z"
+          }
+        ],
+        "candidates": [
+          {
+            "id": "<ulid:1>",
+            "status": "pending",
+            "created_at": "2026-11-09T00:02:19.000Z",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "canonical_text": "the cache layer is not invalidated on every deploy of the api service.",
+            "data": {
+              "id": "<ulid:1>",
+              "schemaVersion": 1,
+              "targetMemoryId": "<id:polarityB>",
+              "text": "The cache layer is not invalidated on every deploy of the api service.",
+              "kind": "memory_review",
+              "status": "pending",
+              "scope": "project",
+              "confidence": 0.75,
+              "importance": 0.6,
+              "reviewReason": "Possible contradiction with memory <id:polarityA>",
+              "suggestedAction": "investigate",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "session"
+                }
+              ],
+              "createdAt": "2026-11-09T00:02:19.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z"
+            }
+          },
+          {
+            "id": "<ulid:2>",
+            "status": "pending",
+            "created_at": "2026-11-09T00:02:19.000Z",
+            "updated_at": "2026-11-09T00:02:19.000Z",
+            "canonical_text": "temporary freeze on dependency upgrades until the audit completes.",
+            "data": {
+              "id": "<ulid:2>",
+              "schemaVersion": 1,
+              "targetMemoryId": "<id:expiring>",
+              "text": "Temporary freeze on dependency upgrades until the audit completes.",
+              "kind": "memory_review",
+              "status": "pending",
+              "scope": "project",
+              "confidence": 0.6,
+              "importance": 0.4,
+              "reviewReason": "expires_at_passed",
+              "suggestedAction": "delete",
+              "tags": [
+                "persistence:long_lived"
+              ],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "session"
+                }
+              ],
+              "createdAt": "2026-11-09T00:02:19.000Z",
+              "updatedAt": "2026-11-09T00:02:19.000Z"
+            }
+          },
+          {
+            "id": "<ulid:3>",
+            "status": "pending",
+            "created_at": "2026-12-10T00:02:20.000Z",
+            "updated_at": "2026-12-10T00:02:20.000Z",
+            "canonical_text": "the analytics job might use a separate replica database.",
+            "data": {
+              "id": "<ulid:3>",
+              "schemaVersion": 1,
+              "targetMemoryId": "<id:lowConfidence>",
+              "text": "The analytics job might use a separate replica database.",
+              "kind": "memory_review",
+              "status": "pending",
+              "scope": "project",
+              "confidence": 0.6,
+              "importance": 0.4,
+              "reviewReason": "confidence_low",
+              "suggestedAction": "investigate",
+              "tags": [
+                "persistence:long_lived"
+              ],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "session"
+                }
+              ],
+              "createdAt": "2026-12-10T00:02:20.000Z",
+              "updatedAt": "2026-12-10T00:02:20.000Z"
+            }
+          }
+        ],
+        "auditEvents": [
+          {
+            "event": "memory.hygiene_dedup",
+            "data": {
+              "details": {
+                "deduplicated": 0,
+                "superseded": 0
+              }
+            }
+          },
+          {
+            "event": "memory.hygiene_completed",
+            "data": {
+              "details": {
+                "startedAt": "2026-12-10T00:02:22.000Z",
+                "completedAt": "2026-12-10T00:02:22.000Z",
+                "examined": 7,
+                "deduplicated": 0,
+                "superseded": 0,
+                "contradicted": 0,
+                "staled": 0,
+                "reviewCandidatesCreated": 0,
+                "archived": 0,
+                "archivedUnused": 0,
+                "deleted": 0,
+                "purgedDeleted": 0,
+                "verified": 7,
+                "reactivated": 1,
+                "transitiveMerges": 0
+              }
+            }
+          }
+        ],
+        "hq": [
+          {
+            "id": "<id:anchoredGone>",
+            "revision": 3,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:anchoredPresent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:dupA>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:expiring>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:lowConfidence>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:polarityA>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:polarityB>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "01DUPLICATECOPY00000000000B",
+            "revision": 2,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 14,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    }
+  ]
+}

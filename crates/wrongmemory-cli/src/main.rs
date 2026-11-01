@@ -2,6 +2,7 @@
 //! bridge (`wrongmemory mcp`). JSON output goes to stdout, diagnostics to
 //! stderr; exit codes follow `wrongmemory_contracts::exit_code`.
 
+mod connect;
 mod mcp;
 mod spawn;
 
@@ -99,10 +100,14 @@ enum Cmd {
         #[arg(long, default_value = "mcp-client")]
         client: String,
     },
-    /// Print client configuration for an MCP server entry (no file is edited).
-    Connect {
+    /// Add the owned `wrongmemory` MCP entry to a client configuration.
+    Connect(connect::ConnectArgs),
+    /// Remove the owned MCP entry and guidance block.
+    Disconnect(connect::DisconnectArgs),
+    /// Read-only client checks.
+    Client {
         #[command(subcommand)]
-        action: ConnectCmd,
+        action: ClientCmd,
     },
 }
 
@@ -193,25 +198,10 @@ enum CandidateCmd {
     },
 }
 
-#[derive(Debug, Clone, Copy, ValueEnum)]
-enum ConfigFormat {
-    Json,
-    Toml,
-}
-
 #[derive(Debug, Subcommand)]
-enum ConnectCmd {
-    /// Print an `mcpServers` (JSON) or `mcp_servers` (TOML) entry.
-    Print {
-        #[arg(long)]
-        project: String,
-        #[arg(long)]
-        grant: String,
-        #[arg(long, value_enum, default_value = "json")]
-        format: ConfigFormat,
-        #[arg(long, default_value = "external-agent")]
-        client: String,
-    },
+enum ClientCmd {
+    /// Check a client's configuration, executable, grant and daemon.
+    Doctor(connect::DoctorArgs),
 }
 
 fn main() -> ExitCode {
@@ -635,47 +625,13 @@ async fn run(cli: Cli, root: DataRoot) -> i32 {
                 return exit_code::SERVICE_UNAVAILABLE;
             }
         }
-        Cmd::Connect { action } => {
-            match action {
-                ConnectCmd::Print {
-                    project,
-                    grant,
-                    format,
-                    client,
-                } => {
-                    let exe = std::env::current_exe()
-                        .map(|p| p.display().to_string().replace('\\', "/"))
-                        .unwrap_or_else(|_| "wrongmemory".into());
-                    let mut args = vec![
-                        "mcp".to_string(),
-                        "--project".into(),
-                        project,
-                        "--grant".into(),
-                        grant,
-                        "--client".into(),
-                        client,
-                    ];
-                    if let Some(dr) = &cli.data_root {
-                        args.push("--data-root".into());
-                        args.push(dr.display().to_string().replace('\\', "/"));
-                    }
-                    match format {
-                    ConfigFormat::Json => println!(
-                        "{}",
-                        serde_json::to_string_pretty(&json!({"mcpServers": {"wrongmemory": {"command": exe, "args": args}}}))
-                            .unwrap_or_default()
-                    ),
-                    ConfigFormat::Toml => {
-                        let quoted: Vec<String> = args.iter().map(|a| format!("{a:?}")).collect();
-                        println!(
-                            "[mcp_servers.wrongmemory]\ncommand = {exe:?}\nargs = [{}]\nstartup_timeout_sec = 15\ntool_timeout_sec = 30",
-                            quoted.join(", ")
-                        );
-                    }
-                }
-                }
-            }
+        Cmd::Connect(args) => {
+            return connect::run_connect(&root, cli.data_root.as_deref(), j, args).await;
         }
+        Cmd::Disconnect(args) => return connect::run_disconnect(&root, j, args).await,
+        Cmd::Client {
+            action: ClientCmd::Doctor(args),
+        } => return connect::run_doctor(&root, j, args).await,
     }
     exit_code::SUCCESS
 }

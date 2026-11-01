@@ -1,0 +1,43 @@
+{
+  "formatVersion": 1,
+  "serverName": "wrongmemory",
+  "accessed": "2026-11-01",
+  "implementation": "crates/wrongmemory-cli/src/connect.rs (layout())",
+  "ownership": {
+    "entry": "only mcpServers.wrongmemory (JSON) or [mcp_servers.wrongmemory] (TOML) is written or removed",
+    "guidanceBlock": "<!-- wrongmemory:begin --> ... <!-- wrongmemory:end --> inside a shared instructions file",
+    "guidanceOwnedFile": "Cursor rule file .cursor/rules/wrongmemory.mdc is owned whole",
+    "backupSuffix": ".wrongmemory.bak",
+    "secrets": "never written; args carry only project and grant IDs"
+  },
+  "clientVersionsTested": "NOT RUN: presets are verified against temp-dir fixtures only, not installed clients",
+  "presets": {
+    "claude-code": {
+      "format": "json",
+      "project": {"config": ".mcp.json", "key": "mcpServers", "guidance": "CLAUDE.md (block)"},
+      "user": {"config": "~/.claude.json", "key": "mcpServers (top level = user scope)", "guidance": "~/.claude/CLAUDE.md (block)"},
+      "notLocal": "local scope (~/.claude.json projects[<path>].mcpServers) is not managed",
+      "docs": ["https://code.claude.com/docs/en/mcp"]
+    },
+    "codex": {
+      "format": "toml",
+      "project": {"config": ".codex/config.toml", "table": "mcp_servers.wrongmemory", "guidance": "AGENTS.md (block)", "note": "trusted projects only"},
+      "user": {"config": "~/.codex/config.toml", "table": "mcp_servers.wrongmemory", "guidance": "~/.codex/AGENTS.md (block)"},
+      "keys": ["command", "args", "startup_timeout_sec = 15", "tool_timeout_sec = 30"],
+      "docs": ["https://learn.chatgpt.com/docs/extend/mcp?surface=cli"]
+    },
+    "cursor": {
+      "format": "json",
+      "project": {"config": ".cursor/mcp.json", "key": "mcpServers", "guidance": ".cursor/rules/wrongmemory.mdc (owned file)"},
+      "user": {"config": "~/.cursor/mcp.json", "key": "mcpServers", "guidance": "not supported (settings UI)"},
+      "docs": ["https://cursor.com/docs/mcp"]
+    },
+    "antigravity": {
+      "format": "json",
+      "project": {"config": ".agents/mcp_config.json", "key": "mcpServers", "guidance": "AGENTS.md (block)"},
+      "user": {"config": "~/.gemini/config/mcp_config.json", "key": "mcpServers", "guidance": "not supported"},
+      "docs": ["https://antigravity.google/docs/mcp"],
+      "crossCheck": "WrongStack packages/cli/src/sage-connect.ts at 222d23a uses the same two paths"
+    }
+  }
+}

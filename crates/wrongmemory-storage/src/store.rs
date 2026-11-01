@@ -20,8 +20,8 @@ use sha2::{Digest, Sha256};
 use wrongmemory_contracts::{
     ANCHOR_TYPES, CANDIDATE_STATUSES, ErrorBody, ErrorCode, MAX_METADATA_ITEMS, MAX_PAGE_SIZE,
     MAX_TEXT_CHARS, MAX_VALIDITY_CHECKS, MemoryAnchor, MemoryCandidate, MutationOutcome,
-    PERSISTENCE_CLASSES, ProposeParams, RememberParams, SAGE_KINDS, SAGE_SCOPES, SAGE_STATUSES,
-    SOURCE_TYPES, SUGGESTED_ACTIONS, SageRecord, SearchHit, SearchResult,
+    ProposeParams, RememberParams, SAGE_KINDS, SAGE_SCOPES, SAGE_STATUSES, SUGGESTED_ACTIONS,
+    SageRecord, SearchHit, SearchResult,
 };
 
 use crate::inspect::{self, Inspection};
@@ -74,7 +74,7 @@ pub struct MutationCtx {
 }
 
 pub struct SageStore {
-    conn: Connection,
+    pub(crate) conn: Connection,
     path: PathBuf,
     writable: bool,
     fts: bool,
@@ -582,29 +582,7 @@ impl SageStore {
         p: &RememberParams,
         ctx: &MutationCtx,
     ) -> StoreResult<MutationOutcome> {
-        self.require_writable()?;
-        let fingerprint = fingerprint(&serde_json::to_value(p).unwrap_or(Value::Null));
-        let built = self.build_memory(p, ctx)?;
-        self.with_receipt(ctx, "memory.remember", &fingerprint, |conn| {
-            insert_memory(conn, &built)?;
-            sync_anchor_edges(conn, &built, &ctx.now_iso)?;
-            audit(
-                conn,
-                "memory.accepted",
-                &ctx.now_iso,
-                json!({
-                    "memoryId": built.id, "kind": built.kind, "source": "wrongmemory",
-                    "principal": ctx.principal_id,
-                }),
-            )?;
-            Ok(MutationOutcome {
-                outcome: "memory-committed".into(),
-                id: built.id.clone(),
-                revision: Some(built.revision),
-                replayed: false,
-                record: serde_json::to_value(&built).unwrap_or(Value::Null),
-            })
-        })
+        self.remember_full(p, ctx)
     }
 
     /// Create a pending review candidate. Never touches `memories`.
@@ -616,7 +594,7 @@ impl SageStore {
         self.require_writable()?;
         let fingerprint = fingerprint(&serde_json::to_value(p).unwrap_or(Value::Null));
         let candidate = self.build_candidate(p, ctx)?;
-        self.with_receipt(ctx, "candidate.propose", &fingerprint, |conn| {
+        self.with_receipt(ctx, "candidate.propose", &fingerprint, |conn| (|| -> rusqlite::Result<MutationOutcome> {
             let data = serde_json::to_string(&candidate)
                 .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
             conn.execute(
@@ -644,10 +622,10 @@ impl SageStore {
                 replayed: false,
                 record: serde_json::to_value(&candidate).unwrap_or(Value::Null),
             })
-        })
+        })().map_err(sql_err))
     }
 
-    fn require_writable(&self) -> StoreResult<()> {
+    pub(crate) fn require_writable(&self) -> StoreResult<()> {
         if self.writable {
             Ok(())
         } else {
@@ -658,12 +636,12 @@ impl SageStore {
         }
     }
 
-    fn with_receipt(
+    pub(crate) fn with_receipt(
         &mut self,
         ctx: &MutationCtx,
         action: &str,
         fingerprint: &str,
-        work: impl FnOnce(&Connection) -> rusqlite::Result<MutationOutcome>,
+        work: impl FnOnce(&Connection) -> StoreResult<MutationOutcome>,
     ) -> StoreResult<MutationOutcome> {
         let conn = &self.conn;
         conn.execute_batch("BEGIN IMMEDIATE").map_err(sql_err)?;
@@ -691,7 +669,7 @@ impl SageStore {
                     return Ok(outcome);
                 }
             }
-            let outcome = work(conn).map_err(sql_err)?;
+            let outcome = work(conn)?;
             if let Some(key) = &ctx.idempotency_key {
                 let stored = serde_json::to_string(&outcome)
                     .map_err(|e| ErrorBody::new(ErrorCode::Internal, e.to_string()))?;
@@ -726,7 +704,7 @@ impl SageStore {
         }
     }
 
-    fn relative_path(&self, p: &str) -> String {
+    pub(crate) fn relative_path(&self, p: &str) -> String {
         let normalized = normalize_slashes(p.trim());
         if let Some(root) = &self.project_root {
             let root_s = normalize_slashes(&root.to_string_lossy());
@@ -810,94 +788,6 @@ impl SageStore {
                 a
             })
             .collect()
-    }
-
-    fn build_memory(&self, p: &RememberParams, ctx: &MutationCtx) -> StoreResult<SageRecord> {
-        let kind = p.kind.clone().unwrap_or_else(|| "fact".into());
-        let scope = p.scope.clone().unwrap_or_else(|| "project".into());
-        self.validate_common(&CommonInput {
-            text: &p.text,
-            kind: &kind,
-            scope: &scope,
-            tags: &p.tags,
-            anchors: &p.anchors,
-            sources_len: p.sources.len(),
-            validity: p.validity.as_ref(),
-        })?;
-        if let Some(per) = &p.persistence
-            && !PERSISTENCE_CLASSES.contains(&per.as_str())
-        {
-            return Err(invalid(format!("unknown persistence {per}")));
-        }
-        for s in &p.sources {
-            if !SOURCE_TYPES.contains(&s.kind.as_str()) {
-                return Err(invalid(format!("unknown source type {}", s.kind)));
-            }
-        }
-        let owner_session_id = if scope == "session" {
-            Some(ctx.session_id.clone().ok_or_else(|| {
-                invalid("scope=session requires a bound session (session.acquire)")
-            })?)
-        } else {
-            None
-        };
-        let mut sources = p.sources.clone();
-        if sources.is_empty() {
-            sources.push(wrongmemory_contracts::MemorySource {
-                kind: "user".into(),
-                ..Default::default()
-            });
-        }
-        let text = normalize_text(&p.text);
-        let caps = quality_caps(&text, &kind, &scope, p.anchors.is_empty());
-        let mut extra = Map::new();
-        // Service attribution: who actually wrote it, independent of any
-        // model-claimed `sources[].type` (mcp-and-client-integration §4).
-        extra.insert(
-            "wrongmemory".into(),
-            json!({"principalId": ctx.principal_id, "client": ctx.client_label}),
-        );
-        Ok(SageRecord {
-            id: ulid::Ulid::generate().to_string(),
-            revision: 1,
-            scope,
-            legacy_scope: None,
-            kind,
-            status: "active".into(),
-            context_policy: None,
-            persistence: p.persistence.clone(),
-            text: normalize_text(&p.text),
-            summary: None,
-            importance: match p.importance {
-                Some(v) => clamp01(v),
-                None => 0.6f64.min(caps.importance),
-            },
-            confidence: match p.confidence {
-                Some(v) => clamp01(v),
-                None => 0.8f64.min(caps.confidence),
-            },
-            freshness: clamp01(p.freshness.unwrap_or(1.0)),
-            tags: normalize_tags(&p.tags),
-            anchors: self.normalize_anchors(&p.anchors),
-            audience: p.audience.clone(),
-            sources,
-            validity: p.validity.clone(),
-            feedback: None,
-            supersedes: None,
-            superseded_by: None,
-            contradicts: None,
-            created_at: ctx.now_iso.clone(),
-            updated_at: ctx.now_iso.clone(),
-            last_accessed_at: None,
-            last_verified_at: None,
-            stale_reason: None,
-            last_used_at: None,
-            expires_at: p.expires_at.clone(),
-            injection_count: None,
-            use_count: None,
-            owner_session_id,
-            extra,
-        })
     }
 
     fn build_candidate(
@@ -1013,56 +903,9 @@ struct CommonInput<'a> {
     validity: Option<&'a wrongmemory_contracts::MemoryValidity>,
 }
 
-/// Soft caps applied only to defaulted scores (`assessRememberQuality`).
-/// Ported: short_text, few_tokens, unanchored, root_cause_unanchored.
-/// Not ported yet: ephemeral_pattern, progress_log (regex vocabularies).
-struct QualityCaps {
-    importance: f64,
-    confidence: f64,
-}
-
-fn quality_caps(text: &str, kind: &str, scope: &str, unanchored: bool) -> QualityCaps {
-    let mut c = QualityCaps {
-        importance: 1.0,
-        confidence: 1.0,
-    };
-    let mut cap = |imp: f64, conf: f64| {
-        c.importance = c.importance.min(imp);
-        c.confidence = c.confidence.min(conf);
-    };
-    if js_length(text) < 12 {
-        cap(0.55, 0.55);
-    }
-    if tokenize(text).len() < 3 {
-        cap(0.6, 0.6);
-    }
-    if unanchored {
-        let imp = if scope == "session" || scope == "user" {
-            1.0
-        } else {
-            0.7
-        };
-        cap(imp, 0.75);
-        if kind == "bug_root_cause" {
-            cap(0.75, 0.65);
-        }
-    }
-    c
-}
-
-/// `tokenize` (memory-text.ts): NFKC + lowercase, split on
-/// `[^\p{L}\p{N}_.-]+`, keep terms of at least 3 UTF-16 units, dedupe.
+/// `tokenize` (memory-text.ts); see [`crate::text::tokenize_default`].
 pub fn tokenize(text: &str) -> Vec<String> {
-    let folded = unicode_fold(text);
-    let mut out: Vec<String> = Vec::new();
-    for t in folded
-        .split(|c: char| !(c.is_alphabetic() || c.is_numeric() || matches!(c, '_' | '.' | '-')))
-    {
-        if js_length(t) >= 3 && !out.iter().any(|x| x == t) {
-            out.push(t.to_string());
-        }
-    }
-    out
+    crate::text::tokenize_default(text)
 }
 
 /// `normalizeTags`: strip one leading `#`, trim, lowercase, drop empty, dedupe.
@@ -1083,7 +926,7 @@ pub fn decode_memory(data: &str) -> Option<SageRecord> {
 }
 
 /// `sageToLegacyScope`.
-fn legacy_scope_for(scope: &str) -> &'static str {
+pub(crate) fn legacy_scope_for(scope: &str) -> &'static str {
     if scope == "user" {
         "user-memory"
     } else {
@@ -1091,7 +934,7 @@ fn legacy_scope_for(scope: &str) -> &'static str {
     }
 }
 
-fn insert_memory(conn: &Connection, m: &SageRecord) -> rusqlite::Result<()> {
+pub(crate) fn insert_memory(conn: &Connection, m: &SageRecord) -> rusqlite::Result<()> {
     let data = serde_json::to_string(m)
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
     let audience = m
@@ -1170,7 +1013,11 @@ pub fn anchor_relation(a: &MemoryAnchor) -> Option<&'static str> {
 }
 
 /// Port of `syncSqliteAnchorEdges` (weight policy: MAX on conflict).
-fn sync_anchor_edges(conn: &Connection, m: &SageRecord, now: &str) -> rusqlite::Result<()> {
+pub(crate) fn sync_anchor_edges(
+    conn: &Connection,
+    m: &SageRecord,
+    now: &str,
+) -> rusqlite::Result<()> {
     let from = format!("mem:{}", m.id);
     let mut created: std::collections::HashMap<(String, String), String> = Default::default();
     {
@@ -1249,7 +1096,7 @@ fn sync_anchor_edges(conn: &Connection, m: &SageRecord, now: &str) -> rusqlite::
     Ok(())
 }
 
-fn audit(conn: &Connection, event: &str, at: &str, data: Value) -> rusqlite::Result<()> {
+pub(crate) fn audit(conn: &Connection, event: &str, at: &str, data: Value) -> rusqlite::Result<()> {
     conn.execute(
         "INSERT INTO audit_log (event, at, trace_id, data) VALUES (?1, ?2, NULL, ?3)",
         params![event, at, data.to_string()],

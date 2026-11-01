@@ -1,0 +1,544 @@
+{
+  "scenario": "counters",
+  "description": "recordInjection / recordUse: JSON counters, updated_at, FTS and HQ churn",
+  "baseline": "222d23a90ae9c67c2433d7734c6966be7ee4e696",
+  "clockEpoch": "2026-11-01T00:00:00.000Z",
+  "steps": [
+    {
+      "step": "seed",
+      "call": {
+        "method": "rememberSage",
+        "input": {}
+      },
+      "result": {
+        "id": "<id:m>",
+        "revision": 1,
+        "text": "Integration tests require the local Postgres container to be running.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-11-01T00:01:31.000Z",
+        "updatedAt": "2026-11-01T00:01:31.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:m>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "integration tests require the local postgres container to be running.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:31.000Z",
+            "created_at": "2026-11-01T00:01:31.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:m>",
+              "revision": 1,
+              "text": "Integration tests require the local Postgres container to be running.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:31.000Z",
+              "updatedAt": "2026-11-01T00:01:31.000Z"
+            }
+          }
+        ],
+        "edges": [],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:m>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 1,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "inject-twice-same-call",
+      "call": {
+        "method": "recordInjection",
+        "input": {
+          "ids": [
+            "<id:m>",
+            "<id:m>"
+          ],
+          "trigger": "tool"
+        }
+      },
+      "result": "<undefined>",
+      "state": {
+        "memories": [
+          {
+            "id": "<id:m>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "integration tests require the local postgres container to be running.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:31.000Z",
+            "created_at": "2026-11-01T00:01:31.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:m>",
+              "revision": 1,
+              "text": "Integration tests require the local Postgres container to be running.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:31.000Z",
+              "updatedAt": "2026-11-01T00:01:31.000Z",
+              "injectionCount": 1,
+              "lastAccessedAt": "2026-11-01T00:01:32.000Z"
+            }
+          }
+        ],
+        "edges": [],
+        "candidates": [],
+        "auditEvents": [
+          {
+            "event": "memory.injected",
+            "data": {
+              "details": {
+                "memoryIds": [
+                  "<id:m>"
+                ],
+                "trigger": "tool",
+                "sessionId": "sess-A"
+              }
+            }
+          }
+        ],
+        "hq": [
+          {
+            "id": "<id:m>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 1,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "inject-again",
+      "call": {
+        "method": "recordInjection",
+        "input": {
+          "ids": [
+            "<id:m>"
+          ],
+          "trigger": "turn"
+        }
+      },
+      "result": "<undefined>",
+      "state": {
+        "memories": [
+          {
+            "id": "<id:m>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "integration tests require the local postgres container to be running.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:31.000Z",
+            "created_at": "2026-11-01T00:01:31.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:m>",
+              "revision": 1,
+              "text": "Integration tests require the local Postgres container to be running.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:31.000Z",
+              "updatedAt": "2026-11-01T00:01:31.000Z",
+              "injectionCount": 2,
+              "lastAccessedAt": "2026-11-01T00:01:33.000Z"
+            }
+          }
+        ],
+        "edges": [],
+        "candidates": [],
+        "auditEvents": [
+          {
+            "event": "memory.injected",
+            "data": {
+              "details": {
+                "memoryIds": [
+                  "<id:m>"
+                ],
+                "trigger": "turn"
+              }
+            }
+          }
+        ],
+        "hq": [
+          {
+            "id": "<id:m>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 1,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "use",
+      "call": {
+        "method": "recordUse",
+        "input": {
+          "ids": [
+            "<id:m>"
+          ],
+          "source": "reference"
+        }
+      },
+      "result": "<undefined>",
+      "state": {
+        "memories": [
+          {
+            "id": "<id:m>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "integration tests require the local postgres container to be running.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:31.000Z",
+            "created_at": "2026-11-01T00:01:31.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:m>",
+              "revision": 1,
+              "text": "Integration tests require the local Postgres container to be running.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:31.000Z",
+              "updatedAt": "2026-11-01T00:01:31.000Z",
+              "injectionCount": 2,
+              "lastAccessedAt": "2026-11-01T00:01:34.000Z",
+              "useCount": 1,
+              "lastUsedAt": "2026-11-01T00:01:34.000Z"
+            }
+          }
+        ],
+        "edges": [],
+        "candidates": [],
+        "auditEvents": [
+          {
+            "event": "memory.used",
+            "data": {
+              "details": {
+                "memoryIds": [
+                  "<id:m>"
+                ],
+                "source": "reference",
+                "sessionId": "sess-A"
+              }
+            }
+          }
+        ],
+        "hq": [
+          {
+            "id": "<id:m>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 1,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "content-update-keeps-counters",
+      "call": {
+        "method": "updateSage",
+        "input": {
+          "id": "<id:m>",
+          "importance": 0.9
+        }
+      },
+      "result": {
+        "id": "<id:m>",
+        "revision": 2,
+        "text": "Integration tests require the local Postgres container to be running.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.9,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-11-01T00:01:31.000Z",
+        "updatedAt": "2026-11-01T00:01:35.000Z",
+        "injectionCount": 2,
+        "lastAccessedAt": "2026-11-01T00:01:34.000Z",
+        "useCount": 1,
+        "lastUsedAt": "2026-11-01T00:01:34.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:m>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.9,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "integration tests require the local postgres container to be running.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:35.000Z",
+            "created_at": "2026-11-01T00:01:31.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:m>",
+              "revision": 2,
+              "text": "Integration tests require the local Postgres container to be running.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.9,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:31.000Z",
+              "updatedAt": "2026-11-01T00:01:35.000Z",
+              "injectionCount": 2,
+              "lastAccessedAt": "2026-11-01T00:01:34.000Z",
+              "useCount": 1,
+              "lastUsedAt": "2026-11-01T00:01:34.000Z"
+            }
+          }
+        ],
+        "edges": [],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:m>",
+            "revision": 2,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 2,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "get",
+      "call": {
+        "method": "getSage",
+        "input": {
+          "id": "<id:m>"
+        }
+      },
+      "result": {
+        "id": "<id:m>",
+        "revision": 2,
+        "text": "Integration tests require the local Postgres container to be running.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.9,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-11-01T00:01:31.000Z",
+        "updatedAt": "2026-11-01T00:01:35.000Z",
+        "injectionCount": 2,
+        "lastAccessedAt": "2026-11-01T00:01:34.000Z",
+        "useCount": 1,
+        "lastUsedAt": "2026-11-01T00:01:34.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:m>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.9,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "integration tests require the local postgres container to be running.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:35.000Z",
+            "created_at": "2026-11-01T00:01:31.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:m>",
+              "revision": 2,
+              "text": "Integration tests require the local Postgres container to be running.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.9,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:31.000Z",
+              "updatedAt": "2026-11-01T00:01:35.000Z",
+              "injectionCount": 2,
+              "lastAccessedAt": "2026-11-01T00:01:34.000Z",
+              "useCount": 1,
+              "lastUsedAt": "2026-11-01T00:01:34.000Z"
+            }
+          }
+        ],
+        "edges": [],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:m>",
+            "revision": 2,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 2,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    }
+  ]
+}

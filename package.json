@@ -2,11 +2,18 @@
   "name": "wrongmemory-workspace",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "baseline:export": "bun scripts/baseline/export.ts",
     "oracle:prepare": "bun scripts/oracle/prepare-clean-wrongstack.ts",
     "oracle:build": "bun scripts/oracle/build-fixtures.ts",
     "inventory:writers": "bun scripts/inventory/writers.ts",
-    "check": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets --locked -- -D warnings && cargo test --workspace --locked"
+    "check": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets --locked -- -D warnings && cargo test --workspace --locked",
+    "test:client": "cd packages/client-ts && bun run check:parity && bun test",
+    "typecheck": "cd packages/client-ts && bun run typecheck",
+    "oracle:mutations": "bun scripts/oracle/build-mutation-fixtures.ts",
+    "inventory:mcp-tools": "bun scripts/inventory/mcp-tools.ts"
   }
 }

@@ -9,6 +9,7 @@ license.workspace = true
 
 [dependencies]
 wrongmemory-contracts.workspace = true
+fancy-regex.workspace = true
 hex.workspace = true
 rusqlite.workspace = true
 serde.workspace = true

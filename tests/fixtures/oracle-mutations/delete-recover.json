@@ -1,0 +1,4734 @@
+{
+  "scenario": "delete-recover",
+  "description": "deleteSage force gate, tombstone, reference cleanup, recoverSage, backfillRecoverable",
+  "baseline": "222d23a90ae9c67c2433d7734c6966be7ee4e696",
+  "clockEpoch": "2026-11-01T00:00:00.000Z",
+  "steps": [
+    {
+      "step": "remember-a",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Service A owns the billing tables and their migrations.",
+          "anchors": [
+            {
+              "type": "file",
+              "path": "src/a.ts"
+            }
+          ]
+        }
+      },
+      "result": {
+        "id": "<id:a>",
+        "revision": 1,
+        "text": "Service A owns the billing tables and their migrations.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [
+          {
+            "type": "file",
+            "path": "src/a.ts"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "createdAt": "2026-11-01T00:01:13.000Z",
+        "updatedAt": "2026-11-01T00:01:13.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:13.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 1,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:13.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:<id:a>",
+            "to_node": "file:src/a.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 1,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "remember-b",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Service B reads billing data only through the reporting API.",
+          "supersedes": [
+            "<id:a>"
+          ]
+        }
+      },
+      "result": {
+        "id": "<id:b>",
+        "revision": 1,
+        "text": "Service B reads billing data only through the reporting API.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "supersedes": [
+          "<id:a>"
+        ],
+        "createdAt": "2026-11-01T00:01:14.000Z",
+        "updatedAt": "2026-11-01T00:01:14.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:13.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 1,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:13.000Z"
+            }
+          },
+          {
+            "id": "<id:b>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service b reads billing data only through the reporting api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:14.000Z",
+            "created_at": "2026-11-01T00:01:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:b>",
+              "revision": 1,
+              "text": "Service B reads billing data only through the reporting API.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "supersedes": [
+                "<id:a>"
+              ],
+              "createdAt": "2026-11-01T00:01:14.000Z",
+              "updatedAt": "2026-11-01T00:01:14.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:<id:a>",
+            "to_node": "file:src/a.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:<id:b>",
+            "to_node": "mem:<id:a>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:14.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:b>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 2,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "remember-c",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Billing exports run nightly at 02:00 UTC from service A.",
+          "contradicts": [
+            "<id:a>"
+          ]
+        }
+      },
+      "result": {
+        "id": "<id:c>",
+        "revision": 1,
+        "text": "Billing exports run nightly at 02:00 UTC from service A.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "contradicts": [
+          "<id:a>"
+        ],
+        "createdAt": "2026-11-01T00:01:15.000Z",
+        "updatedAt": "2026-11-01T00:01:15.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:13.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 1,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:13.000Z"
+            }
+          },
+          {
+            "id": "<id:b>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service b reads billing data only through the reporting api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:14.000Z",
+            "created_at": "2026-11-01T00:01:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:b>",
+              "revision": 1,
+              "text": "Service B reads billing data only through the reporting API.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "supersedes": [
+                "<id:a>"
+              ],
+              "createdAt": "2026-11-01T00:01:14.000Z",
+              "updatedAt": "2026-11-01T00:01:14.000Z"
+            }
+          },
+          {
+            "id": "<id:c>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:15.000Z",
+            "created_at": "2026-11-01T00:01:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:c>",
+              "revision": 1,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "contradicts": [
+                "<id:a>"
+              ],
+              "createdAt": "2026-11-01T00:01:15.000Z",
+              "updatedAt": "2026-11-01T00:01:15.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:<id:a>",
+            "to_node": "file:src/a.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:<id:b>",
+            "to_node": "mem:<id:a>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:14.000Z"
+          },
+          {
+            "from_node": "mem:<id:c>",
+            "to_node": "mem:<id:a>",
+            "relation": "contradicts",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:15.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:b>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:c>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 3,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "remember-permanent",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Never store raw card numbers anywhere in the system.",
+          "persistence": "permanent"
+        }
+      },
+      "result": {
+        "id": "<id:permanent>",
+        "revision": 1,
+        "text": "Never store raw card numbers anywhere in the system.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "persistence": "permanent",
+        "createdAt": "2026-11-01T00:01:16.000Z",
+        "updatedAt": "2026-11-01T00:01:16.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:13.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 1,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:13.000Z"
+            }
+          },
+          {
+            "id": "<id:b>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service b reads billing data only through the reporting api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:14.000Z",
+            "created_at": "2026-11-01T00:01:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:b>",
+              "revision": 1,
+              "text": "Service B reads billing data only through the reporting API.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "supersedes": [
+                "<id:a>"
+              ],
+              "createdAt": "2026-11-01T00:01:14.000Z",
+              "updatedAt": "2026-11-01T00:01:14.000Z"
+            }
+          },
+          {
+            "id": "<id:c>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:15.000Z",
+            "created_at": "2026-11-01T00:01:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:c>",
+              "revision": 1,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "contradicts": [
+                "<id:a>"
+              ],
+              "createdAt": "2026-11-01T00:01:15.000Z",
+              "updatedAt": "2026-11-01T00:01:15.000Z"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "never store raw card numbers anywhere in the system.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:16.000Z",
+            "created_at": "2026-11-01T00:01:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Never store raw card numbers anywhere in the system.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:01:16.000Z",
+              "updatedAt": "2026-11-01T00:01:16.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:<id:a>",
+            "to_node": "file:src/a.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:<id:b>",
+            "to_node": "mem:<id:a>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:14.000Z"
+          },
+          {
+            "from_node": "mem:<id:c>",
+            "to_node": "mem:<id:a>",
+            "relation": "contradicts",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:15.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:b>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:c>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 4,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "delete-without-force",
+      "call": {
+        "method": "deleteSage",
+        "input": {
+          "id": "<id:a>"
+        }
+      },
+      "error": {
+        "name": "Error",
+        "message": "SAGE \"<id:a>\" cannot be deleted without explicit authorization. Pass { force: true } to the memory_delete tool, or resolve a review candidate via memory_candidates({ action: 'resolve', decision: 'delete' }). The force flag is recorded in the audit log."
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:13.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 1,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:13.000Z"
+            }
+          },
+          {
+            "id": "<id:b>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service b reads billing data only through the reporting api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:14.000Z",
+            "created_at": "2026-11-01T00:01:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:b>",
+              "revision": 1,
+              "text": "Service B reads billing data only through the reporting API.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "supersedes": [
+                "<id:a>"
+              ],
+              "createdAt": "2026-11-01T00:01:14.000Z",
+              "updatedAt": "2026-11-01T00:01:14.000Z"
+            }
+          },
+          {
+            "id": "<id:c>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:15.000Z",
+            "created_at": "2026-11-01T00:01:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:c>",
+              "revision": 1,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "contradicts": [
+                "<id:a>"
+              ],
+              "createdAt": "2026-11-01T00:01:15.000Z",
+              "updatedAt": "2026-11-01T00:01:15.000Z"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "never store raw card numbers anywhere in the system.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:16.000Z",
+            "created_at": "2026-11-01T00:01:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Never store raw card numbers anywhere in the system.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:01:16.000Z",
+              "updatedAt": "2026-11-01T00:01:16.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:<id:a>",
+            "to_node": "file:src/a.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:<id:b>",
+            "to_node": "mem:<id:a>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:14.000Z"
+          },
+          {
+            "from_node": "mem:<id:c>",
+            "to_node": "mem:<id:a>",
+            "relation": "contradicts",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:15.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:b>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:c>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 4,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "delete-permanent-without-force",
+      "call": {
+        "method": "deleteSage",
+        "input": {
+          "id": "<id:permanent>"
+        }
+      },
+      "error": {
+        "name": "Error",
+        "message": "SAGE \"<id:permanent>\" is marked 'permanent' and cannot be deleted. Pass { force: true } to override; the override will be recorded in the audit log."
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:13.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 1,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:13.000Z"
+            }
+          },
+          {
+            "id": "<id:b>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service b reads billing data only through the reporting api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:14.000Z",
+            "created_at": "2026-11-01T00:01:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:b>",
+              "revision": 1,
+              "text": "Service B reads billing data only through the reporting API.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "supersedes": [
+                "<id:a>"
+              ],
+              "createdAt": "2026-11-01T00:01:14.000Z",
+              "updatedAt": "2026-11-01T00:01:14.000Z"
+            }
+          },
+          {
+            "id": "<id:c>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:15.000Z",
+            "created_at": "2026-11-01T00:01:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:c>",
+              "revision": 1,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "contradicts": [
+                "<id:a>"
+              ],
+              "createdAt": "2026-11-01T00:01:15.000Z",
+              "updatedAt": "2026-11-01T00:01:15.000Z"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "never store raw card numbers anywhere in the system.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:16.000Z",
+            "created_at": "2026-11-01T00:01:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Never store raw card numbers anywhere in the system.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:01:16.000Z",
+              "updatedAt": "2026-11-01T00:01:16.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:<id:a>",
+            "to_node": "file:src/a.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:<id:b>",
+            "to_node": "mem:<id:a>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:14.000Z"
+          },
+          {
+            "from_node": "mem:<id:c>",
+            "to_node": "mem:<id:a>",
+            "relation": "contradicts",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:15.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:b>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:c>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 4,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "delete-force",
+      "call": {
+        "method": "deleteSage",
+        "input": {
+          "id": "<id:a>",
+          "reason": "obsolete",
+          "options": {
+            "force": true
+          }
+        }
+      },
+      "result": "<undefined>",
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:19.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 2,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:19.000Z"
+            }
+          },
+          {
+            "id": "<id:b>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service b reads billing data only through the reporting api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:19.000Z",
+            "created_at": "2026-11-01T00:01:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:b>",
+              "revision": 2,
+              "text": "Service B reads billing data only through the reporting API.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "supersedes": [],
+              "createdAt": "2026-11-01T00:01:14.000Z",
+              "updatedAt": "2026-11-01T00:01:19.000Z"
+            }
+          },
+          {
+            "id": "<id:c>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:19.000Z",
+            "created_at": "2026-11-01T00:01:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:c>",
+              "revision": 2,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "contradicts": [],
+              "createdAt": "2026-11-01T00:01:15.000Z",
+              "updatedAt": "2026-11-01T00:01:19.000Z"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "never store raw card numbers anywhere in the system.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:16.000Z",
+            "created_at": "2026-11-01T00:01:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Never store raw card numbers anywhere in the system.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:01:16.000Z",
+              "updatedAt": "2026-11-01T00:01:16.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [
+          {
+            "event": "memory.deleted",
+            "data": {
+              "memoryId": "<id:a>",
+              "reason": "obsolete",
+              "details": {
+                "removedEdges": 3,
+                "force": true,
+                "contextPolicy": "eligible"
+              }
+            }
+          }
+        ],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:b>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:c>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 7,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "delete-again-noop",
+      "call": {
+        "method": "deleteSage",
+        "input": {
+          "id": "<id:a>",
+          "reason": "again",
+          "options": {
+            "force": true
+          }
+        }
+      },
+      "result": "<undefined>",
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:19.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 2,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:19.000Z"
+            }
+          },
+          {
+            "id": "<id:b>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service b reads billing data only through the reporting api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:19.000Z",
+            "created_at": "2026-11-01T00:01:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:b>",
+              "revision": 2,
+              "text": "Service B reads billing data only through the reporting API.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "supersedes": [],
+              "createdAt": "2026-11-01T00:01:14.000Z",
+              "updatedAt": "2026-11-01T00:01:19.000Z"
+            }
+          },
+          {
+            "id": "<id:c>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:19.000Z",
+            "created_at": "2026-11-01T00:01:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:c>",
+              "revision": 2,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "contradicts": [],
+              "createdAt": "2026-11-01T00:01:15.000Z",
+              "updatedAt": "2026-11-01T00:01:19.000Z"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "never store raw card numbers anywhere in the system.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:16.000Z",
+            "created_at": "2026-11-01T00:01:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Never store raw card numbers anywhere in the system.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:01:16.000Z",
+              "updatedAt": "2026-11-01T00:01:16.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:b>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:c>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 7,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "delete-never-inject",
+      "call": {
+        "method": "deleteSage",
+        "input": {
+          "id": "<id:c>",
+          "reason": "noise",
+          "options": {
+            "force": true,
+            "neverInject": true
+          }
+        }
+      },
+      "result": "<undefined>",
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:19.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 2,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:19.000Z"
+            }
+          },
+          {
+            "id": "<id:b>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service b reads billing data only through the reporting api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:19.000Z",
+            "created_at": "2026-11-01T00:01:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:b>",
+              "revision": 2,
+              "text": "Service B reads billing data only through the reporting API.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "supersedes": [],
+              "createdAt": "2026-11-01T00:01:14.000Z",
+              "updatedAt": "2026-11-01T00:01:19.000Z"
+            }
+          },
+          {
+            "id": "<id:c>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:21.000Z",
+            "created_at": "2026-11-01T00:01:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:c>",
+              "revision": 3,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:15.000Z",
+              "updatedAt": "2026-11-01T00:01:21.000Z",
+              "contextPolicy": "never"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "never store raw card numbers anywhere in the system.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:16.000Z",
+            "created_at": "2026-11-01T00:01:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Never store raw card numbers anywhere in the system.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:01:16.000Z",
+              "updatedAt": "2026-11-01T00:01:16.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [
+          {
+            "event": "memory.deleted",
+            "data": {
+              "memoryId": "<id:c>",
+              "reason": "noise",
+              "details": {
+                "removedEdges": 0,
+                "force": true,
+                "contextPolicy": "never"
+              }
+            }
+          }
+        ],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:b>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:c>",
+            "revision": 3,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 8,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "recover-a",
+      "call": {
+        "method": "recoverSage",
+        "input": {
+          "id": "<id:a>"
+        }
+      },
+      "result": {
+        "id": "<id:a>",
+        "revision": 3,
+        "text": "Service A owns the billing tables and their migrations.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [
+          {
+            "type": "file",
+            "path": "src/a.ts"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "createdAt": "2026-11-01T00:01:13.000Z",
+        "updatedAt": "2026-11-01T00:01:22.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:22.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 3,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:22.000Z"
+            }
+          },
+          {
+            "id": "<id:b>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service b reads billing data only through the reporting api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:19.000Z",
+            "created_at": "2026-11-01T00:01:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:b>",
+              "revision": 2,
+              "text": "Service B reads billing data only through the reporting API.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "supersedes": [],
+              "createdAt": "2026-11-01T00:01:14.000Z",
+              "updatedAt": "2026-11-01T00:01:19.000Z"
+            }
+          },
+          {
+            "id": "<id:c>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:21.000Z",
+            "created_at": "2026-11-01T00:01:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:c>",
+              "revision": 3,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:15.000Z",
+              "updatedAt": "2026-11-01T00:01:21.000Z",
+              "contextPolicy": "never"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "never store raw card numbers anywhere in the system.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:16.000Z",
+            "created_at": "2026-11-01T00:01:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Never store raw card numbers anywhere in the system.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:01:16.000Z",
+              "updatedAt": "2026-11-01T00:01:16.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:<id:a>",
+            "to_node": "file:src/a.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:22.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [
+          {
+            "event": "memory.recovered",
+            "data": {
+              "memoryId": "<id:a>",
+              "reason": "Manually recovered via API.",
+              "details": {
+                "persistence": "long_lived"
+              }
+            }
+          }
+        ],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 3,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:b>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:c>",
+            "revision": 3,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 9,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "recover-active-noop",
+      "call": {
+        "method": "recoverSage",
+        "input": {
+          "id": "<id:a>"
+        }
+      },
+      "result": {
+        "id": "<id:a>",
+        "revision": 3,
+        "text": "Service A owns the billing tables and their migrations.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [
+          {
+            "type": "file",
+            "path": "src/a.ts"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "createdAt": "2026-11-01T00:01:13.000Z",
+        "updatedAt": "2026-11-01T00:01:22.000Z"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:22.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 3,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:22.000Z"
+            }
+          },
+          {
+            "id": "<id:b>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service b reads billing data only through the reporting api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:19.000Z",
+            "created_at": "2026-11-01T00:01:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:b>",
+              "revision": 2,
+              "text": "Service B reads billing data only through the reporting API.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "supersedes": [],
+              "createdAt": "2026-11-01T00:01:14.000Z",
+              "updatedAt": "2026-11-01T00:01:19.000Z"
+            }
+          },
+          {
+            "id": "<id:c>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:21.000Z",
+            "created_at": "2026-11-01T00:01:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:c>",
+              "revision": 3,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:15.000Z",
+              "updatedAt": "2026-11-01T00:01:21.000Z",
+              "contextPolicy": "never"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "never store raw card numbers anywhere in the system.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:16.000Z",
+            "created_at": "2026-11-01T00:01:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Never store raw card numbers anywhere in the system.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:01:16.000Z",
+              "updatedAt": "2026-11-01T00:01:16.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:<id:a>",
+            "to_node": "file:src/a.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:22.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 3,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:b>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:c>",
+            "revision": 3,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 9,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "delete-a-again",
+      "call": {
+        "method": "deleteSage",
+        "input": {
+          "id": "<id:a>",
+          "reason": "again",
+          "options": {
+            "force": true
+          }
+        }
+      },
+      "result": "<undefined>",
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:24.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 4,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:24.000Z"
+            }
+          },
+          {
+            "id": "<id:b>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service b reads billing data only through the reporting api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:19.000Z",
+            "created_at": "2026-11-01T00:01:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:b>",
+              "revision": 2,
+              "text": "Service B reads billing data only through the reporting API.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "supersedes": [],
+              "createdAt": "2026-11-01T00:01:14.000Z",
+              "updatedAt": "2026-11-01T00:01:19.000Z"
+            }
+          },
+          {
+            "id": "<id:c>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:21.000Z",
+            "created_at": "2026-11-01T00:01:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:c>",
+              "revision": 3,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:15.000Z",
+              "updatedAt": "2026-11-01T00:01:21.000Z",
+              "contextPolicy": "never"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "never store raw card numbers anywhere in the system.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:16.000Z",
+            "created_at": "2026-11-01T00:01:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Never store raw card numbers anywhere in the system.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:01:16.000Z",
+              "updatedAt": "2026-11-01T00:01:16.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [
+          {
+            "event": "memory.deleted",
+            "data": {
+              "memoryId": "<id:a>",
+              "reason": "again",
+              "details": {
+                "removedEdges": 1,
+                "force": true,
+                "contextPolicy": "eligible"
+              }
+            }
+          }
+        ],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 4,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:b>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:c>",
+            "revision": 3,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 10,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "backfill-dry-run",
+      "call": {
+        "method": "backfillRecoverable",
+        "input": {}
+      },
+      "result": {
+        "startedAt": "2026-11-01T00:01:25.000Z",
+        "completedAt": "2026-11-01T00:01:25.000Z",
+        "dryRun": true,
+        "examined": 2,
+        "recoverable": 2,
+        "recovered": 0,
+        "skipped": 0,
+        "skippedRecords": [],
+        "recoverableRecords": [
+          {
+            "originalId": "<id:a>",
+            "reason": "recoverable",
+            "kind": "fact",
+            "scope": "project",
+            "textPreview": "Service A owns the billing tables and their migrations.",
+            "deletedAt": "2026-11-01T00:01:24.000Z",
+            "persistence": "long_lived"
+          },
+          {
+            "originalId": "<id:c>",
+            "reason": "recoverable",
+            "kind": "fact",
+            "scope": "project",
+            "textPreview": "Billing exports run nightly at 02:00 UTC from service A.",
+            "deletedAt": "2026-11-01T00:01:21.000Z",
+            "persistence": "long_lived"
+          }
+        ],
+        "byKind": {
+          "fact": 2
+        },
+        "byReason": {}
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:24.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 4,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:24.000Z"
+            }
+          },
+          {
+            "id": "<id:b>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service b reads billing data only through the reporting api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:19.000Z",
+            "created_at": "2026-11-01T00:01:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:b>",
+              "revision": 2,
+              "text": "Service B reads billing data only through the reporting API.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "supersedes": [],
+              "createdAt": "2026-11-01T00:01:14.000Z",
+              "updatedAt": "2026-11-01T00:01:19.000Z"
+            }
+          },
+          {
+            "id": "<id:c>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:21.000Z",
+            "created_at": "2026-11-01T00:01:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:c>",
+              "revision": 3,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:15.000Z",
+              "updatedAt": "2026-11-01T00:01:21.000Z",
+              "contextPolicy": "never"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "never store raw card numbers anywhere in the system.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:16.000Z",
+            "created_at": "2026-11-01T00:01:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Never store raw card numbers anywhere in the system.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:01:16.000Z",
+              "updatedAt": "2026-11-01T00:01:16.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [
+          {
+            "event": "memory.backfill_dry_run",
+            "data": {
+              "details": {
+                "examined": 2,
+                "recoverable": 2,
+                "recovered": 0,
+                "skipped": 0
+              }
+            }
+          }
+        ],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 4,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:b>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:c>",
+            "revision": 3,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 10,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "backfill-apply",
+      "call": {
+        "method": "backfillRecoverable",
+        "input": {
+          "dryRun": false
+        }
+      },
+      "result": {
+        "startedAt": "2026-11-01T00:01:26.000Z",
+        "completedAt": "2026-11-01T00:01:26.000Z",
+        "dryRun": false,
+        "examined": 2,
+        "recoverable": 2,
+        "recovered": 2,
+        "skipped": 0,
+        "skippedRecords": [],
+        "recoverableRecords": [
+          {
+            "originalId": "<id:a>",
+            "reason": "recoverable",
+            "kind": "fact",
+            "scope": "project",
+            "textPreview": "Service A owns the billing tables and their migrations.",
+            "deletedAt": "2026-11-01T00:01:24.000Z",
+            "persistence": "long_lived",
+            "newActiveId": "mem_<id:aBackfilled>"
+          },
+          {
+            "originalId": "<id:c>",
+            "reason": "recoverable",
+            "kind": "fact",
+            "scope": "project",
+            "textPreview": "Billing exports run nightly at 02:00 UTC from service A.",
+            "deletedAt": "2026-11-01T00:01:21.000Z",
+            "persistence": "long_lived",
+            "newActiveId": "mem_<id:cBackfilled>"
+          }
+        ],
+        "byKind": {
+          "fact": 2
+        },
+        "byReason": {}
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:24.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 4,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:24.000Z"
+            }
+          },
+          {
+            "id": "<id:b>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service b reads billing data only through the reporting api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:19.000Z",
+            "created_at": "2026-11-01T00:01:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:b>",
+              "revision": 2,
+              "text": "Service B reads billing data only through the reporting API.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "supersedes": [],
+              "createdAt": "2026-11-01T00:01:14.000Z",
+              "updatedAt": "2026-11-01T00:01:19.000Z"
+            }
+          },
+          {
+            "id": "<id:c>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:21.000Z",
+            "created_at": "2026-11-01T00:01:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:c>",
+              "revision": 3,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:15.000Z",
+              "updatedAt": "2026-11-01T00:01:21.000Z",
+              "contextPolicy": "never"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "never store raw card numbers anywhere in the system.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:16.000Z",
+            "created_at": "2026-11-01T00:01:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Never store raw card numbers anywhere in the system.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:01:16.000Z",
+              "updatedAt": "2026-11-01T00:01:16.000Z"
+            }
+          },
+          {
+            "id": "mem_<id:aBackfilled>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[\"backfill:recovered\"]",
+            "updated_at": "2026-11-01T00:01:26.000Z",
+            "created_at": "2026-11-01T00:01:26.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "mem_<id:aBackfilled>",
+              "revision": 1,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "backfill:recovered"
+              ],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:26.000Z",
+              "updatedAt": "2026-11-01T00:01:26.000Z",
+              "supersedes": [
+                "<id:a>"
+              ],
+              "injectionCount": 0,
+              "useCount": 0
+            }
+          },
+          {
+            "id": "mem_<id:cBackfilled>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[\"backfill:recovered\"]",
+            "updated_at": "2026-11-01T00:01:26.000Z",
+            "created_at": "2026-11-01T00:01:26.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "mem_<id:cBackfilled>",
+              "revision": 1,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "backfill:recovered"
+              ],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:26.000Z",
+              "updatedAt": "2026-11-01T00:01:26.000Z",
+              "contextPolicy": "never",
+              "supersedes": [
+                "<id:c>"
+              ],
+              "injectionCount": 0,
+              "useCount": 0
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:mem_<id:aBackfilled>",
+            "to_node": "file:src/a.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:26.000Z"
+          },
+          {
+            "from_node": "mem:mem_<id:aBackfilled>",
+            "to_node": "mem:<id:a>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:26.000Z"
+          },
+          {
+            "from_node": "mem:mem_<id:cBackfilled>",
+            "to_node": "mem:<id:c>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:26.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [
+          {
+            "event": "memory.backfilled",
+            "data": {
+              "memoryId": "<id:a>",
+              "reason": "backfillRecoverable",
+              "details": {
+                "newActiveId": "mem_<id:aBackfilled>"
+              }
+            }
+          },
+          {
+            "event": "memory.backfilled",
+            "data": {
+              "memoryId": "<id:c>",
+              "reason": "backfillRecoverable",
+              "details": {
+                "newActiveId": "mem_<id:cBackfilled>"
+              }
+            }
+          },
+          {
+            "event": "memory.backfill_applied",
+            "data": {
+              "details": {
+                "examined": 2,
+                "recoverable": 2,
+                "recovered": 2,
+                "skipped": 0
+              }
+            }
+          }
+        ],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 4,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:b>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:c>",
+            "revision": 3,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "mem_<id:aBackfilled>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "mem_<id:cBackfilled>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 12,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "recover-after-backfill-returns-successor",
+      "call": {
+        "method": "recoverSage",
+        "input": {
+          "id": "<id:a>"
+        }
+      },
+      "result": {
+        "id": "mem_<id:aBackfilled>",
+        "revision": 1,
+        "text": "Service A owns the billing tables and their migrations.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [
+          "backfill:recovered"
+        ],
+        "anchors": [
+          {
+            "type": "file",
+            "path": "src/a.ts"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "createdAt": "2026-11-01T00:01:26.000Z",
+        "updatedAt": "2026-11-01T00:01:26.000Z",
+        "supersedes": [
+          "<id:a>"
+        ],
+        "injectionCount": 0,
+        "useCount": 0
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:24.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 4,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:24.000Z"
+            }
+          },
+          {
+            "id": "<id:b>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service b reads billing data only through the reporting api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:19.000Z",
+            "created_at": "2026-11-01T00:01:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:b>",
+              "revision": 2,
+              "text": "Service B reads billing data only through the reporting API.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "supersedes": [],
+              "createdAt": "2026-11-01T00:01:14.000Z",
+              "updatedAt": "2026-11-01T00:01:19.000Z"
+            }
+          },
+          {
+            "id": "<id:c>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:21.000Z",
+            "created_at": "2026-11-01T00:01:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:c>",
+              "revision": 3,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:15.000Z",
+              "updatedAt": "2026-11-01T00:01:21.000Z",
+              "contextPolicy": "never"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "never store raw card numbers anywhere in the system.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:16.000Z",
+            "created_at": "2026-11-01T00:01:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Never store raw card numbers anywhere in the system.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:01:16.000Z",
+              "updatedAt": "2026-11-01T00:01:16.000Z"
+            }
+          },
+          {
+            "id": "mem_<id:aBackfilled>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[\"backfill:recovered\"]",
+            "updated_at": "2026-11-01T00:01:26.000Z",
+            "created_at": "2026-11-01T00:01:26.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "mem_<id:aBackfilled>",
+              "revision": 1,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "backfill:recovered"
+              ],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:26.000Z",
+              "updatedAt": "2026-11-01T00:01:26.000Z",
+              "supersedes": [
+                "<id:a>"
+              ],
+              "injectionCount": 0,
+              "useCount": 0
+            }
+          },
+          {
+            "id": "mem_<id:cBackfilled>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[\"backfill:recovered\"]",
+            "updated_at": "2026-11-01T00:01:26.000Z",
+            "created_at": "2026-11-01T00:01:26.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "mem_<id:cBackfilled>",
+              "revision": 1,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "backfill:recovered"
+              ],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:26.000Z",
+              "updatedAt": "2026-11-01T00:01:26.000Z",
+              "contextPolicy": "never",
+              "supersedes": [
+                "<id:c>"
+              ],
+              "injectionCount": 0,
+              "useCount": 0
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:mem_<id:aBackfilled>",
+            "to_node": "file:src/a.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:26.000Z"
+          },
+          {
+            "from_node": "mem:mem_<id:aBackfilled>",
+            "to_node": "mem:<id:a>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:26.000Z"
+          },
+          {
+            "from_node": "mem:mem_<id:cBackfilled>",
+            "to_node": "mem:<id:c>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:26.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [
+          {
+            "event": "memory.recover_noop",
+            "data": {
+              "memoryId": "<id:a>",
+              "reason": "Already restored by backfill; returning its active successor.",
+              "details": {
+                "activeId": "mem_<id:aBackfilled>"
+              }
+            }
+          }
+        ],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 4,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:b>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:c>",
+            "revision": 3,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "mem_<id:aBackfilled>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "mem_<id:cBackfilled>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 12,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "backfill-again-already-recovered",
+      "call": {
+        "method": "backfillRecoverable",
+        "input": {
+          "dryRun": false
+        }
+      },
+      "result": {
+        "startedAt": "2026-11-01T00:01:28.000Z",
+        "completedAt": "2026-11-01T00:01:28.000Z",
+        "dryRun": false,
+        "examined": 2,
+        "recoverable": 0,
+        "recovered": 0,
+        "skipped": 2,
+        "skippedRecords": [
+          {
+            "originalId": "<id:a>",
+            "reason": "already_recovered",
+            "kind": "fact",
+            "scope": "project",
+            "textPreview": "Service A owns the billing tables and their migrations.",
+            "deletedAt": "2026-11-01T00:01:24.000Z",
+            "persistence": "long_lived"
+          },
+          {
+            "originalId": "<id:c>",
+            "reason": "already_recovered",
+            "kind": "fact",
+            "scope": "project",
+            "textPreview": "Billing exports run nightly at 02:00 UTC from service A.",
+            "deletedAt": "2026-11-01T00:01:21.000Z",
+            "persistence": "long_lived"
+          }
+        ],
+        "recoverableRecords": [],
+        "byKind": {},
+        "byReason": {
+          "already_recovered": 2
+        }
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:24.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 4,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:24.000Z"
+            }
+          },
+          {
+            "id": "<id:b>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service b reads billing data only through the reporting api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:19.000Z",
+            "created_at": "2026-11-01T00:01:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:b>",
+              "revision": 2,
+              "text": "Service B reads billing data only through the reporting API.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "supersedes": [],
+              "createdAt": "2026-11-01T00:01:14.000Z",
+              "updatedAt": "2026-11-01T00:01:19.000Z"
+            }
+          },
+          {
+            "id": "<id:c>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:21.000Z",
+            "created_at": "2026-11-01T00:01:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:c>",
+              "revision": 3,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:15.000Z",
+              "updatedAt": "2026-11-01T00:01:21.000Z",
+              "contextPolicy": "never"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "never store raw card numbers anywhere in the system.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:16.000Z",
+            "created_at": "2026-11-01T00:01:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Never store raw card numbers anywhere in the system.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:01:16.000Z",
+              "updatedAt": "2026-11-01T00:01:16.000Z"
+            }
+          },
+          {
+            "id": "mem_<id:aBackfilled>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[\"backfill:recovered\"]",
+            "updated_at": "2026-11-01T00:01:26.000Z",
+            "created_at": "2026-11-01T00:01:26.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "mem_<id:aBackfilled>",
+              "revision": 1,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "backfill:recovered"
+              ],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:26.000Z",
+              "updatedAt": "2026-11-01T00:01:26.000Z",
+              "supersedes": [
+                "<id:a>"
+              ],
+              "injectionCount": 0,
+              "useCount": 0
+            }
+          },
+          {
+            "id": "mem_<id:cBackfilled>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[\"backfill:recovered\"]",
+            "updated_at": "2026-11-01T00:01:26.000Z",
+            "created_at": "2026-11-01T00:01:26.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "mem_<id:cBackfilled>",
+              "revision": 1,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "backfill:recovered"
+              ],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:26.000Z",
+              "updatedAt": "2026-11-01T00:01:26.000Z",
+              "contextPolicy": "never",
+              "supersedes": [
+                "<id:c>"
+              ],
+              "injectionCount": 0,
+              "useCount": 0
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:mem_<id:aBackfilled>",
+            "to_node": "file:src/a.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:26.000Z"
+          },
+          {
+            "from_node": "mem:mem_<id:aBackfilled>",
+            "to_node": "mem:<id:a>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:26.000Z"
+          },
+          {
+            "from_node": "mem:mem_<id:cBackfilled>",
+            "to_node": "mem:<id:c>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:26.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [
+          {
+            "event": "memory.backfill_applied",
+            "data": {
+              "details": {
+                "examined": 2,
+                "recoverable": 0,
+                "recovered": 0,
+                "skipped": 2
+              }
+            }
+          }
+        ],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 4,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:b>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:c>",
+            "revision": 3,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "mem_<id:aBackfilled>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "mem_<id:cBackfilled>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 12,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "get-tombstone",
+      "call": {
+        "method": "getSage",
+        "input": {
+          "id": "<id:c>"
+        }
+      },
+      "result": {
+        "id": "<id:c>",
+        "revision": 3,
+        "text": "Billing exports run nightly at 02:00 UTC from service A.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "deleted",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-11-01T00:01:15.000Z",
+        "updatedAt": "2026-11-01T00:01:21.000Z",
+        "contextPolicy": "never"
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:24.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 4,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:24.000Z"
+            }
+          },
+          {
+            "id": "<id:b>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service b reads billing data only through the reporting api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:19.000Z",
+            "created_at": "2026-11-01T00:01:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:b>",
+              "revision": 2,
+              "text": "Service B reads billing data only through the reporting API.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "supersedes": [],
+              "createdAt": "2026-11-01T00:01:14.000Z",
+              "updatedAt": "2026-11-01T00:01:19.000Z"
+            }
+          },
+          {
+            "id": "<id:c>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:21.000Z",
+            "created_at": "2026-11-01T00:01:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:c>",
+              "revision": 3,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:15.000Z",
+              "updatedAt": "2026-11-01T00:01:21.000Z",
+              "contextPolicy": "never"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "never store raw card numbers anywhere in the system.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:16.000Z",
+            "created_at": "2026-11-01T00:01:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Never store raw card numbers anywhere in the system.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:01:16.000Z",
+              "updatedAt": "2026-11-01T00:01:16.000Z"
+            }
+          },
+          {
+            "id": "mem_<id:aBackfilled>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[\"backfill:recovered\"]",
+            "updated_at": "2026-11-01T00:01:26.000Z",
+            "created_at": "2026-11-01T00:01:26.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "mem_<id:aBackfilled>",
+              "revision": 1,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "backfill:recovered"
+              ],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:26.000Z",
+              "updatedAt": "2026-11-01T00:01:26.000Z",
+              "supersedes": [
+                "<id:a>"
+              ],
+              "injectionCount": 0,
+              "useCount": 0
+            }
+          },
+          {
+            "id": "mem_<id:cBackfilled>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[\"backfill:recovered\"]",
+            "updated_at": "2026-11-01T00:01:26.000Z",
+            "created_at": "2026-11-01T00:01:26.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "mem_<id:cBackfilled>",
+              "revision": 1,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "backfill:recovered"
+              ],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:26.000Z",
+              "updatedAt": "2026-11-01T00:01:26.000Z",
+              "contextPolicy": "never",
+              "supersedes": [
+                "<id:c>"
+              ],
+              "injectionCount": 0,
+              "useCount": 0
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:mem_<id:aBackfilled>",
+            "to_node": "file:src/a.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:26.000Z"
+          },
+          {
+            "from_node": "mem:mem_<id:aBackfilled>",
+            "to_node": "mem:<id:a>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:26.000Z"
+          },
+          {
+            "from_node": "mem:mem_<id:cBackfilled>",
+            "to_node": "mem:<id:c>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:26.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 4,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:b>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:c>",
+            "revision": 3,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "mem_<id:aBackfilled>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "mem_<id:cBackfilled>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 12,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "recover-unknown",
+      "call": {
+        "method": "recoverSage",
+        "input": {
+          "id": "x"
+        }
+      },
+      "error": {
+        "name": "Error",
+        "message": "SAGE \"01NOTFOUNDNOTFOUNDNOTFOUND\" not found."
+      },
+      "state": {
+        "memories": [
+          {
+            "id": "<id:a>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:24.000Z",
+            "created_at": "2026-11-01T00:01:13.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:a>",
+              "revision": 4,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:13.000Z",
+              "updatedAt": "2026-11-01T00:01:24.000Z"
+            }
+          },
+          {
+            "id": "<id:b>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service b reads billing data only through the reporting api.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:19.000Z",
+            "created_at": "2026-11-01T00:01:14.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:b>",
+              "revision": 2,
+              "text": "Service B reads billing data only through the reporting API.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "supersedes": [],
+              "createdAt": "2026-11-01T00:01:14.000Z",
+              "updatedAt": "2026-11-01T00:01:19.000Z"
+            }
+          },
+          {
+            "id": "<id:c>",
+            "status": "deleted",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:21.000Z",
+            "created_at": "2026-11-01T00:01:15.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:c>",
+              "revision": 3,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:15.000Z",
+              "updatedAt": "2026-11-01T00:01:21.000Z",
+              "contextPolicy": "never"
+            }
+          },
+          {
+            "id": "<id:permanent>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "never store raw card numbers anywhere in the system.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-11-01T00:01:16.000Z",
+            "created_at": "2026-11-01T00:01:16.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:permanent>",
+              "revision": 1,
+              "text": "Never store raw card numbers anywhere in the system.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:01:16.000Z",
+              "updatedAt": "2026-11-01T00:01:16.000Z"
+            }
+          },
+          {
+            "id": "mem_<id:aBackfilled>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "service a owns the billing tables and their migrations.",
+            "audience": null,
+            "tags": "[\"backfill:recovered\"]",
+            "updated_at": "2026-11-01T00:01:26.000Z",
+            "created_at": "2026-11-01T00:01:26.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "mem_<id:aBackfilled>",
+              "revision": 1,
+              "text": "Service A owns the billing tables and their migrations.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "backfill:recovered"
+              ],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/a.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:26.000Z",
+              "updatedAt": "2026-11-01T00:01:26.000Z",
+              "supersedes": [
+                "<id:a>"
+              ],
+              "injectionCount": 0,
+              "useCount": 0
+            }
+          },
+          {
+            "id": "mem_<id:cBackfilled>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "billing exports run nightly at 02:00 utc from service a.",
+            "audience": null,
+            "tags": "[\"backfill:recovered\"]",
+            "updated_at": "2026-11-01T00:01:26.000Z",
+            "created_at": "2026-11-01T00:01:26.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "mem_<id:cBackfilled>",
+              "revision": 1,
+              "text": "Billing exports run nightly at 02:00 UTC from service A.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "backfill:recovered"
+              ],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:01:26.000Z",
+              "updatedAt": "2026-11-01T00:01:26.000Z",
+              "contextPolicy": "never",
+              "supersedes": [
+                "<id:c>"
+              ],
+              "injectionCount": 0,
+              "useCount": 0
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "file:src/a.ts",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:13.000Z"
+          },
+          {
+            "from_node": "mem:mem_<id:aBackfilled>",
+            "to_node": "file:src/a.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-11-01T00:01:26.000Z"
+          },
+          {
+            "from_node": "mem:mem_<id:aBackfilled>",
+            "to_node": "mem:<id:a>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:26.000Z"
+          },
+          {
+            "from_node": "mem:mem_<id:cBackfilled>",
+            "to_node": "mem:<id:c>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-11-01T00:01:26.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:a>",
+            "revision": 4,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:b>",
+            "revision": 2,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:c>",
+            "revision": 3,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:permanent>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "mem_<id:aBackfilled>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "mem_<id:cBackfilled>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 12,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    }
+  ]
+}

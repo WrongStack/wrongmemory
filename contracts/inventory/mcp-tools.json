@@ -1,0 +1,1452 @@
+{
+  "schema": "wrongmemory/mcp-tool-inventory@1",
+  "source": {
+    "commit": "222d23a90ae9c67c2433d7734c6966be7ee4e696",
+    "factory": "packages/sage/src/tools/memory-tools.ts#createSageTools",
+    "policy": "packages/sage-mcp/src/policy.ts#selectAllowedTools",
+    "generatedBy": "scripts/inventory/mcp-tools.ts"
+  },
+  "policyRule": "deny -> never; memory_candidates with proposals && !writable -> narrowed to list/propose (session scope refused); riskTier destructive -> never; permission auto -> exposed if riskTier safe or writable; permission confirm -> only writable and riskTier standard|safe",
+  "exposure": {
+    "read-only": [
+      "memory_for_file",
+      "memory_for_path",
+      "memory_search",
+      "memory_search_explain",
+      "memory_graph",
+      "memory_gather_batch"
+    ],
+    "read-propose": [
+      "memory_for_file",
+      "memory_for_path",
+      "memory_search",
+      "memory_search_explain",
+      "memory_graph",
+      "memory_gather_batch",
+      "memory_candidates"
+    ],
+    "writable": [
+      "memory_for_file",
+      "memory_for_path",
+      "memory_search",
+      "memory_search_explain",
+      "memory_graph",
+      "memory_gather_batch",
+      "memory_verify",
+      "memory_hygiene",
+      "memory_candidates",
+      "remember",
+      "forget",
+      "memory_update",
+      "memory_delete",
+      "memory_recover",
+      "memory_backfill_recoverable"
+    ]
+  },
+  "narrowed": {
+    "read-propose:memory_candidates": {
+      "description": "List pending memory candidates, or propose a new one for WrongStack review. A proposal is not a memory until a reviewer accepts it in WrongStack.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "propose"
+            ]
+          },
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Required for accept, reject, or resolve."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reason for rejection, the review reason for propose, or the resolution note for resolve."
+          },
+          "include_resolved": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Candidate text (required for propose)."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "fact",
+              "decision",
+              "convention",
+              "preference",
+              "warning",
+              "anti_pattern",
+              "workflow",
+              "bug_root_cause",
+              "file_note",
+              "symbol_note",
+              "command_note",
+              "summary",
+              "memory_review",
+              "tool_outcome",
+              "error_pattern",
+              "session_digest",
+              "role_operational",
+              "task_outcome",
+              "security_signal",
+              "fleet_convention"
+            ],
+            "description": "Memory kind for propose."
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "project",
+              "file",
+              "symbol",
+              "user"
+            ],
+            "description": "Scope for propose."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Extra tags for propose."
+          },
+          "importance": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "suggested_action": {
+            "type": "string",
+            "enum": [
+              "delete",
+              "archive",
+              "investigate"
+            ],
+            "description": "Review action suggested for propose."
+          },
+          "memory_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Id of the memory this proposal targets (propose)."
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "delete",
+              "archive",
+              "keep"
+            ],
+            "description": "Review decision to apply to the target memory (required for resolve)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "rejects": {
+        "accept": [
+          "action \"accept\" is not available over MCP; use list or propose."
+        ],
+        "sessionScopePropose": [
+          "scope \"session\" is not available for MCP proposals; use project, file, symbol, or user."
+        ]
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "memory_for_file",
+      "description": "Retrieve memories attached to a file, grouped by how they match. Supports a cursor line range so symbol-anchored memories under the caret surface first.",
+      "permission": "auto",
+      "riskTier": "safe",
+      "mutating": false,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project-relative file path."
+          },
+          "lineStart": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional — caret line (1-indexed). When both `lineStart` and `lineEnd` are set, symbol anchors overlapping this range get a strength boost."
+          },
+          "lineEnd": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional — last caret line. Pair with `lineStart`."
+          },
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Per-bucket cap. Default 50."
+          },
+          "showSuperseded": {
+            "type": "boolean",
+            "description": "Default true. Set false to hide superseded memories (use for compact UI)."
+          },
+          "showDeleted": {
+            "type": "boolean",
+            "description": "Default false. Set true (typically via a \"Show recoverable\" UI toggle) to surface deleted memories for recovery."
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      },
+      "otherKeys": [
+        "capabilities",
+        "category",
+        "icon",
+        "usageHint"
+      ]
+    },
+    {
+      "name": "memory_for_path",
+      "description": "Retrieve project knowledge for a path and its ancestor directories.",
+      "permission": "auto",
+      "riskTier": "safe",
+      "mutating": false,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project-relative file or directory path."
+          },
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      },
+      "otherKeys": [
+        "capabilities",
+        "category",
+        "icon"
+      ]
+    },
+    {
+      "name": "memory_search",
+      "description": "Search structured project memory using lexical, tag, path, and anchor signals.",
+      "permission": "auto",
+      "riskTier": "safe",
+      "mutating": false,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search text, symbol, tag, command, or path."
+          },
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "include_stale": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "otherKeys": [
+        "capabilities",
+        "category",
+        "icon"
+      ]
+    },
+    {
+      "name": "memory_search_explain",
+      "description": "Like `memory_search` but each result carries a per-channel score breakdown — lexical score, vector score, RRF final score, and a `source` attribution (`lexical` | `vector` | `both`). Use when the agent needs to weigh channels (e.g. trust a paraphrased semantic hit vs an exact lexical hit) or to surface WHY a result is in the list. Falls back to lexical-only hits when the underlying port does not expose the rich variant.",
+      "permission": "auto",
+      "riskTier": "safe",
+      "mutating": false,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search text, symbol, tag, command, or path."
+          },
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "include_stale": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "otherKeys": [
+        "capabilities",
+        "category",
+        "icon"
+      ]
+    },
+    {
+      "name": "memory_graph",
+      "description": "Traverse relationships between memories, files, symbols, commands, and sessions.",
+      "permission": "auto",
+      "riskTier": "safe",
+      "mutating": false,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A memory id, graph node, path, symbol, or search query."
+          },
+          "depth": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 6
+          },
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 500
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "otherKeys": [
+        "capabilities",
+        "category",
+        "icon"
+      ]
+    },
+    {
+      "name": "memory_gather_batch",
+      "description": "Gather a bounded batch of memories with optional graph relations. Use this for bulk memory review and cleanup workflows — enumerates active memories by status, kind, or text substring, and optionally includes their graph edges for collective evaluation.",
+      "permission": "auto",
+      "riskTier": "safe",
+      "mutating": false,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "statuses": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "active",
+                "stale",
+                "superseded",
+                "contradicted",
+                "archived",
+                "deleted"
+              ]
+            },
+            "description": "Statuses to include. Default: all except deleted."
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional kind filter (e.g. \"fact\")."
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Case-insensitive substring match against memory text."
+          },
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque cursor from a previous page's `nextCursor`."
+          },
+          "includeRelations": {
+            "type": "boolean",
+            "description": "Include graph edges among gathered memories. Default true."
+          }
+        },
+        "additionalProperties": false
+      },
+      "otherKeys": [
+        "capabilities",
+        "category",
+        "icon"
+      ]
+    },
+    {
+      "name": "memory_verify",
+      "description": "Verify file, directory, symbol, content-hash, and git-blob anchors and update stale state.",
+      "permission": "confirm",
+      "riskTier": "standard",
+      "mutating": true,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "memory_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional memory id; omit to verify all."
+          }
+        },
+        "additionalProperties": false
+      },
+      "otherKeys": [
+        "capabilities",
+        "category",
+        "icon"
+      ]
+    },
+    {
+      "name": "memory_hygiene",
+      "description": "Deduplicate, verify anchors, mark stale, supersede old versions, and surface review candidates for deletion or archival. Never auto-deletes live memories — those decisions belong to the user or agent. The optional, opt-in purgeDeletedAfterDays physically compacts ALREADY-deleted tombstones older than N days out of the JSONL log (never touches active or permanent memories).",
+      "permission": "confirm",
+      "riskTier": "standard",
+      "mutating": true,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "retentionDays": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3650
+          },
+          "archiveLowConfidenceAfterDays": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3650
+          },
+          "verify": {
+            "type": "boolean"
+          },
+          "purgeDeletedAfterDays": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3650,
+            "description": "OPT-IN cleanup: physically remove records that are already status=\"deleted\" and were deleted more than this many days ago, compacting them out of the JSONL log. Omit or 0 to disable (default). Never deletes active/permanent memories and never creates new deletions. JSONL backend only."
+          }
+        },
+        "additionalProperties": false
+      },
+      "otherKeys": [
+        "capabilities",
+        "category",
+        "icon"
+      ]
+    },
+    {
+      "name": "memory_candidates",
+      "description": "List, accept, reject, propose, or resolve memory candidates. Proposing files a non-destructive review suggestion into the ReviewQueue; resolving applies the review decision (delete/archive/keep) to the proposal's TARGET memory — the preferred decision path over raw memory_delete calls.",
+      "permission": "confirm",
+      "riskTier": "standard",
+      "mutating": true,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "accept",
+              "reject",
+              "propose",
+              "resolve"
+            ]
+          },
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Required for accept, reject, or resolve."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reason for rejection, the review reason for propose, or the resolution note for resolve."
+          },
+          "include_resolved": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Candidate text (required for propose)."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "fact",
+              "decision",
+              "convention",
+              "preference",
+              "warning",
+              "anti_pattern",
+              "workflow",
+              "bug_root_cause",
+              "file_note",
+              "symbol_note",
+              "command_note",
+              "summary",
+              "memory_review",
+              "tool_outcome",
+              "error_pattern",
+              "session_digest",
+              "role_operational",
+              "task_outcome",
+              "security_signal",
+              "fleet_convention"
+            ],
+            "description": "Memory kind for propose."
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "project",
+              "user",
+              "session",
+              "file",
+              "symbol"
+            ],
+            "description": "Scope for propose."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Extra tags for propose."
+          },
+          "importance": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "suggested_action": {
+            "type": "string",
+            "enum": [
+              "delete",
+              "archive",
+              "investigate"
+            ],
+            "description": "Review action suggested for propose."
+          },
+          "memory_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Id of the memory this proposal targets (propose)."
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "delete",
+              "archive",
+              "keep"
+            ],
+            "description": "Review decision to apply to the target memory (required for resolve)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "otherKeys": [
+        "capabilities",
+        "category",
+        "icon"
+      ]
+    },
+    {
+      "name": "remember",
+      "description": "Persist structured project knowledge into long-term SAGE. Bind it to files, symbols, or commands with `anchors` so it can be verified and auto-surfaced later.",
+      "permission": "confirm",
+      "riskTier": "standard",
+      "mutating": true,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The fact or note to remember. Concise and factual."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "fact",
+              "decision",
+              "convention",
+              "preference",
+              "warning",
+              "anti_pattern",
+              "workflow",
+              "bug_root_cause",
+              "file_note",
+              "symbol_note",
+              "command_note",
+              "summary",
+              "memory_review",
+              "tool_outcome",
+              "error_pattern",
+              "session_digest",
+              "role_operational",
+              "task_outcome",
+              "security_signal",
+              "fleet_convention"
+            ],
+            "description": "Category — the most specific kind that fits."
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "project",
+              "user",
+              "session",
+              "file",
+              "symbol"
+            ],
+            "description": "project (shared, default), user (personal), session, file, or symbol."
+          },
+          "ownerSessionId": {
+            "type": "string",
+            "description": "Optional. For scope 'session' the current session is used automatically; pass this only to attribute the memory to a different session. Ignored for non-session scopes."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Hashtag-style tags for grouping and search (omit the #)."
+          },
+          "anchors": {
+            "type": "array",
+            "description": "Bind this memory to concrete code locations so it can be verified and auto-surfaced.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "file",
+                    "directory",
+                    "symbol",
+                    "package",
+                    "command",
+                    "test",
+                    "git",
+                    "agent"
+                  ],
+                  "description": "Anchor kind."
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Project-relative path (required for file/directory/package/test/git)."
+                },
+                "symbol": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Symbol name (required for symbol anchors)."
+                },
+                "command": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Shell command (required for command anchors)."
+                },
+                "role": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Roster/catalog role id (required for agent anchors)."
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "sources": {
+            "type": "array",
+            "maxItems": 16,
+            "description": "Evidence actually inspected. Use session for agent observations; user only for explicit user statements.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "user",
+                    "session",
+                    "tool_result",
+                    "project_instruction",
+                    "file",
+                    "test",
+                    "command",
+                    "legacy_memory"
+                  ],
+                  "description": "Evidence origin."
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Source file or test path."
+                },
+                "command": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Command actually run."
+                },
+                "toolUseId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Observed tool call id."
+                },
+                "excerptHash": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Hash of inspected evidence, if available."
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "validity": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "statement"
+            ],
+            "description": "When this claim applies. Assumptions are unverified until checked in the current task. Literal source checks are evidence signals, not proof that all assumptions hold. Never include secrets or executable commands.",
+            "properties": {
+              "statement": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              "checks": {
+                "type": "array",
+                "maxItems": 4,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "path",
+                    "text"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "source_contains"
+                      ]
+                    },
+                    "path": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500,
+                      "description": "Relative project file path."
+                    },
+                    "text": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 400,
+                      "description": "Exact source literal expected while the claim applies; not a regex."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "audience": {
+            "type": "object",
+            "description": "Optional automatic-injection audience. Values are stable project role/task/mode ids.",
+            "properties": {
+              "roles": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Agent role ids, for example reviewer, refactor-planner, or git."
+              },
+              "taskTypes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Task classifications such as review, refactor, or bugfix."
+              },
+              "modes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Runtime mode ids."
+              }
+            },
+            "additionalProperties": false
+          },
+          "no_auto_audience": {
+            "type": "boolean",
+            "description": "Set to true to prevent auto-scoping from your agent role. Creates a general project memory even when called from a subagent."
+          },
+          "importance": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "persistence": {
+            "type": "string",
+            "enum": [
+              "permanent",
+              "long_lived",
+              "short_lived"
+            ],
+            "description": "Retention class. Prefer long_lived; permanent is only for explicit invariants."
+          },
+          "supersedes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Memory ids this replaces (they become superseded)."
+          },
+          "contradicts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Memory ids this contradicts."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "fact",
+              "decision",
+              "convention",
+              "preference",
+              "reference",
+              "anti_pattern"
+            ],
+            "description": "Legacy category (optional; prefer `kind`)."
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ],
+            "description": "Legacy priority (optional; prefer `importance`)."
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "otherKeys": [
+        "capabilities",
+        "category",
+        "icon",
+        "timeoutMs",
+        "usageHint"
+      ]
+    },
+    {
+      "name": "forget",
+      "description": "Remove memory entries whose text/tag/anchor matches the query (case-insensitive). Requires force: true — this is a bulk delete. Prefer `memory_delete` when you have a specific memory id.",
+      "permission": "confirm",
+      "riskTier": "standard",
+      "mutating": true,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 3,
+            "description": "Substring/tag/id to match."
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "project-agents",
+              "project-memory",
+              "user-memory"
+            ],
+            "description": "Which scope to search. Defaults to project-memory."
+          },
+          "force": {
+            "type": "boolean",
+            "description": "Required — authorizes deleting every memory matching the query. Recorded in the audit log."
+          }
+        },
+        "required": [
+          "query",
+          "force"
+        ],
+        "additionalProperties": false
+      },
+      "otherKeys": [
+        "capabilities",
+        "category",
+        "icon",
+        "timeoutMs",
+        "usageHint"
+      ]
+    },
+    {
+      "name": "memory_update",
+      "description": "Update a single SAGE entry by id — edit text, tags, kind, anchors, importance/confidence, status, or relationships.",
+      "permission": "confirm",
+      "riskTier": "standard",
+      "mutating": true,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The memory id to update."
+          },
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Revision read before correcting the memory; rejects concurrent changes."
+          },
+          "sources": {
+            "type": "array",
+            "maxItems": 16,
+            "description": "Evidence actually inspected. Use session for agent observations; user only for explicit user statements.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "user",
+                    "session",
+                    "tool_result",
+                    "project_instruction",
+                    "file",
+                    "test",
+                    "command",
+                    "legacy_memory"
+                  ],
+                  "description": "Evidence origin."
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Source file or test path."
+                },
+                "command": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Command actually run."
+                },
+                "toolUseId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Observed tool call id."
+                },
+                "excerptHash": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Hash of inspected evidence, if available."
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "validity": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "statement"
+                ],
+                "description": "When this claim applies. Assumptions are unverified until checked in the current task. Literal source checks are evidence signals, not proof that all assumptions hold. Never include secrets or executable commands.",
+                "properties": {
+                  "statement": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  "checks": {
+                    "type": "array",
+                    "maxItems": 4,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "type",
+                        "path",
+                        "text"
+                      ],
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "source_contains"
+                          ]
+                        },
+                        "path": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500,
+                          "description": "Relative project file path."
+                        },
+                        "text": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 400,
+                          "description": "Exact source literal expected while the claim applies; not a regex."
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Replace applicability assumptions; null clears them. Use expectedRevision after checking current evidence."
+          },
+          "feedback": {
+            "type": "object",
+            "properties": {
+              "verdict": {
+                "type": "string",
+                "enum": [
+                  "useful",
+                  "outdated",
+                  "incorrect",
+                  "irrelevant",
+                  "uncertain"
+                ],
+                "description": "Your evidence-based judgment after using/checking this memory."
+              },
+              "observedRevision": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Revision you actually read."
+              },
+              "evidence": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "description": "Concrete outcome or current source/test evidence. Do not include secrets or raw logs."
+              }
+            },
+            "required": [
+              "verdict",
+              "observedRevision",
+              "evidence"
+            ],
+            "additionalProperties": false
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement text."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Replacement tags (omit the #)."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "fact",
+              "decision",
+              "convention",
+              "preference",
+              "warning",
+              "anti_pattern",
+              "workflow",
+              "bug_root_cause",
+              "file_note",
+              "symbol_note",
+              "command_note",
+              "summary",
+              "memory_review",
+              "tool_outcome",
+              "error_pattern",
+              "session_digest",
+              "role_operational",
+              "task_outcome",
+              "security_signal",
+              "fleet_convention"
+            ],
+            "description": "New kind."
+          },
+          "anchors": {
+            "type": "array",
+            "description": "Bind this memory to concrete code locations so it can be verified and auto-surfaced.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "file",
+                    "directory",
+                    "symbol",
+                    "package",
+                    "command",
+                    "test",
+                    "git",
+                    "agent"
+                  ],
+                  "description": "Anchor kind."
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Project-relative path (required for file/directory/package/test/git)."
+                },
+                "symbol": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Symbol name (required for symbol anchors)."
+                },
+                "command": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Shell command (required for command anchors)."
+                },
+                "role": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Roster/catalog role id (required for agent anchors)."
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "audience": {
+            "type": "object",
+            "description": "Optional automatic-injection audience. Values are stable project role/task/mode ids.",
+            "properties": {
+              "roles": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Agent role ids, for example reviewer, refactor-planner, or git."
+              },
+              "taskTypes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Task classifications such as review, refactor, or bugfix."
+              },
+              "modes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Runtime mode ids."
+              }
+            },
+            "additionalProperties": false
+          },
+          "importance": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "freshness": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "persistence": {
+            "type": "string",
+            "enum": [
+              "permanent",
+              "long_lived",
+              "short_lived"
+            ],
+            "description": "Retention class. Prefer long_lived; permanent is only for explicit invariants."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "stale",
+              "superseded",
+              "contradicted",
+              "archived",
+              "deleted"
+            ],
+            "description": "New lifecycle status."
+          },
+          "supersedes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Memory ids this replaces."
+          },
+          "contradicts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Memory ids this contradicts."
+          },
+          "force": {
+            "type": "boolean",
+            "description": "Required to set status to \"deleted\" — authorizes all deletions, not just permanent memories. The override is audit-logged."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "otherKeys": [
+        "capabilities",
+        "category",
+        "icon",
+        "timeoutMs",
+        "usageHint"
+      ]
+    },
+    {
+      "name": "memory_delete",
+      "description": "Delete one SAGE entry by id (soft-delete with graph/relationship cascade cleanup). Requires force: true — all deletions are audited and need explicit authorization.",
+      "permission": "confirm",
+      "riskTier": "standard",
+      "mutating": true,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The memory id to delete."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reason recorded in the audit log."
+          },
+          "force": {
+            "type": "boolean",
+            "description": "Required for ALL deletions — authorizes the removal and is recorded in the audit log."
+          },
+          "neverInject": {
+            "type": "boolean",
+            "description": "Absolute privacy/safety ban: this memory must never enter LLM context. Normal deletion remains context-eligible historical evidence."
+          }
+        },
+        "required": [
+          "id",
+          "force"
+        ],
+        "additionalProperties": false
+      },
+      "otherKeys": [
+        "capabilities",
+        "category",
+        "icon",
+        "timeoutMs",
+        "usageHint"
+      ]
+    },
+    {
+      "name": "memory_recover",
+      "description": "Restore a deleted SAGE entry to active status. Superseded entries resolve to the head of their version chain (no-op write).",
+      "permission": "confirm",
+      "riskTier": "standard",
+      "mutating": true,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The memory id to recover."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reason recorded in the audit log."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "otherKeys": [
+        "capabilities",
+        "category",
+        "icon",
+        "timeoutMs",
+        "usageHint"
+      ]
+    },
+    {
+      "name": "memory_backfill_recoverable",
+      "description": "Find status=\"deleted\" memories that are still recoverable and either preview them (default) or restore them as fresh active versions.",
+      "permission": "confirm",
+      "riskTier": "standard",
+      "mutating": false,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "type": "object",
+            "description": "Optional filter — see schema for fields. Empty/missing means \"no filter\".",
+            "properties": {
+              "kinds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "fact",
+                    "decision",
+                    "convention",
+                    "preference",
+                    "warning",
+                    "anti_pattern",
+                    "workflow",
+                    "bug_root_cause",
+                    "file_note",
+                    "symbol_note",
+                    "command_note",
+                    "summary",
+                    "memory_review",
+                    "tool_outcome",
+                    "error_pattern",
+                    "session_digest",
+                    "role_operational",
+                    "task_outcome",
+                    "security_signal",
+                    "fleet_convention"
+                  ]
+                },
+                "description": "Only consider memories with one of these kinds."
+              },
+              "scopes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "project",
+                    "user",
+                    "session",
+                    "file",
+                    "symbol"
+                  ]
+                },
+                "description": "Only consider memories with one of these scopes."
+              },
+              "updatedAfter": {
+                "type": "string",
+                "minLength": 1,
+                "description": "ISO-8601 cutoff: only memories with updatedAt >= this are considered."
+              },
+              "updatedBefore": {
+                "type": "string",
+                "minLength": 1,
+                "description": "ISO-8601 cutoff: only memories with updatedAt <= this are considered."
+              },
+              "requireText": {
+                "type": "boolean",
+                "description": "Default true. Set false to also consider empty-text records."
+              },
+              "requireProvenance": {
+                "type": "boolean",
+                "description": "Default true. Set false to consider records with neither sources nor anchors."
+              }
+            },
+            "additionalProperties": false
+          },
+          "apply": {
+            "type": "boolean",
+            "description": "Default false (dry-run). Set true to actually create new active versions."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional reason recorded in the audit log."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "otherKeys": [
+        "capabilities",
+        "category",
+        "icon",
+        "timeoutMs",
+        "usageHint"
+      ]
+    }
+  ]
+}

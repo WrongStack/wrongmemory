@@ -1,0 +1,49 @@
+{
+  "baseline": "222d23a90ae9c67c2433d7734c6966be7ee4e696",
+  "generator": "scripts/oracle/build-mutation-fixtures.ts",
+  "scenarios": [
+    {
+      "scenario": "remember",
+      "description": "rememberSage defaults, quality caps, merges, relationships, validation and rejections",
+      "steps": 37,
+      "errors": 12
+    },
+    {
+      "scenario": "update",
+      "description": "updateSage: field changes, revision guard, feedback, validity removal, immutability, status/staleReason",
+      "steps": 38,
+      "errors": 11
+    },
+    {
+      "scenario": "delete-recover",
+      "description": "deleteSage force gate, tombstone, reference cleanup, recoverSage, backfillRecoverable",
+      "steps": 18,
+      "errors": 3
+    },
+    {
+      "scenario": "counters",
+      "description": "recordInjection / recordUse: JSON counters, updated_at, FTS and HQ churn",
+      "steps": 6,
+      "errors": 0
+    },
+    {
+      "scenario": "candidates",
+      "description": "createCandidate, list, accept, reject, resolve (delete/archive/keep), stale targetRevision, consolidation",
+      "steps": 33,
+      "errors": 4
+    },
+    {
+      "scenario": "hygiene",
+      "description": "default hygiene: verification, exact/near dedup, contradictions, session GC, expiry, review candidates, permanent safeguard",
+      "steps": 13,
+      "errors": 0
+    },
+    {
+      "scenario": "graph-retrieval",
+      "description": "findRelatedSage, graphFor, traverseGraph, retrieveForPath expansion, listSagePage cursor walk, multi-term search rerank, getStats",
+      "steps": 43,
+      "errors": 0
+    }
+  ],
+  "warnings": 1
+}

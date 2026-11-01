@@ -607,6 +607,10 @@ pub struct RememberParams {
     pub freshness: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expires_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supersedes: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contradicts: Vec<String>,
 }
 
 /// Input accepted by `candidate.propose` (a proposal, not a memory).

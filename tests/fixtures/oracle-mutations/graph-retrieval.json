@@ -1,0 +1,3103 @@
+{
+  "scenario": "graph-retrieval",
+  "description": "findRelatedSage, graphFor, traverseGraph, retrieveForPath expansion, listSagePage cursor walk, multi-term search rerank, getStats",
+  "baseline": "222d23a90ae9c67c2433d7734c6966be7ee4e696",
+  "clockEpoch": "2026-11-01T00:00:00.000Z",
+  "steps": [
+    {
+      "step": "remember-http",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "startServer binds the port before plugins load.",
+          "kind": "symbol_note",
+          "anchors": [
+            {
+              "type": "symbol",
+              "path": "src/server/http.ts",
+              "symbol": "startServer"
+            }
+          ],
+          "tags": [
+            "server"
+          ]
+        }
+      },
+      "result": {
+        "id": "<id:http>",
+        "revision": 1,
+        "text": "startServer binds the port before plugins load.",
+        "kind": "symbol_note",
+        "scope": "project",
+        "status": "active",
+        "tags": [
+          "server"
+        ],
+        "anchors": [
+          {
+            "type": "symbol",
+            "path": "src/server/http.ts",
+            "symbol": "startServer"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "createdAt": "2026-12-10T00:02:23.000Z",
+        "updatedAt": "2026-12-10T00:02:23.000Z"
+      }
+    },
+    {
+      "step": "remember-routes",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Routes are registered in src/server/routes.ts in declaration order.",
+          "anchors": [
+            {
+              "type": "file",
+              "path": "src/server/routes.ts"
+            }
+          ],
+          "tags": [
+            "server"
+          ]
+        }
+      },
+      "result": {
+        "id": "<id:routes>",
+        "revision": 1,
+        "text": "Routes are registered in src/server/routes.ts in declaration order.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [
+          "server"
+        ],
+        "anchors": [
+          {
+            "type": "file",
+            "path": "src/server/routes.ts"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "createdAt": "2026-12-10T00:02:24.000Z",
+        "updatedAt": "2026-12-10T00:02:24.000Z"
+      }
+    },
+    {
+      "step": "remember-serverDir",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Everything under src/server is owned by the platform team.",
+          "anchors": [
+            {
+              "type": "directory",
+              "path": "src/server"
+            }
+          ]
+        }
+      },
+      "result": {
+        "id": "<id:serverDir>",
+        "revision": 1,
+        "text": "Everything under src/server is owned by the platform team.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [
+          {
+            "type": "directory",
+            "path": "src/server"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "createdAt": "2026-12-10T00:02:25.000Z",
+        "updatedAt": "2026-12-10T00:02:25.000Z"
+      }
+    },
+    {
+      "step": "remember-util",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "util.ts helpers must stay free of side effects.",
+          "anchors": [
+            {
+              "type": "file",
+              "path": "src/lib/util.ts"
+            }
+          ]
+        }
+      },
+      "result": {
+        "id": "<id:util>",
+        "revision": 1,
+        "text": "util.ts helpers must stay free of side effects.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [
+          {
+            "type": "file",
+            "path": "src/lib/util.ts"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "createdAt": "2026-12-10T00:02:26.000Z",
+        "updatedAt": "2026-12-10T00:02:26.000Z"
+      }
+    },
+    {
+      "step": "remember-cmd",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Run bun test --watch while editing the server module.",
+          "anchors": [
+            {
+              "type": "command",
+              "command": "bun test --watch"
+            }
+          ]
+        }
+      },
+      "result": {
+        "id": "<id:cmd>",
+        "revision": 1,
+        "text": "Run bun test --watch while editing the server module.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [
+          {
+            "type": "command",
+            "command": "bun test --watch"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "createdAt": "2026-12-10T00:02:27.000Z",
+        "updatedAt": "2026-12-10T00:02:27.000Z"
+      }
+    },
+    {
+      "step": "remember-reviewer",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Reviewers check error handling paths in the server.",
+          "kind": "role_operational",
+          "anchors": [
+            {
+              "type": "agent",
+              "role": "reviewer"
+            }
+          ],
+          "audience": {
+            "roles": [
+              "reviewer"
+            ]
+          }
+        }
+      },
+      "result": {
+        "id": "<id:reviewer>",
+        "revision": 1,
+        "text": "Reviewers check error handling paths in the server.",
+        "kind": "role_operational",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [
+          {
+            "type": "agent",
+            "role": "reviewer"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "audience": {
+          "roles": [
+            "reviewer"
+          ]
+        },
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "createdAt": "2026-12-10T00:02:28.000Z",
+        "updatedAt": "2026-12-10T00:02:28.000Z"
+      }
+    },
+    {
+      "step": "remember-successor",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "startServer now binds the port after plugins load to allow port overrides.",
+          "kind": "symbol_note",
+          "anchors": [
+            {
+              "type": "symbol",
+              "path": "src/server/http.ts",
+              "symbol": "startServer"
+            }
+          ],
+          "supersedes": [
+            "<id:http>"
+          ]
+        }
+      },
+      "result": {
+        "id": "<id:successor>",
+        "revision": 1,
+        "text": "startServer now binds the port after plugins load to allow port overrides.",
+        "kind": "symbol_note",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [
+          {
+            "type": "symbol",
+            "path": "src/server/http.ts",
+            "symbol": "startServer"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "supersedes": [
+          "<id:http>"
+        ],
+        "createdAt": "2026-12-10T00:02:29.000Z",
+        "updatedAt": "2026-12-10T00:02:29.000Z"
+      }
+    },
+    {
+      "step": "remember-filler0",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Filler fact number 0 about the deployment pipeline and server rollout timing.",
+          "importance": 0.3
+        }
+      },
+      "result": {
+        "id": "<id:filler5>",
+        "revision": 1,
+        "text": "Filler fact number 0 about the deployment pipeline and server rollout timing.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.3,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-12-10T00:02:30.000Z",
+        "updatedAt": "2026-12-10T00:02:30.000Z"
+      }
+    },
+    {
+      "step": "remember-filler1",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Filler fact number 1 about the deployment pipeline and server rollout timing.",
+          "importance": 0.4
+        }
+      },
+      "result": {
+        "id": "<id:filler5>",
+        "revision": 2,
+        "text": "Filler fact number 0 about the deployment pipeline and server rollout timing.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.4,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-12-10T00:02:30.000Z",
+        "updatedAt": "2026-12-10T00:02:31.000Z",
+        "supersedes": [],
+        "contradicts": []
+      }
+    },
+    {
+      "step": "remember-filler2",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Filler fact number 2 about the deployment pipeline and server rollout timing.",
+          "importance": 0.5
+        }
+      },
+      "result": {
+        "id": "<id:filler5>",
+        "revision": 3,
+        "text": "Filler fact number 0 about the deployment pipeline and server rollout timing.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.5,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-12-10T00:02:30.000Z",
+        "updatedAt": "2026-12-10T00:02:32.000Z",
+        "supersedes": [],
+        "contradicts": []
+      }
+    },
+    {
+      "step": "remember-filler3",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Filler fact number 3 about the deployment pipeline and server rollout timing.",
+          "importance": 0.6000000000000001
+        }
+      },
+      "result": {
+        "id": "<id:filler5>",
+        "revision": 4,
+        "text": "Filler fact number 0 about the deployment pipeline and server rollout timing.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6000000000000001,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-12-10T00:02:30.000Z",
+        "updatedAt": "2026-12-10T00:02:33.000Z",
+        "supersedes": [],
+        "contradicts": []
+      }
+    },
+    {
+      "step": "remember-filler4",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Filler fact number 4 about the deployment pipeline and server rollout timing.",
+          "importance": 0.7
+        }
+      },
+      "result": {
+        "id": "<id:filler5>",
+        "revision": 5,
+        "text": "Filler fact number 0 about the deployment pipeline and server rollout timing.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.7,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-12-10T00:02:30.000Z",
+        "updatedAt": "2026-12-10T00:02:34.000Z",
+        "supersedes": [],
+        "contradicts": []
+      }
+    },
+    {
+      "step": "remember-filler5",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Filler fact number 5 about the deployment pipeline and server rollout timing.",
+          "importance": 0.8
+        }
+      },
+      "result": {
+        "id": "<id:filler5>",
+        "revision": 6,
+        "text": "Filler fact number 0 about the deployment pipeline and server rollout timing.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.8,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-12-10T00:02:30.000Z",
+        "updatedAt": "2026-12-10T00:02:35.000Z",
+        "supersedes": [],
+        "contradicts": []
+      }
+    },
+    {
+      "step": "state",
+      "call": {
+        "method": "dump",
+        "input": {}
+      },
+      "result": "<undefined>",
+      "state": {
+        "memories": [
+          {
+            "id": "<id:http>",
+            "status": "active",
+            "kind": "symbol_note",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "startserver binds the port before plugins load.",
+            "audience": null,
+            "tags": "[\"server\"]",
+            "updated_at": "2026-12-10T00:02:23.000Z",
+            "created_at": "2026-12-10T00:02:23.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:http>",
+              "revision": 1,
+              "text": "startServer binds the port before plugins load.",
+              "kind": "symbol_note",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "server"
+              ],
+              "anchors": [
+                {
+                  "type": "symbol",
+                  "path": "src/server/http.ts",
+                  "symbol": "startServer"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-12-10T00:02:23.000Z",
+              "updatedAt": "2026-12-10T00:02:23.000Z"
+            }
+          },
+          {
+            "id": "<id:routes>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "routes are registered in src/server/routes.ts in declaration order.",
+            "audience": null,
+            "tags": "[\"server\"]",
+            "updated_at": "2026-12-10T00:02:24.000Z",
+            "created_at": "2026-12-10T00:02:24.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:routes>",
+              "revision": 1,
+              "text": "Routes are registered in src/server/routes.ts in declaration order.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "server"
+              ],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/server/routes.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-12-10T00:02:24.000Z",
+              "updatedAt": "2026-12-10T00:02:24.000Z"
+            }
+          },
+          {
+            "id": "<id:serverDir>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "everything under src/server is owned by the platform team.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-10T00:02:25.000Z",
+            "created_at": "2026-12-10T00:02:25.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:serverDir>",
+              "revision": 1,
+              "text": "Everything under src/server is owned by the platform team.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "directory",
+                  "path": "src/server"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-12-10T00:02:25.000Z",
+              "updatedAt": "2026-12-10T00:02:25.000Z"
+            }
+          },
+          {
+            "id": "<id:util>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "util.ts helpers must stay free of side effects.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-10T00:02:26.000Z",
+            "created_at": "2026-12-10T00:02:26.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:util>",
+              "revision": 1,
+              "text": "util.ts helpers must stay free of side effects.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/lib/util.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-12-10T00:02:26.000Z",
+              "updatedAt": "2026-12-10T00:02:26.000Z"
+            }
+          },
+          {
+            "id": "<id:cmd>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "run bun test --watch while editing the server module.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-10T00:02:27.000Z",
+            "created_at": "2026-12-10T00:02:27.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:cmd>",
+              "revision": 1,
+              "text": "Run bun test --watch while editing the server module.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "command",
+                  "command": "bun test --watch"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-12-10T00:02:27.000Z",
+              "updatedAt": "2026-12-10T00:02:27.000Z"
+            }
+          },
+          {
+            "id": "<id:reviewer>",
+            "status": "active",
+            "kind": "role_operational",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "reviewers check error handling paths in the server.",
+            "audience": "{\"roles\":[\"reviewer\"]}",
+            "tags": "[]",
+            "updated_at": "2026-12-10T00:02:28.000Z",
+            "created_at": "2026-12-10T00:02:28.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:reviewer>",
+              "revision": 1,
+              "text": "Reviewers check error handling paths in the server.",
+              "kind": "role_operational",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "agent",
+                  "role": "reviewer"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "audience": {
+                "roles": [
+                  "reviewer"
+                ]
+              },
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-12-10T00:02:28.000Z",
+              "updatedAt": "2026-12-10T00:02:28.000Z"
+            }
+          },
+          {
+            "id": "<id:successor>",
+            "status": "active",
+            "kind": "symbol_note",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "startserver now binds the port after plugins load to allow port overrides.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-10T00:02:29.000Z",
+            "created_at": "2026-12-10T00:02:29.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:successor>",
+              "revision": 1,
+              "text": "startServer now binds the port after plugins load to allow port overrides.",
+              "kind": "symbol_note",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "symbol",
+                  "path": "src/server/http.ts",
+                  "symbol": "startServer"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "supersedes": [
+                "<id:http>"
+              ],
+              "createdAt": "2026-12-10T00:02:29.000Z",
+              "updatedAt": "2026-12-10T00:02:29.000Z"
+            }
+          },
+          {
+            "id": "<id:filler5>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.8,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "filler fact number 0 about the deployment pipeline and server rollout timing.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-10T00:02:35.000Z",
+            "created_at": "2026-12-10T00:02:30.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:filler5>",
+              "revision": 6,
+              "text": "Filler fact number 0 about the deployment pipeline and server rollout timing.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.8,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-12-10T00:02:30.000Z",
+              "updatedAt": "2026-12-10T00:02:35.000Z",
+              "supersedes": [],
+              "contradicts": []
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "dir:src/lib",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:02:26.000Z"
+          },
+          {
+            "from_node": "dir:src/server",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:02:23.000Z"
+          },
+          {
+            "from_node": "file:src/lib/util.ts",
+            "to_node": "dir:src/lib",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:02:26.000Z"
+          },
+          {
+            "from_node": "file:src/server/http.ts",
+            "to_node": "dir:src/server",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:02:23.000Z"
+          },
+          {
+            "from_node": "file:src/server/routes.ts",
+            "to_node": "dir:src/server",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:02:24.000Z"
+          },
+          {
+            "from_node": "mem:<id:cmd>",
+            "to_node": "command:bun test --watch",
+            "relation": "about_command",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:02:27.000Z"
+          },
+          {
+            "from_node": "mem:<id:http>",
+            "to_node": "symbol:src/server/http.ts#startServer",
+            "relation": "about_symbol",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:02:23.000Z"
+          },
+          {
+            "from_node": "mem:<id:reviewer>",
+            "to_node": "agent:reviewer",
+            "relation": "about_agent",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:02:28.000Z"
+          },
+          {
+            "from_node": "mem:<id:routes>",
+            "to_node": "file:src/server/routes.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:02:24.000Z"
+          },
+          {
+            "from_node": "mem:<id:serverDir>",
+            "to_node": "dir:src/server",
+            "relation": "about_directory",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:02:25.000Z"
+          },
+          {
+            "from_node": "mem:<id:successor>",
+            "to_node": "mem:<id:http>",
+            "relation": "supersedes",
+            "weight": 1,
+            "created_at": "2026-12-10T00:02:29.000Z"
+          },
+          {
+            "from_node": "mem:<id:successor>",
+            "to_node": "symbol:src/server/http.ts#startServer",
+            "relation": "about_symbol",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:02:29.000Z"
+          },
+          {
+            "from_node": "mem:<id:util>",
+            "to_node": "file:src/lib/util.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:02:26.000Z"
+          },
+          {
+            "from_node": "symbol:src/server/http.ts#startServer",
+            "to_node": "file:src/server/http.ts",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:02:23.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:cmd>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:filler5>",
+            "revision": 6,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:http>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:reviewer>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:routes>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:serverDir>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:successor>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:util>",
+            "revision": 1,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 13,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "retrieveForPath-file",
+      "call": {
+        "method": "retrieveForPath",
+        "input": {
+          "paths": [
+            "src/server/http.ts"
+          ]
+        }
+      },
+      "result": [
+        {
+          "id": "<id:successor>",
+          "revision": 1,
+          "text": "startServer now binds the port after plugins load to allow port overrides.",
+          "kind": "symbol_note",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [
+            {
+              "type": "symbol",
+              "path": "src/server/http.ts",
+              "symbol": "startServer"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "supersedes": [
+            "<id:http>"
+          ],
+          "createdAt": "2026-12-10T00:02:29.000Z",
+          "updatedAt": "2026-12-10T00:02:29.000Z"
+        },
+        {
+          "id": "<id:serverDir>",
+          "revision": 1,
+          "text": "Everything under src/server is owned by the platform team.",
+          "kind": "fact",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [
+            {
+              "type": "directory",
+              "path": "src/server"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:25.000Z",
+          "updatedAt": "2026-12-10T00:02:25.000Z"
+        },
+        {
+          "id": "<id:http>",
+          "revision": 1,
+          "text": "startServer binds the port before plugins load.",
+          "kind": "symbol_note",
+          "scope": "project",
+          "status": "active",
+          "tags": [
+            "server"
+          ],
+          "anchors": [
+            {
+              "type": "symbol",
+              "path": "src/server/http.ts",
+              "symbol": "startServer"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:23.000Z",
+          "updatedAt": "2026-12-10T00:02:23.000Z"
+        }
+      ]
+    },
+    {
+      "step": "retrieveForPath-no-ancestors",
+      "call": {
+        "method": "retrieveForPath",
+        "input": {
+          "paths": [
+            "src/server/http.ts"
+          ],
+          "includeAncestors": false
+        }
+      },
+      "result": [
+        {
+          "id": "<id:successor>",
+          "revision": 1,
+          "text": "startServer now binds the port after plugins load to allow port overrides.",
+          "kind": "symbol_note",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [
+            {
+              "type": "symbol",
+              "path": "src/server/http.ts",
+              "symbol": "startServer"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "supersedes": [
+            "<id:http>"
+          ],
+          "createdAt": "2026-12-10T00:02:29.000Z",
+          "updatedAt": "2026-12-10T00:02:29.000Z"
+        },
+        {
+          "id": "<id:http>",
+          "revision": 1,
+          "text": "startServer binds the port before plugins load.",
+          "kind": "symbol_note",
+          "scope": "project",
+          "status": "active",
+          "tags": [
+            "server"
+          ],
+          "anchors": [
+            {
+              "type": "symbol",
+              "path": "src/server/http.ts",
+              "symbol": "startServer"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:23.000Z",
+          "updatedAt": "2026-12-10T00:02:23.000Z"
+        }
+      ]
+    },
+    {
+      "step": "retrieveForPath-dir",
+      "call": {
+        "method": "retrieveForPath",
+        "input": {
+          "paths": [
+            "src/server"
+          ]
+        }
+      },
+      "result": [
+        {
+          "id": "<id:serverDir>",
+          "revision": 1,
+          "text": "Everything under src/server is owned by the platform team.",
+          "kind": "fact",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [
+            {
+              "type": "directory",
+              "path": "src/server"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:25.000Z",
+          "updatedAt": "2026-12-10T00:02:25.000Z"
+        }
+      ]
+    },
+    {
+      "step": "retrieveForPath-absolute",
+      "call": {
+        "method": "retrieveForPath",
+        "input": {
+          "paths": [
+            "<root>/src/lib/util.ts"
+          ]
+        }
+      },
+      "result": [
+        {
+          "id": "<id:util>",
+          "revision": 1,
+          "text": "util.ts helpers must stay free of side effects.",
+          "kind": "fact",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [
+            {
+              "type": "file",
+              "path": "src/lib/util.ts"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:26.000Z",
+          "updatedAt": "2026-12-10T00:02:26.000Z"
+        }
+      ]
+    },
+    {
+      "step": "retrieveForPath-no-audience",
+      "call": {
+        "method": "retrieveForPath",
+        "input": {
+          "paths": [
+            "src/server/http.ts"
+          ],
+          "includeAudienceScoped": false
+        }
+      },
+      "result": [
+        {
+          "id": "<id:successor>",
+          "revision": 1,
+          "text": "startServer now binds the port after plugins load to allow port overrides.",
+          "kind": "symbol_note",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [
+            {
+              "type": "symbol",
+              "path": "src/server/http.ts",
+              "symbol": "startServer"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "supersedes": [
+            "<id:http>"
+          ],
+          "createdAt": "2026-12-10T00:02:29.000Z",
+          "updatedAt": "2026-12-10T00:02:29.000Z"
+        },
+        {
+          "id": "<id:serverDir>",
+          "revision": 1,
+          "text": "Everything under src/server is owned by the platform team.",
+          "kind": "fact",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [
+            {
+              "type": "directory",
+              "path": "src/server"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:25.000Z",
+          "updatedAt": "2026-12-10T00:02:25.000Z"
+        },
+        {
+          "id": "<id:http>",
+          "revision": 1,
+          "text": "startServer binds the port before plugins load.",
+          "kind": "symbol_note",
+          "scope": "project",
+          "status": "active",
+          "tags": [
+            "server"
+          ],
+          "anchors": [
+            {
+              "type": "symbol",
+              "path": "src/server/http.ts",
+              "symbol": "startServer"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:23.000Z",
+          "updatedAt": "2026-12-10T00:02:23.000Z"
+        }
+      ]
+    },
+    {
+      "step": "findRelatedSage",
+      "call": {
+        "method": "findRelatedSage",
+        "input": {
+          "ids": [
+            "<id:http>"
+          ]
+        }
+      },
+      "result": [
+        {
+          "id": "<id:successor>",
+          "revision": 1,
+          "text": "startServer now binds the port after plugins load to allow port overrides.",
+          "kind": "symbol_note",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [
+            {
+              "type": "symbol",
+              "path": "src/server/http.ts",
+              "symbol": "startServer"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "supersedes": [
+            "<id:http>"
+          ],
+          "createdAt": "2026-12-10T00:02:29.000Z",
+          "updatedAt": "2026-12-10T00:02:29.000Z"
+        },
+        {
+          "id": "<id:serverDir>",
+          "revision": 1,
+          "text": "Everything under src/server is owned by the platform team.",
+          "kind": "fact",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [
+            {
+              "type": "directory",
+              "path": "src/server"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:25.000Z",
+          "updatedAt": "2026-12-10T00:02:25.000Z"
+        },
+        {
+          "id": "<id:routes>",
+          "revision": 1,
+          "text": "Routes are registered in src/server/routes.ts in declaration order.",
+          "kind": "fact",
+          "scope": "project",
+          "status": "active",
+          "tags": [
+            "server"
+          ],
+          "anchors": [
+            {
+              "type": "file",
+              "path": "src/server/routes.ts"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:24.000Z",
+          "updatedAt": "2026-12-10T00:02:24.000Z"
+        }
+      ]
+    },
+    {
+      "step": "findMemoriesForFile",
+      "call": {
+        "method": "findMemoriesForFile",
+        "input": {
+          "path": "src/server/http.ts"
+        }
+      },
+      "result": {
+        "filePath": "src/server/http.ts",
+        "primaryMatches": [
+          {
+            "memory": {
+              "id": "<id:serverDir>",
+              "revision": 1,
+              "text": "Everything under src/server is owned by the platform team.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "directory",
+                  "path": "src/server"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-12-10T00:02:25.000Z",
+              "updatedAt": "2026-12-10T00:02:25.000Z"
+            },
+            "matchedVia": "anchor_directory",
+            "matchStrength": 0.5
+          }
+        ],
+        "symbolMatches": [
+          {
+            "memory": {
+              "id": "<id:successor>",
+              "revision": 1,
+              "text": "startServer now binds the port after plugins load to allow port overrides.",
+              "kind": "symbol_note",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "symbol",
+                  "path": "src/server/http.ts",
+                  "symbol": "startServer"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "supersedes": [
+                "<id:http>"
+              ],
+              "createdAt": "2026-12-10T00:02:29.000Z",
+              "updatedAt": "2026-12-10T00:02:29.000Z"
+            },
+            "matchedVia": "anchor_symbol",
+            "matchStrength": 0.75
+          },
+          {
+            "memory": {
+              "id": "<id:http>",
+              "revision": 1,
+              "text": "startServer binds the port before plugins load.",
+              "kind": "symbol_note",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "server"
+              ],
+              "anchors": [
+                {
+                  "type": "symbol",
+                  "path": "src/server/http.ts",
+                  "symbol": "startServer"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-12-10T00:02:23.000Z",
+              "updatedAt": "2026-12-10T00:02:23.000Z"
+            },
+            "matchedVia": "anchor_symbol",
+            "matchStrength": 0.75
+          }
+        ],
+        "relatedMatches": [],
+        "totalCount": 3,
+        "activeCount": 3,
+        "supersededCount": 0,
+        "reviewPendingCount": 0
+      }
+    },
+    {
+      "step": "graphFor-file",
+      "call": {
+        "method": "graphFor",
+        "input": {
+          "query": "src/server/http.ts"
+        }
+      },
+      "result": [
+        {
+          "id": "<ulid:1>",
+          "from": "dir:src/server",
+          "to": "dir:src",
+          "relation": "related_to",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:23.000Z",
+          "schemaVersion": 1
+        },
+        {
+          "id": "<ulid:2>",
+          "from": "file:src/lib/util.ts",
+          "to": "dir:src/lib",
+          "relation": "related_to",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:26.000Z",
+          "schemaVersion": 1
+        },
+        {
+          "id": "<ulid:3>",
+          "from": "file:src/server/http.ts",
+          "to": "dir:src/server",
+          "relation": "related_to",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:23.000Z",
+          "schemaVersion": 1
+        },
+        {
+          "id": "<ulid:4>",
+          "from": "file:src/server/routes.ts",
+          "to": "dir:src/server",
+          "relation": "related_to",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:24.000Z",
+          "schemaVersion": 1
+        },
+        {
+          "id": "<ulid:5>",
+          "from": "mem:<id:http>",
+          "to": "symbol:src/server/http.ts#startServer",
+          "relation": "about_symbol",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:23.000Z",
+          "schemaVersion": 1,
+          "evidence": [
+            "symbol:src/server/http.ts#startServer"
+          ]
+        },
+        {
+          "id": "<ulid:6>",
+          "from": "mem:<id:routes>",
+          "to": "file:src/server/routes.ts",
+          "relation": "about_file",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:24.000Z",
+          "schemaVersion": 1,
+          "evidence": [
+            "file:src/server/routes.ts"
+          ]
+        },
+        {
+          "id": "<ulid:7>",
+          "from": "mem:<id:serverDir>",
+          "to": "dir:src/server",
+          "relation": "about_directory",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:25.000Z",
+          "schemaVersion": 1,
+          "evidence": [
+            "directory:src/server"
+          ]
+        },
+        {
+          "id": "<ulid:8>",
+          "from": "mem:<id:util>",
+          "to": "file:src/lib/util.ts",
+          "relation": "about_file",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:26.000Z",
+          "schemaVersion": 1,
+          "evidence": [
+            "file:src/lib/util.ts"
+          ]
+        },
+        {
+          "id": "<ulid:9>",
+          "from": "mem:<id:cmd>",
+          "to": "command:bun test --watch",
+          "relation": "about_command",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:27.000Z",
+          "schemaVersion": 1,
+          "evidence": [
+            "command:bun test --watch"
+          ]
+        },
+        {
+          "id": "<ulid:10>",
+          "from": "mem:<id:reviewer>",
+          "to": "agent:reviewer",
+          "relation": "about_agent",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:28.000Z",
+          "schemaVersion": 1,
+          "evidence": [
+            "agent:reviewer"
+          ]
+        },
+        {
+          "id": "<ulid:11>",
+          "from": "symbol:src/server/http.ts#startServer",
+          "to": "file:src/server/http.ts",
+          "relation": "related_to",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:23.000Z",
+          "schemaVersion": 1
+        },
+        {
+          "id": "<ulid:12>",
+          "from": "mem:<id:successor>",
+          "to": "mem:<id:http>",
+          "relation": "supersedes",
+          "weight": 1,
+          "createdAt": "2026-12-10T00:02:29.000Z",
+          "schemaVersion": 1
+        },
+        {
+          "id": "<ulid:13>",
+          "from": "mem:<id:successor>",
+          "to": "symbol:src/server/http.ts#startServer",
+          "relation": "about_symbol",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:29.000Z",
+          "schemaVersion": 1,
+          "evidence": [
+            "symbol:src/server/http.ts#startServer"
+          ]
+        },
+        {
+          "id": "<ulid:14>",
+          "from": "dir:src/lib",
+          "to": "dir:src",
+          "relation": "related_to",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:26.000Z",
+          "schemaVersion": 1
+        }
+      ]
+    },
+    {
+      "step": "graphFor-memory",
+      "call": {
+        "method": "graphFor",
+        "input": {
+          "query": "<id:http>"
+        }
+      },
+      "result": [
+        {
+          "id": "<ulid:15>",
+          "from": "mem:<id:http>",
+          "to": "symbol:src/server/http.ts#startServer",
+          "relation": "about_symbol",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:23.000Z",
+          "schemaVersion": 1,
+          "evidence": [
+            "symbol:src/server/http.ts#startServer"
+          ]
+        },
+        {
+          "id": "<ulid:16>",
+          "from": "symbol:src/server/http.ts#startServer",
+          "to": "file:src/server/http.ts",
+          "relation": "related_to",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:23.000Z",
+          "schemaVersion": 1
+        },
+        {
+          "id": "<ulid:17>",
+          "from": "mem:<id:successor>",
+          "to": "mem:<id:http>",
+          "relation": "supersedes",
+          "weight": 1,
+          "createdAt": "2026-12-10T00:02:29.000Z",
+          "schemaVersion": 1
+        },
+        {
+          "id": "<ulid:18>",
+          "from": "mem:<id:successor>",
+          "to": "symbol:src/server/http.ts#startServer",
+          "relation": "about_symbol",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:29.000Z",
+          "schemaVersion": 1,
+          "evidence": [
+            "symbol:src/server/http.ts#startServer"
+          ]
+        },
+        {
+          "id": "<ulid:19>",
+          "from": "file:src/server/http.ts",
+          "to": "dir:src/server",
+          "relation": "related_to",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:23.000Z",
+          "schemaVersion": 1
+        }
+      ]
+    },
+    {
+      "step": "traverseGraph",
+      "call": {
+        "method": "traverseGraph",
+        "input": {
+          "from": "mem:<id:http>"
+        }
+      },
+      "result": [
+        {
+          "id": "<ulid:20>",
+          "from": "mem:<id:http>",
+          "to": "symbol:src/server/http.ts#startServer",
+          "relation": "about_symbol",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:23.000Z",
+          "schemaVersion": 1,
+          "evidence": [
+            "symbol:src/server/http.ts#startServer"
+          ]
+        },
+        {
+          "id": "<ulid:21>",
+          "from": "mem:<id:successor>",
+          "to": "mem:<id:http>",
+          "relation": "supersedes",
+          "weight": 1,
+          "createdAt": "2026-12-10T00:02:29.000Z",
+          "schemaVersion": 1
+        },
+        {
+          "id": "<ulid:22>",
+          "from": "mem:<id:successor>",
+          "to": "symbol:src/server/http.ts#startServer",
+          "relation": "about_symbol",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:29.000Z",
+          "schemaVersion": 1,
+          "evidence": [
+            "symbol:src/server/http.ts#startServer"
+          ]
+        },
+        {
+          "id": "<ulid:23>",
+          "from": "symbol:src/server/http.ts#startServer",
+          "to": "file:src/server/http.ts",
+          "relation": "related_to",
+          "weight": 0.8,
+          "createdAt": "2026-12-10T00:02:23.000Z",
+          "schemaVersion": 1
+        }
+      ]
+    },
+    {
+      "step": "retrieveForAudience",
+      "call": {
+        "method": "retrieveForAudience",
+        "input": {
+          "role": "reviewer"
+        }
+      },
+      "result": [
+        {
+          "id": "<id:reviewer>",
+          "revision": 1,
+          "text": "Reviewers check error handling paths in the server.",
+          "kind": "role_operational",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [
+            {
+              "type": "agent",
+              "role": "reviewer"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "audience": {
+            "roles": [
+              "reviewer"
+            ]
+          },
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:28.000Z",
+          "updatedAt": "2026-12-10T00:02:28.000Z"
+        }
+      ]
+    },
+    {
+      "step": "searchSage(server port plugins)",
+      "call": {
+        "method": "searchSage",
+        "input": {
+          "query": "server port plugins"
+        }
+      },
+      "result": [
+        {
+          "id": "<id:http>",
+          "revision": 1,
+          "text": "startServer binds the port before plugins load.",
+          "kind": "symbol_note",
+          "scope": "project",
+          "status": "active",
+          "tags": [
+            "server"
+          ],
+          "anchors": [
+            {
+              "type": "symbol",
+              "path": "src/server/http.ts",
+              "symbol": "startServer"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:23.000Z",
+          "updatedAt": "2026-12-10T00:02:23.000Z"
+        }
+      ]
+    },
+    {
+      "step": "searchSage(server port plugins, semanticRerank=false)",
+      "call": {
+        "method": "searchSage",
+        "input": {
+          "query": "server port plugins",
+          "semanticRerank": false
+        }
+      },
+      "result": [
+        {
+          "id": "<id:http>",
+          "revision": 1,
+          "text": "startServer binds the port before plugins load.",
+          "kind": "symbol_note",
+          "scope": "project",
+          "status": "active",
+          "tags": [
+            "server"
+          ],
+          "anchors": [
+            {
+              "type": "symbol",
+              "path": "src/server/http.ts",
+              "symbol": "startServer"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:23.000Z",
+          "updatedAt": "2026-12-10T00:02:23.000Z"
+        }
+      ]
+    },
+    {
+      "step": "searchSage(deployment pipeline rollout)",
+      "call": {
+        "method": "searchSage",
+        "input": {
+          "query": "deployment pipeline rollout"
+        }
+      },
+      "result": [
+        {
+          "id": "<id:filler5>",
+          "revision": 6,
+          "text": "Filler fact number 0 about the deployment pipeline and server rollout timing.",
+          "kind": "fact",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.8,
+          "confidence": 0.75,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:30.000Z",
+          "updatedAt": "2026-12-10T00:02:35.000Z",
+          "supersedes": [],
+          "contradicts": []
+        }
+      ]
+    },
+    {
+      "step": "searchSage(deployment pipeline rollout, semanticRerank=false)",
+      "call": {
+        "method": "searchSage",
+        "input": {
+          "query": "deployment pipeline rollout",
+          "semanticRerank": false
+        }
+      },
+      "result": [
+        {
+          "id": "<id:filler5>",
+          "revision": 6,
+          "text": "Filler fact number 0 about the deployment pipeline and server rollout timing.",
+          "kind": "fact",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.8,
+          "confidence": 0.75,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:30.000Z",
+          "updatedAt": "2026-12-10T00:02:35.000Z",
+          "supersedes": [],
+          "contradicts": []
+        }
+      ]
+    },
+    {
+      "step": "searchSage(startServer binds)",
+      "call": {
+        "method": "searchSage",
+        "input": {
+          "query": "startServer binds"
+        }
+      },
+      "result": [
+        {
+          "id": "<id:http>",
+          "revision": 1,
+          "text": "startServer binds the port before plugins load.",
+          "kind": "symbol_note",
+          "scope": "project",
+          "status": "active",
+          "tags": [
+            "server"
+          ],
+          "anchors": [
+            {
+              "type": "symbol",
+              "path": "src/server/http.ts",
+              "symbol": "startServer"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:23.000Z",
+          "updatedAt": "2026-12-10T00:02:23.000Z"
+        },
+        {
+          "id": "<id:successor>",
+          "revision": 1,
+          "text": "startServer now binds the port after plugins load to allow port overrides.",
+          "kind": "symbol_note",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [
+            {
+              "type": "symbol",
+              "path": "src/server/http.ts",
+              "symbol": "startServer"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "supersedes": [
+            "<id:http>"
+          ],
+          "createdAt": "2026-12-10T00:02:29.000Z",
+          "updatedAt": "2026-12-10T00:02:29.000Z"
+        }
+      ]
+    },
+    {
+      "step": "searchSage(startServer binds, semanticRerank=false)",
+      "call": {
+        "method": "searchSage",
+        "input": {
+          "query": "startServer binds",
+          "semanticRerank": false
+        }
+      },
+      "result": [
+        {
+          "id": "<id:http>",
+          "revision": 1,
+          "text": "startServer binds the port before plugins load.",
+          "kind": "symbol_note",
+          "scope": "project",
+          "status": "active",
+          "tags": [
+            "server"
+          ],
+          "anchors": [
+            {
+              "type": "symbol",
+              "path": "src/server/http.ts",
+              "symbol": "startServer"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:23.000Z",
+          "updatedAt": "2026-12-10T00:02:23.000Z"
+        },
+        {
+          "id": "<id:successor>",
+          "revision": 1,
+          "text": "startServer now binds the port after plugins load to allow port overrides.",
+          "kind": "symbol_note",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [
+            {
+              "type": "symbol",
+              "path": "src/server/http.ts",
+              "symbol": "startServer"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "supersedes": [
+            "<id:http>"
+          ],
+          "createdAt": "2026-12-10T00:02:29.000Z",
+          "updatedAt": "2026-12-10T00:02:29.000Z"
+        }
+      ]
+    },
+    {
+      "step": "searchSage(filler server)",
+      "call": {
+        "method": "searchSage",
+        "input": {
+          "query": "filler server"
+        }
+      },
+      "result": [
+        {
+          "id": "<id:filler5>",
+          "revision": 6,
+          "text": "Filler fact number 0 about the deployment pipeline and server rollout timing.",
+          "kind": "fact",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.8,
+          "confidence": 0.75,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:30.000Z",
+          "updatedAt": "2026-12-10T00:02:35.000Z",
+          "supersedes": [],
+          "contradicts": []
+        }
+      ]
+    },
+    {
+      "step": "searchSage(filler server, semanticRerank=false)",
+      "call": {
+        "method": "searchSage",
+        "input": {
+          "query": "filler server",
+          "semanticRerank": false
+        }
+      },
+      "result": [
+        {
+          "id": "<id:filler5>",
+          "revision": 6,
+          "text": "Filler fact number 0 about the deployment pipeline and server rollout timing.",
+          "kind": "fact",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.8,
+          "confidence": 0.75,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:30.000Z",
+          "updatedAt": "2026-12-10T00:02:35.000Z",
+          "supersedes": [],
+          "contradicts": []
+        }
+      ]
+    },
+    {
+      "step": "searchSage(bun test watch)",
+      "call": {
+        "method": "searchSage",
+        "input": {
+          "query": "bun test watch"
+        }
+      },
+      "result": [
+        {
+          "id": "<id:cmd>",
+          "revision": 1,
+          "text": "Run bun test --watch while editing the server module.",
+          "kind": "fact",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [
+            {
+              "type": "command",
+              "command": "bun test --watch"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:27.000Z",
+          "updatedAt": "2026-12-10T00:02:27.000Z"
+        }
+      ]
+    },
+    {
+      "step": "searchSage(bun test watch, semanticRerank=false)",
+      "call": {
+        "method": "searchSage",
+        "input": {
+          "query": "bun test watch",
+          "semanticRerank": false
+        }
+      },
+      "result": [
+        {
+          "id": "<id:cmd>",
+          "revision": 1,
+          "text": "Run bun test --watch while editing the server module.",
+          "kind": "fact",
+          "scope": "project",
+          "status": "active",
+          "tags": [],
+          "anchors": [
+            {
+              "type": "command",
+              "command": "bun test --watch"
+            }
+          ],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.8,
+          "freshness": 1,
+          "createdAt": "2026-12-10T00:02:27.000Z",
+          "updatedAt": "2026-12-10T00:02:27.000Z"
+        }
+      ]
+    },
+    {
+      "step": "searchSageWithBreakdown",
+      "call": {
+        "method": "searchSageWithBreakdown",
+        "input": {
+          "query": "server port plugins"
+        }
+      },
+      "result": [
+        {
+          "memory": {
+            "id": "<id:http>",
+            "revision": 1,
+            "text": "startServer binds the port before plugins load.",
+            "kind": "symbol_note",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:23.000Z",
+            "updatedAt": "2026-12-10T00:02:23.000Z"
+          },
+          "vectorScore": null,
+          "lexicalScore": 1,
+          "finalScore": 1,
+          "source": "lexical"
+        }
+      ]
+    },
+    {
+      "step": "hybridRerank-pure",
+      "result": [
+        {
+          "query": "server port plugins",
+          "order": [
+            "t0",
+            "t1",
+            "t2"
+          ]
+        },
+        {
+          "query": "deployment",
+          "order": [
+            "t0",
+            "t1",
+            "t2"
+          ]
+        },
+        {
+          "query": "ab",
+          "order": [
+            "t0",
+            "t1",
+            "t2"
+          ]
+        }
+      ]
+    },
+    {
+      "step": "listSagePage-limit3-page0",
+      "call": {
+        "method": "listSagePage",
+        "input": {
+          "limit": 3
+        }
+      },
+      "result": {
+        "memories": [
+          {
+            "id": "<id:filler5>",
+            "revision": 6,
+            "text": "Filler fact number 0 about the deployment pipeline and server rollout timing.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.8,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:30.000Z",
+            "updatedAt": "2026-12-10T00:02:35.000Z",
+            "supersedes": [],
+            "contradicts": []
+          },
+          {
+            "id": "<id:successor>",
+            "revision": 1,
+            "text": "startServer now binds the port after plugins load to allow port overrides.",
+            "kind": "symbol_note",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "supersedes": [
+              "<id:http>"
+            ],
+            "createdAt": "2026-12-10T00:02:29.000Z",
+            "updatedAt": "2026-12-10T00:02:29.000Z"
+          },
+          {
+            "id": "<id:reviewer>",
+            "revision": 1,
+            "text": "Reviewers check error handling paths in the server.",
+            "kind": "role_operational",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "agent",
+                "role": "reviewer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:28.000Z",
+            "updatedAt": "2026-12-10T00:02:28.000Z"
+          }
+        ],
+        "nextCursor": "<cursor:{\"u\":\"2026-12-10T00:02:28.000Z\",\"i\":\"<id:reviewer>\"}>",
+        "total": 8,
+        "statusCounts": {
+          "active": 8
+        }
+      }
+    },
+    {
+      "step": "listSagePage-limit3-page1",
+      "call": {
+        "method": "listSagePage",
+        "input": {
+          "limit": 3,
+          "cursor": "<cursor:{\"u\":\"2026-12-10T00:02:28.000Z\",\"i\":\"<id:reviewer>\"}>"
+        }
+      },
+      "result": {
+        "memories": [
+          {
+            "id": "<id:cmd>",
+            "revision": 1,
+            "text": "Run bun test --watch while editing the server module.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "command",
+                "command": "bun test --watch"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:27.000Z",
+            "updatedAt": "2026-12-10T00:02:27.000Z"
+          },
+          {
+            "id": "<id:util>",
+            "revision": 1,
+            "text": "util.ts helpers must stay free of side effects.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/lib/util.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:26.000Z",
+            "updatedAt": "2026-12-10T00:02:26.000Z"
+          },
+          {
+            "id": "<id:serverDir>",
+            "revision": 1,
+            "text": "Everything under src/server is owned by the platform team.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/server"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:25.000Z",
+            "updatedAt": "2026-12-10T00:02:25.000Z"
+          }
+        ],
+        "nextCursor": "<cursor:{\"u\":\"2026-12-10T00:02:25.000Z\",\"i\":\"<id:serverDir>\"}>",
+        "total": 8,
+        "statusCounts": {
+          "active": 8
+        }
+      }
+    },
+    {
+      "step": "listSagePage-limit3-page2",
+      "call": {
+        "method": "listSagePage",
+        "input": {
+          "limit": 3,
+          "cursor": "<cursor:{\"u\":\"2026-12-10T00:02:25.000Z\",\"i\":\"<id:serverDir>\"}>"
+        }
+      },
+      "result": {
+        "memories": [
+          {
+            "id": "<id:routes>",
+            "revision": 1,
+            "text": "Routes are registered in src/server/routes.ts in declaration order.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/routes.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:24.000Z",
+            "updatedAt": "2026-12-10T00:02:24.000Z"
+          },
+          {
+            "id": "<id:http>",
+            "revision": 1,
+            "text": "startServer binds the port before plugins load.",
+            "kind": "symbol_note",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:23.000Z",
+            "updatedAt": "2026-12-10T00:02:23.000Z"
+          }
+        ],
+        "nextCursor": null,
+        "total": 8,
+        "statusCounts": {
+          "active": 8
+        }
+      }
+    },
+    {
+      "step": "listSagePage-query",
+      "call": {
+        "method": "listSagePage",
+        "input": {
+          "query": "SERVER"
+        }
+      },
+      "result": {
+        "memories": [
+          {
+            "id": "<id:filler5>",
+            "revision": 6,
+            "text": "Filler fact number 0 about the deployment pipeline and server rollout timing.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.8,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:30.000Z",
+            "updatedAt": "2026-12-10T00:02:35.000Z",
+            "supersedes": [],
+            "contradicts": []
+          },
+          {
+            "id": "<id:successor>",
+            "revision": 1,
+            "text": "startServer now binds the port after plugins load to allow port overrides.",
+            "kind": "symbol_note",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "supersedes": [
+              "<id:http>"
+            ],
+            "createdAt": "2026-12-10T00:02:29.000Z",
+            "updatedAt": "2026-12-10T00:02:29.000Z"
+          },
+          {
+            "id": "<id:reviewer>",
+            "revision": 1,
+            "text": "Reviewers check error handling paths in the server.",
+            "kind": "role_operational",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "agent",
+                "role": "reviewer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:28.000Z",
+            "updatedAt": "2026-12-10T00:02:28.000Z"
+          },
+          {
+            "id": "<id:cmd>",
+            "revision": 1,
+            "text": "Run bun test --watch while editing the server module.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "command",
+                "command": "bun test --watch"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:27.000Z",
+            "updatedAt": "2026-12-10T00:02:27.000Z"
+          },
+          {
+            "id": "<id:serverDir>",
+            "revision": 1,
+            "text": "Everything under src/server is owned by the platform team.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/server"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:25.000Z",
+            "updatedAt": "2026-12-10T00:02:25.000Z"
+          },
+          {
+            "id": "<id:routes>",
+            "revision": 1,
+            "text": "Routes are registered in src/server/routes.ts in declaration order.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/routes.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:24.000Z",
+            "updatedAt": "2026-12-10T00:02:24.000Z"
+          },
+          {
+            "id": "<id:http>",
+            "revision": 1,
+            "text": "startServer binds the port before plugins load.",
+            "kind": "symbol_note",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:23.000Z",
+            "updatedAt": "2026-12-10T00:02:23.000Z"
+          }
+        ],
+        "nextCursor": null,
+        "total": 7,
+        "statusCounts": {
+          "active": 8
+        }
+      }
+    },
+    {
+      "step": "listSagePage-bad-cursor",
+      "call": {
+        "method": "listSagePage",
+        "input": {
+          "cursor": "not-a-cursor"
+        }
+      },
+      "result": {
+        "memories": [
+          {
+            "id": "<id:filler5>",
+            "revision": 6,
+            "text": "Filler fact number 0 about the deployment pipeline and server rollout timing.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.8,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:30.000Z",
+            "updatedAt": "2026-12-10T00:02:35.000Z",
+            "supersedes": [],
+            "contradicts": []
+          },
+          {
+            "id": "<id:successor>",
+            "revision": 1,
+            "text": "startServer now binds the port after plugins load to allow port overrides.",
+            "kind": "symbol_note",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "supersedes": [
+              "<id:http>"
+            ],
+            "createdAt": "2026-12-10T00:02:29.000Z",
+            "updatedAt": "2026-12-10T00:02:29.000Z"
+          },
+          {
+            "id": "<id:reviewer>",
+            "revision": 1,
+            "text": "Reviewers check error handling paths in the server.",
+            "kind": "role_operational",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "agent",
+                "role": "reviewer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:28.000Z",
+            "updatedAt": "2026-12-10T00:02:28.000Z"
+          },
+          {
+            "id": "<id:cmd>",
+            "revision": 1,
+            "text": "Run bun test --watch while editing the server module.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "command",
+                "command": "bun test --watch"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:27.000Z",
+            "updatedAt": "2026-12-10T00:02:27.000Z"
+          },
+          {
+            "id": "<id:util>",
+            "revision": 1,
+            "text": "util.ts helpers must stay free of side effects.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/lib/util.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:26.000Z",
+            "updatedAt": "2026-12-10T00:02:26.000Z"
+          },
+          {
+            "id": "<id:serverDir>",
+            "revision": 1,
+            "text": "Everything under src/server is owned by the platform team.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/server"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:25.000Z",
+            "updatedAt": "2026-12-10T00:02:25.000Z"
+          },
+          {
+            "id": "<id:routes>",
+            "revision": 1,
+            "text": "Routes are registered in src/server/routes.ts in declaration order.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/routes.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:24.000Z",
+            "updatedAt": "2026-12-10T00:02:24.000Z"
+          },
+          {
+            "id": "<id:http>",
+            "revision": 1,
+            "text": "startServer binds the port before plugins load.",
+            "kind": "symbol_note",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-12-10T00:02:23.000Z",
+            "updatedAt": "2026-12-10T00:02:23.000Z"
+          }
+        ],
+        "nextCursor": null,
+        "total": 8,
+        "statusCounts": {
+          "active": 8
+        }
+      }
+    },
+    {
+      "step": "getStats",
+      "call": {
+        "method": "getStats",
+        "input": {}
+      },
+      "result": {
+        "total": 8,
+        "byStatus": {
+          "active": 8,
+          "stale": 0,
+          "superseded": 0,
+          "contradicted": 0,
+          "archived": 0,
+          "deleted": 0
+        },
+        "byKind": {
+          "fact": 5,
+          "role_operational": 1,
+          "symbol_note": 2
+        },
+        "edges": 14
+      }
+    }
+  ]
+}
