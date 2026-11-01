@@ -1198,6 +1198,41 @@ fn find_near_duplicate(
         ""
     };
     let mut rows: Vec<(String, String)> = Vec::new();
+    // Baseline: `status IN ('active','stale') ... ORDER BY importance DESC,
+    // updated_at DESC LIMIT 64`. Written as one ordered index walk per status
+    // (`idx_status_importance_updated`) merged on the same key, because the
+    // IN form sorts every row of the scope and made remember O(n) (WM-604).
+    {
+        let mut recent: Vec<(String, String, f64, String)> = Vec::new();
+        for status in ["active", "stale"] {
+            let mut s = conn
+                .prepare(&format!(
+                    "SELECT id, data, importance, updated_at FROM memories
+                      INDEXED BY idx_status_importance_updated
+                      WHERE status = '{status}' AND scope = ?1 AND audience IS ?2{session}
+                      ORDER BY importance DESC, updated_at DESC LIMIT 64"
+                ))
+                .map_err(sql_err)?;
+            let mut args: Vec<rusqlite::types::Value> = vec![
+                scope.to_string().into(),
+                audience_key.map(str::to_string).into(),
+            ];
+            if let Some(o) = owner {
+                args.push(o.to_string().into());
+            }
+            let it = s
+                .query_map(rusqlite::params_from_iter(args), |r| {
+                    Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+                })
+                .map_err(sql_err)?;
+            for r in it {
+                recent.push(r.map_err(sql_err)?);
+            }
+        }
+        recent.sort_by(|a, b| b.2.total_cmp(&a.2).then_with(|| b.3.cmp(&a.3)));
+        recent.truncate(64);
+        rows.extend(recent.into_iter().map(|(id, data, ..)| (id, data)));
+    }
     let mut push = |sql: &str, extra: Option<&str>| -> rusqlite::Result<()> {
         let mut s = conn.prepare(sql)?;
         let mut args: Vec<rusqlite::types::Value> = vec![
@@ -1221,14 +1256,6 @@ fn find_near_duplicate(
         }
         Ok(())
     };
-    push(
-        &format!(
-            "SELECT id, data FROM memories WHERE status IN ('active','stale') AND scope = ?1 AND audience IS ?2{session}
-             ORDER BY importance DESC, updated_at DESC LIMIT 64"
-        ),
-        None,
-    )
-    .map_err(sql_err)?;
     let terms = crate::store::fts_prefix_terms(text);
     if !terms.is_empty() {
         let n = if owner.is_some() { 4 } else { 3 };

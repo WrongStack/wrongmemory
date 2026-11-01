@@ -7,6 +7,7 @@
 //! `daemon.shutdown` or a console signal does (WM-INV-12).
 
 mod events;
+mod fault;
 mod log;
 mod projects;
 mod scheduler;

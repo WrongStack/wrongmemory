@@ -494,8 +494,12 @@ where
         };
         let is_shutdown = request.method == method::DAEMON_SHUTDOWN;
         let request_id = request.request_id.clone();
+        let method_name = request.method.clone();
         let response = match dispatch(&shared, &mut state, request).await {
-            Ok(v) => Response::ok(request_id, v),
+            Ok(v) => {
+                crate::fault::after_commit_before_reply(&method_name);
+                Response::ok(request_id, v)
+            }
             Err(e) => Response::err(request_id, e),
         };
         let accepted = response.error.is_none();
@@ -1258,18 +1262,31 @@ async fn events_since(
         .iter()
         .filter_map(|e| e.event.memory_id.clone())
         .collect();
-    if !ids.is_empty() {
+    // Review events (accept/reject/resolve) carry no owner session, so the
+    // candidate itself is checked: a session-private proposal's id must not
+    // reach other sessions (WM-603).
+    let cand_ids: Vec<String> = candidates
+        .iter()
+        .filter_map(|e| e.event.candidate_id.clone())
+        .collect();
+    if !ids.is_empty() || !cand_ids.is_empty() {
         let viewer = Viewer {
             session_id: session.clone(),
         };
-        let visible = store_op(shared, pid, move |store| {
+        let (visible, visible_cands) = store_op(shared, pid, move |store| {
             let mut ok = std::collections::HashSet::new();
             for id in ids {
                 if store.get(&id, &viewer)?.is_some() {
                     ok.insert(id);
                 }
             }
-            Ok(ok)
+            let mut ok_c = std::collections::HashSet::new();
+            for id in cand_ids {
+                if store.candidate_visible(&id, &viewer)? {
+                    ok_c.insert(id);
+                }
+            }
+            Ok((ok, ok_c))
         })
         .await?;
         candidates.retain(|e| {
@@ -1277,6 +1294,10 @@ async fn events_since(
                 .memory_id
                 .as_ref()
                 .is_none_or(|id| visible.contains(id))
+                && e.event
+                    .candidate_id
+                    .as_ref()
+                    .is_none_or(|id| visible_cands.contains(id))
         });
     }
     to_value(EventsSinceResult {

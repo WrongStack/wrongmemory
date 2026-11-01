@@ -1,97 +1,197 @@
 # Implementation status
 
-Last updated: 2026-11-01 (session 1). **Release level reached: none.** L1 needs a bounded compatibility backend for the full SAGE profile, and L2 needs the WrongStack adapter.
+Last updated: 2026-11-01 (session 2).
+
+**Release level reached: none certified.**
+
+- The standalone daemon, IPC, policy, MCP bridge, native SAGE-profile storage and the WrongStack adapter branch are implemented and tested.
+- Not yet run, so nothing is certified:
+  - real installed MCP clients;
+  - live store adoption;
+  - a signed hosted release;
+  - a demonstration with a downloaded binary.
+
+Legend: **Done**, meaning implemented and covered by an automated test or recorded command; **Partial**; **Not started**; **NOT RUN**, meaning implemented but never exercised in a real external environment.
 
 ## Baseline
 
 - **WrongStack commit:** `222d23a90ae9c67c2433d7734c6966be7ee4e696` ([manifest](../contracts/baseline/wrongstack-baseline.json)). It covers 202 contract files, none of them dirty.
-- **Drift since the plan:** the plan was written against `ad9f79d`. No contract file changed between the two commits.
-- **Oracle source:** a `git archive` of that commit, rebuilt outside the repository (`C:/wrongmemory-oracle-src/...`).
-- **Fixture location:** fixtures are built under `C:/wrongmemory-oracle/<fixture>`, so the committed databases contain no user paths.
-- **Storage profile:** `sage-sqlite-v5-baseline` ([manifest](../contracts/profiles/sage-sqlite-v5-baseline/manifest.json), [schema.sql](../contracts/profiles/sage-sqlite-v5-baseline/schema.sql)).
-  - DDL fingerprint: `d8e36f92…090b`.
-  - Fresh `schema_meta`: `version=5`, `fts_index_initialized=1`, `hq_memory_sync_schema=3`.
-- **SQLite versions:** Bun 3.53.4; bundled rusqlite 0.41.1.
+- **Storage profile:** `sage-sqlite-v5-baseline` with DDL fingerprint `d8e36f92…090b`. The managed store matches it exactly.
+- **Extension `wrongmemory-ext-v1`:** adds the tables `wm_mutation_receipts` and `wm_profile_extensions`.
+- **Oracle:** fixtures are produced by running the real SAGE code at the baseline commit (`scripts/oracle`).
+  - Read fixtures: `empty`, `basic`, `unicode` and `corrupt-row`.
+  - Mutation fixtures: 7 scenarios with 188 recorded steps.
+  - Fake secrets in the fixtures are redacted when generated.
 
 ## M0 — contract capture
 
 | ID | State | Evidence / gap |
 |---|---|---|
-| WM-000 | Done | `scripts/baseline/export.ts`: hashes taken from `HEAD` blobs, and the dirty-file list is empty. |
-| WM-001 | Done (seed) | Full `sqlite_master` from a store SAGE created: 10 triggers, plus the FTS shadow tables, HQ tables and Unicode helper. Covered by `managed_store_ddl_matches_oracle_fingerprint`. |
-| WM-002 | Done (seed) | `contracts/fixtures/record-shape.json` holds the record fields, every vocabulary, input limits and the `rememberSage` defaults. It also holds known answers from the real functions: `normalizeText`, `normalizeTextKey`, `unicode_text` fold, `tokenize`, `ftsPrefixTerms` and `sqliteNormalizeCommand`. |
-| WM-003 | Done (review list) | `contracts/inventory/writers.json`: 1,224 name-matched sites, 684 of them flagged as suspected collisions. It is name-based; confirm each site before WM-400. |
-| WM-004 | Partial | Fixtures `empty`, `basic`, `unicode` and `corrupt-row`, each with a recorded `queries.json` (151 operations). Not yet captured: cursors, ranking for queries with two or more terms, graph traversal parity, audience retrieval. |
-| WM-005..011 | Not started | Mutation, replay and failure fixtures; MCP tool inventory; corpora; executing the existing SAGE suites; performance baseline; license review. |
+| WM-000 | Done | `scripts/baseline/export.ts` |
+| WM-001 | Done | Full DDL, triggers, FTS and HQ tables. Test: `managed_store_ddl_matches_oracle_fingerprint`. |
+| WM-002 | Done | `contracts/fixtures/record-shape.json`, with known answers from the real normalizers. |
+| WM-003 | Done (review list) | `contracts/inventory/writers.json`. It matches by name, so the suspected collisions are not individually confirmed. |
+| WM-004 | Done | Search with one or more terms, path retrieval, exact ID, cursors and graph, recorded in the oracle fixtures. Audience retrieval is not captured; see WM-501. |
+| WM-005 | Done | Mutation fixtures: remember/merge, update/revision, feedback, delete/recover, candidates, hygiene. |
+| WM-006 | Done | `contracts/inventory/mcp-tools.json` (`sage-mcp` tool and policy inventory). |
+| WM-007 | Partial | Synthetic corpora: multilingual (`unicode`), worktree (temp git repos), session (adversarial tests). No real-task corpus. |
+| WM-008 | Partial | The existing SAGE suites run green in the adapter worktree (see M4). The SAGE vector and host suites have no WrongMemory counterpart. |
+| WM-009 | Done | `contracts/profiles/` |
+| WM-010 | Done (synthetic) | `wrongmemory-bench` (see Performance). No baseline taken from SAGE running in process. |
+| WM-011 | Partial | Repository is MIT. Dependency licences are not audited automatically. |
 
-## M1 — standalone repository and safe storage slice
+## M1 — repository and safe storage
 
 | ID | State | Evidence / gap |
 |---|---|---|
-| WM-100 | Done (local) | Cargo workspace, toolchain pin 1.93.0, Bun scripts, `AGENTS.md`, Windows CI workflow (hosted run 41300045407: PASS). |
-| WM-101 | Partial | Exact pins from crates.io: `rusqlite 0.41.1`, `tokio 1.54.1`, `rmcp 3.8.0`, `ulid 3.0.0`, `unicode-normalization 0.1.26`. Toolchain upgrade and MSRV review: NOT RUN. |
-| WM-102 | Partial | Rust contracts with unknown-field round-trip tests. Generated TypeScript DTOs: not started. |
-| WM-103 | Done | Read-only inspector with verdicts compatible, unknown-data, older, newer, divergent, not-a-sage-store, unreadable and missing. A test proves the adopted store's bytes are unchanged. |
-| WM-104 | Partial | Native DDL, codec, FTS and Unicode text index (see the search parity section). |
-| WM-105 | Done | `registry.db` with migrations; a newer schema is refused. Private data root with a protected DACL (shared with WrongIndex). |
-| WM-106 | Done | Singleton through the first pipe instance: 8 concurrent starts leave exactly one survivor, and the losers exit with code 3. Authentication uses host token or grant secret; frame limits are 4 MiB, auth frames 16 KiB with a 5 s auth deadline, and at most 64 connections. |
-| WM-107 | Partial | `OwnerGuard` exclusive lock file plus owner epochs and an activation/release journal in the registry. A transfer protocol with WrongStack is not implemented. Adoption is refused (read-only) while `server.json` exists. |
-| WM-108 | Done (slice) | `wm_mutation_receipts` is an additive extension (`wrongmemory-ext-v1`). The receipt and the mutation commit in one IMMEDIATE transaction. Replay survives a daemon restart, and reusing a key with a different payload returns `IDEMPOTENCY_MISMATCH`. No outbox yet. |
-| WM-109 | Done | CLI commands: `daemon start/status/stop`, `project add/list/show/detach`, `search`, `get`, `for-path`, `remember`, `candidates`, `grants`, `inspect`, `doctor`, `connect print`. |
+| WM-100 | Done | Workspace, toolchain 1.93.0, `AGENTS.md`, Windows CI. |
+| WM-101 | Partial | All dependencies pinned to exact versions. MSRV review NOT RUN. |
+| WM-102 | Done | Rust contracts. `packages/client-ts` mirrors them; `scripts/check-contract-parity.ts` passes (38 methods, 22 error codes). |
+| WM-103 | Done | Read-only inspector. A byte-unchanged test proves it writes nothing. |
+| WM-104 | Done | Native DDL, codec, FTS and Unicode projection. |
+| WM-105 | Done | Registry migrations v1→v2 (jobs and schedules); a newer schema is refused; private DACL. |
+| WM-106 | Done | Singleton, owner-only pipe, 4 MiB / 16 KiB frame limits, auth deadline. The daemon proves itself with HMAC before any credential is sent (Rust and TS, with a squatting test). |
+| WM-107 | Partial | `OwnerGuard` lock, epochs, journal. No cooperative transfer protocol with a running WrongStack. |
+| WM-108 | Done | Receipts commit in the same transaction as the mutation; replay survives a restart and a crash (WM-602). There is no outbox; HQ sync is not implemented. |
+| WM-109 | Done | CLI: daemon, project, grants, search/get/for-path/remember, candidates, inspect, doctor, connect, backup, migrate, diagnostics, install. |
 
-## M2 / M3 work pulled forward (slice only)
+## M2 — projects, policy, lifecycle
 
-- **WM-200 / WM-201 (partial):** project registration takes one of two store kinds.
-  - Adopted: `<root>/.wrongstack/memories/sage.db` in place.
-  - Managed: `<data-root>/projects/<id>/sage.db`.
-  - Registration is idempotent. A second authoritative store for the same root is refused.
-  - Linked-worktree canonical identity is not ported yet. Register the canonical root.
-- **WM-202 / WM-203 (partial):**
-  - Grants carry a profile and a project allowlist, and their secrets are stored hashed.
-  - A grant connection always runs in a fresh daemon-issued session. Only the host principal may bind a named session.
-  - Revocation is checked on every request.
-- **WM-204 (partial):** one session rule (SAGE `buildSessionClause` without the `includeAllSessions` bypass) applies to search, exact ID, path and candidates. Graph, count and cursor surfaces do not exist yet.
-- **WM-301 / WM-302 / WM-303 (partial):**
-  - `wrongmemory mcp` stdio bridge on `rmcp 3.8.0`. It starts the daemon itself, so WrongStack does not need to run.
-  - Tools: `memory_search`, `memory_for_path`, `memory_get`, `memory_candidates` (list and propose), and `remember` for writer grants only.
-  - The tool list is derived from the grant profile, and the daemon enforces every action anyway.
-  - Bridge EOF leaves the daemon running.
-- **WM-305..309:** NOT RUN. No named client preset was installed or edited; `connect print` only prints an entry.
+| ID | State | Evidence / gap |
+|---|---|---|
+| WM-200 | Done | Adopted and managed stores; idempotent; a second store for one root is refused. |
+| WM-201 | Done | A linked worktree resolves to the main checkout store (`tests/worktree.rs`, using the ported `resolveProjectSageStorageRoot` logic). |
+| WM-202 | Done | Grant profiles read-only / read-propose / writer / curator, project allowlist, hashed secrets, revocation checked on every request. |
+| WM-203 | Done | Sessions issued by the daemon for grants; only the host may bind or resume a named session. |
+| WM-204 | Done | One session rule applies before LIMIT on search, ID, path, list cursor, related, graph, stats, candidates and events (`tests/adversarial.rs`). Known gap: see WM-603. |
+| WM-205 | Done | One store mutex per project acts as its serialized writer; SQLite runs on the blocking pool. LRU of open stores, capped at 32. |
+| WM-206 | Done | Durable maintenance schedules and jobs in the registry; tick-driven scheduler; cancel. |
+| WM-207 | Done | `events.since`, filtered by visibility. |
+| WM-208 | Partial | Graceful shutdown, restart over a stale endpoint, crash recovery (`tests/fault.rs`). Disk-full and root-loss are mapped to error codes but not exercised by injection. |
 
-## Search parity (WM-500 slice)
+## M3 — MCP
 
-Ported from `searchSage` / `ftsPrefixTerms`:
+| ID | State | Evidence / gap |
+|---|---|---|
+| WM-300 | Done | rmcp 3.8.0 stdio. |
+| WM-301 | Done | `wrongmemory mcp` starts the daemon detached, so the caller's stdio handles are not inherited. |
+| WM-302 | Done | Read tools: `memory_search`, `memory_for_path`, `memory_get`, `memory_graph`, `memory_gather_batch`, `memory_related`. |
+| WM-303 | Done | `memory_candidates` and `memory_feedback`. |
+| WM-304 | Done | Writer and curator tools, listed only for grants that allow them; the daemon enforces every action anyway. |
+| WM-305 | Done | Planner for JSON and TOML client configs, with owned-entry markers; tests write only to temp prefixes. |
+| WM-306 | **NOT RUN** | Presets for Claude Code, Codex, Cursor and Antigravity are implemented and tested on temp configs. No installed client has been connected. |
+| WM-307 | Done | `connect print`, `client doctor`, `disconnect` (with grant revocation). |
+| WM-308 | Not started (deferred) | Loopback HTTP transport. |
+| WM-309 | **NOT RUN** | Evaluating an external agent workflow. |
 
-- query terms split on whitespace and then on `[^\p{L}\p{N}_]`, minimum length 2, quoted prefix terms, at most 64 terms;
-- FTS MATCH with AND first, then OR when AND finds nothing and there is more than one term;
-- `bm25 ASC, importance DESC` ordering;
-- `unicode_text LIKE` fallback with the lazy `nfkc-lower-v1` refresh, on writable handles only;
-- an empty query sorts by importance, then recency;
-- `contextPolicy=never` is excluded when the caller passes no statuses.
+## M4 — WrongStack adapter
 
-`crates/wrongmemory-storage/tests/oracle_parity.rs`:
+Branch `feat/wrongmemory-adapter` in the worktree `D:/Codebox/PROJECTS/WrongStack-wrongmemory`. It is local and not pushed.
 
-- Search order matches the oracle for every single-term query in the four fixtures. For queries with two or more terms only the result set is compared.
-- Exact-ID records match field by field, including unknown fields.
-- Corrupt rows read as absent.
-- Path hits are a subset of the oracle's.
+- Commit `478fa2333` is the adapter.
+- Commit after it: re-copies the client at `40f7275` to pick up the HMAC proof fix.
 
-**Known gaps (not claimed):**
+| ID | State | Evidence / gap |
+|---|---|---|
+| WM-400 | Done (branch) | `packages/sage/src/wrongmemory-port.ts`. Typed `UNAVAILABLE` errors; it never falls back to local SQLite. 20/20 port tests, including tests against a real daemon. |
+| WM-401 | Done (branch) | `Sage.service` is `local` (the default), `wrongmemory` or `auto`; a repo's own config cannot set it. |
+| WM-402 | Partial | The port binds `session.acquire{hostSessionId}` on every call. The host session id is not yet passed through the container. |
+| WM-403..408 | Not started | Setup-time injection parity (audience and verify-for-paths); vector fusion; WebUI/slash/desktop; MCP connect migration; HQ sync. |
+| WM-409 | Partial | `local` mode leaves behaviour unchanged. `auto` uses WrongMemory only if a daemon is already running and the project is registered. Ownership-safe rollback is not exercised. |
 
-- `hybridRerankMemories` re-ranking for queries with two or more terms.
-- `retrieveForPath` graph expansion.
-- The remember-time `ephemeral_pattern` / `progress_log` quality caps.
-- Near-duplicate merging and contradiction detection.
-- Update, delete, recovery, feedback and hygiene.
-- `\p{L}` is approximated by `char::is_alphabetic`. The known answers pass, but Other_Alphabetic marks can differ.
+Without the adapter, the WrongStack suites on the branch give core 10305/10305 pass. With it:
 
-## Findings
+- sage 1564/1565: `sqlite-perf.test.ts` times out under full-suite load and passes on its own.
+- runtime 401/403: both failures are in `automation-pull-request-status-sha.test.ts`, which needs the untracked `.temp_files` directory.
 
-- **Fixed: a spawned daemon kept the caller's stdio pipes open.** On Windows, a daemon started by the CLI or bridge inherited the caller's stdio handles. The coding tool's stdout pipe then never reached EOF. The bridge test caught it; the fix marks the std handles non-inheritable before spawning.
-- **Baseline: FTS does not apply NFKC.** `file` does not match `ﬁle` through FTS; only the LIKE channel folds NFKC. Preserved.
-- **Baseline: legacy unowned session rows.** Session-scoped rows with no owner are visible to callers without a session. Grant connections always have a session, so they never see them.
-- **Baseline: corrupt rows.** `getSage` on a corrupt row returns null. Corrupt rows still occupy pagination slots in `listSagePage`.
-- **Not baseline: attribution fields.** WrongMemory adds `wrongmemory.principalId` (memories) and `proposedBy` (candidates) as extension JSON fields. SAGE readers keep unknown JSON fields, but this has not been verified by reopening with SAGE (NOT RUN).
+These failures are not caused by the adapter. The main checkout was not modified.
+
+## M5 — retrieval and lifecycle parity
+
+| ID | State | Evidence / gap |
+|---|---|---|
+| WM-500 | Done | Search order is identical to the oracle for every query with one or more terms, including the hybrid rerank (`tests/oracle_parity.rs`). `\p{L}` is approximated by `char::is_alphabetic`. |
+| WM-501 | Partial | Path and graph traversal, with hub damping, match the oracle. Audience retrieval is not implemented. |
+| WM-502 | Done | Remember, exact and near-duplicate merge, supersedes and contradicts, raw-JSON patch on update, revision guard (lifecycle oracle replay). |
+| WM-503 | Done | Feedback (up to 8 entries; session and principal set by the server), usage counters. |
+| WM-504 | Done | Candidates: propose with dedupe; accept, reject and resolve in one transaction; reverted resolution writes an audit record. Consolidation is not implemented. |
+| WM-505 | Done | Tombstone, cascade, recover, backfill. Purge is not implemented. |
+| WM-506 | Partial | Validity rules have no shell or regex evaluation. Verification of checkout evidence is not implemented. |
+| WM-507 | Done | Hygiene with protections for critical memories (oracle replay). Expiry is scheduled through jobs. |
+| WM-508 / 509 | Not started (optional L4) | Semantic provider and vector mirror. |
+| WM-510 | Partial | Corrupt rows read as absent. Older and JSONL stores are refused: open them with SAGE first. No conversion. |
+| WM-511 | Not started | Full native differential certification. |
+
+## M6 — hardening
+
+| ID | State | Evidence / gap |
+|---|---|---|
+| WM-600 | Partial | Online backup API (`wrongmemory backup`) on copies. Adopting, transferring or releasing a real store is **NOT RUN**, as required. |
+| WM-601 | Partial | A conflict between a managed and an adopted store for one root is refused. Export is not implemented. |
+| WM-602 | Done | Fault points (debug builds only) `after_commit_before_reply` and `before_commit`. Retry replays the receipt, rollback leaves nothing behind, a crash during accept recovers, and a kill while idle restarts over a stale endpoint. Crash cases were repeated 5×. |
+| WM-603 | Done (with gaps) | See the review results below. |
+| WM-604 | Partial | Synthetic S/M benchmark. No soak run or WAL tuning. |
+| WM-605 | Partial | Synthetic recall@5 with leak counting. No real-task corpus or regression budget. |
+| WM-606 | Not started | Process-tree certification. |
+
+**WM-603 isolation review.** Four leaks were found and fixed, each with a test that failed first:
+
+1. `list_candidates` applied visibility after LIMIT, so hidden rows could starve the visible ones.
+2. `memory.stats` counts exposed rows the viewer cannot see.
+3. `memory.graph` exposed private anchor symbols through the shared structural nodes.
+4. `events.since` exposed the ids of private candidates.
+
+Two gaps remain open:
+
+- A directory node created only by a hidden memory's anchor path, and referenced by no memory, can still appear as a directory name in `memory.graph`.
+- `stats.edges` now counts only memory-owned visible edges. This deliberately deviates from the SAGE count.
+
+## M7 — packaging and operations
+
+| ID | State | Evidence / gap |
+|---|---|---|
+| WM-700 | Done (local) | `install`, `uninstall`, `autostart enable/status/disable` (per-user Run value), tested with override keys and temp prefixes. |
+| WM-701 | Partial | `install --stop-daemon` keeps `.old` copies for rollback; `migrate inspect`. A cross-version upgrade is not exercised. |
+| WM-702 | Done (local) | `uninstall` stops the daemon, removes the autostart entry and removes binaries; client entries go through `disconnect`. |
+| WM-703 | Done | `docs/operations.md`, `docs/runbooks.md` |
+| WM-704 | Partial | `release.yml` builds a draft, unsigned release with `SHA256SUMS` on tag. **Code signing and provenance are NOT RUN.** The hosted release workflow has not run. |
+| WM-705 / 706 | **NOT RUN** | Demonstration with a downloaded binary; 1.0 evidence matrix. |
+
+## M8
+
+Not started: GUI, other platforms (Unix sockets exist only on the client side), WrongIndex adapter, native embeddings.
+
+## Performance (WM-010 / WM-604 / WM-605, synthetic)
+
+Command:
+
+```powershell
+cargo build --release -p wrongmemoryd -p wrongmemory-bench
+target/release/wrongmemory-bench --corpus s --runs 5 --calls 200 --out benchmarks/results/<date>-s.json
+```
+
+- Setup: a real daemon over a real named pipe, with a deterministic seeded corpus.
+- Ten percent of the memories are session-private to another session and serve as hard negatives.
+- Latencies are measured on the client side, so they include IPC.
+- The machine is a local Windows 11 developer workstation, not dedicated benchmark hardware.
+
+| Corpus | Load | RSS after load | search p50 / p95 / p99 | forPath p50 / p95 / p99 | propose p50 / p95 / p99 | recall@5 | leaks |
+|---|---|---|---|---|---|---|---|
+| S (1,000) | 4.0 s | 16.4 MiB | 0.38 / 0.70 / 0.94 ms | 0.45 / 0.77 / 1.11 ms | 0.29 / 0.45 / 0.85 ms | 1.00 (300 queries) | 0 |
+| M (25,000), before the path fix | 1,085 s (inherited, see below) | 18.7 MiB | 2.27 / 4.66 / 5.84 ms | 42.3 / 53.8 / 60.9 ms | 0.40 / 0.93 / 1.28 ms | 1.00 (300 queries) | 0 |
+
+The recall figure comes from a synthetic corpus of code tokens. It is not a quality claim for real tasks.
+
+Findings from the M run:
+
+- **Fixed: the near-duplicate importance window sorted the whole scope.** That made each `remember` O(n), at 6 writes/s at 10k. It is now one ordered index walk per status, merged on the same key, with the same rows and order.
+- **Fixed: path lookup did a full edges scan.** `to_node IN (...) OR to_node GLOB ...` prevented use of `idx_edge_to`, giving 42 ms p50 at 25k. It is now indexed `IN` plus BINARY prefix-range arms. The path oracle passes, including symbol anchors.
+  - The M row above was measured before this fix.
+  - Re-measuring M is pending.
+- **Inherited baseline cost, kept for parity: the lexical near-duplicate window.** It is `bm25` over an OR of every prefix term with `LIMIT 32`, as in `sqlite-store-remember.ts` at `222d23a`.
+  - It scores every row that shares any term, so `remember` slows as lexically overlapping rows grow.
+  - About 60 ms per write at 16k in this corpus, where every row shares common words.
+  - Changing it would change which rows dedupe considers.
 
 ## Verification run (2026-11-01, Windows 11, local)
 
@@ -99,15 +199,8 @@ Ported from `searchSage` / `ftsPrefixTerms`:
 |---|---|
 | `cargo fmt --all -- --check` | PASS |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo test --workspace --locked` ×5 | PASS 50/50 each run; no leftover daemon processes |
-| Oracle scripts (`baseline:export`, `oracle:prepare`, `oracle:build`, `inventory:writers`) | PASS; generated JSON is byte-identical across two runs (the sage.db bytes differ because of ULID and randomblob) |
-| Real MCP client (Claude Code / Codex / Cursor / Antigravity) | NOT RUN |
-| WrongStack adapter, ownership transfer, live store adoption | NOT RUN (not implemented) |
-| Hosted CI (windows-latest, run 41300045407) | PASS |
-
-## Next exit gates
-
-1. **M0 completion:** mutation, replay and failure fixtures; capture of the multi-term rerank and of `retrieveForPath`; the MCP tool inventory from `sage-mcp`.
-2. **WM-107 / WM-400:** cooperative ownership transfer with a WrongStack adapter version, then the `WrongMemoryPort` slice.
-3. **WM-500..505:** update/feedback, delete, recovery and candidate accept/resolve, with revision checks.
-4. Named client smoke tests (WM-306) on installed clients.
+| `cargo test --workspace --locked` ×5 | PASS 108/108 on each run; no leftover daemon processes |
+| `bun run test:client` (TS client 10/10, contract parity) | PASS |
+| Adapter: wrongmemory-client 6/6, sage port 20/20 against the release daemon | PASS |
+| Hosted CI on this commit | not checked yet |
+| Real MCP clients, live store adoption, signed release | NOT RUN |

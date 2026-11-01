@@ -480,14 +480,22 @@ impl SageStore {
         let mut stmt = self
             .conn
             .prepare(
+                // Visibility before LIMIT: hidden session proposals must not
+                // consume the page budget and starve visible ones (WM-603).
+                // Undecodable rows stay in the scan so they are counted.
                 "SELECT data FROM candidates WHERE status = ?1
+                   AND (NOT json_valid(data)
+                        OR json_extract(data, '$.scope') IS NOT 'session'
+                        OR (json_extract(data, '$.ownerSessionId') IS NOT NULL
+                            AND json_extract(data, '$.ownerSessionId') = ?3))
                   ORDER BY created_at DESC, id DESC LIMIT ?2",
             )
             .map_err(sql_err)?;
         let rows = stmt
-            .query_map(params![status, (limit * 4 + 1) as i64], |r| {
-                r.get::<_, String>(0)
-            })
+            .query_map(
+                params![status, (limit * 4 + 1) as i64, viewer.session_id],
+                |r| r.get::<_, String>(0),
+            )
             .map_err(sql_err)?;
         let mut out = Vec::new();
         let mut corrupt = 0;
@@ -664,6 +672,15 @@ impl SageStore {
             }
             Ok(outcome)
         })();
+        // Fault injection (debug builds only, see wrongmemoryd/src/fault.rs):
+        // fail the outermost transaction before COMMIT.
+        let result = match result {
+            Ok(_) if !nested && injected_before_commit() => Err(ErrorBody::new(
+                ErrorCode::Internal,
+                "injected fault before_commit (disk I/O error)",
+            )),
+            other => other,
+        };
         match result {
             Ok(v) => {
                 conn.execute_batch(if nested {
@@ -1258,4 +1275,17 @@ pub fn fingerprint(v: &Value) -> String {
         }
     }
     hex::encode(Sha256::digest(sorted(v).to_string().as_bytes()))
+}
+
+/// `WRONGMEMORY_FAULT=before_commit` (debug builds only): fails the first
+/// outermost receipt transaction of the process, once, so tests can prove
+/// the rollback left the connection usable for the next write.
+fn injected_before_commit() -> bool {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static FIRED: AtomicBool = AtomicBool::new(false);
+    cfg!(debug_assertions)
+        && std::env::var("WRONGMEMORY_FAULT")
+            .map(|v| v.split(':').next() == Some("before_commit"))
+            .unwrap_or(false)
+        && !FIRED.swap(true, Ordering::SeqCst)
 }

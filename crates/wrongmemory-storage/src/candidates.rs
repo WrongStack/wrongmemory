@@ -97,6 +97,16 @@ impl SageStore {
         Ok((m, c))
     }
 
+    /// Whether `viewer` may see candidate `id` (absent and hidden are both
+    /// `false`). Used to filter change events about review actions.
+    pub fn candidate_visible(&self, id: &str, viewer: &Viewer) -> StoreResult<bool> {
+        match self.visible_candidate(id, viewer) {
+            Ok(_) => Ok(true),
+            Err(e) if e.code == ErrorCode::NotFound => Ok(false),
+            Err(e) => Err(e),
+        }
+    }
+
     fn already(c: &MemoryCandidate) -> CandidateOutcome {
         CandidateOutcome {
             candidate_id: c.id.clone(),

@@ -1,0 +1,354 @@
+//! WM-602 fault injection against the real daemon process (debug builds
+//! only; `WRONGMEMORY_FAULT` is inert in release):
+//!
+//! * crash after commit, before the reply: an idempotent retry after restart
+//!   returns the original outcome and never duplicates the write;
+//! * injected I/O failure before COMMIT: typed error, nothing persisted (no
+//!   memory, no receipt), and the very next write on the same store works;
+//! * candidate accept crash: the acceptance is durable exactly once;
+//! * a daemon killed while idle leaves stale discovery and an owner lock that
+//!   a fresh daemon recovers from.
+
+#![cfg(all(windows, debug_assertions))]
+
+use std::path::Path;
+use std::process::{Child, Command, Stdio};
+use std::time::{Duration, Instant};
+
+use serde_json::{Value, json};
+use wrongmemory_contracts::method;
+use wrongmemory_ipc::{CallError, Client, DataRoot};
+
+struct Daemon(Option<Child>);
+
+impl Drop for Daemon {
+    fn drop(&mut self) {
+        if let Some(mut c) = self.0.take() {
+            let _ = c.kill();
+            let _ = c.wait();
+        }
+    }
+}
+
+impl Daemon {
+    async fn start(root: &Path, fault: Option<&str>) -> Self {
+        let mut cmd = Command::new(env!("CARGO_BIN_EXE_wrongmemoryd"));
+        cmd.arg("--data-root")
+            .arg(root)
+            .env_remove("WRONGMEMORY_FAULT")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        if let Some(f) = fault {
+            cmd.env("WRONGMEMORY_FAULT", f);
+        }
+        let child = cmd.spawn().unwrap();
+        let deadline = Instant::now() + Duration::from_secs(20);
+        while Client::connect_host(&dr(root), "probe").await.is_err() {
+            assert!(Instant::now() < deadline, "daemon not ready");
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+        Self(Some(child))
+    }
+
+    /// Wait for the process to die on its own (injected abort).
+    async fn expect_crash(&mut self) {
+        let child = self.0.as_mut().unwrap();
+        let deadline = Instant::now() + Duration::from_secs(20);
+        loop {
+            if let Some(status) = child.try_wait().unwrap() {
+                assert!(!status.success(), "fault must abort, got {status}");
+                break;
+            }
+            assert!(Instant::now() < deadline, "daemon did not crash");
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+        self.0 = None;
+    }
+
+    async fn stop(mut self, root: &Path) {
+        let mut c = Client::connect_host(&dr(root), "stop").await.unwrap();
+        let _ = c
+            .call_raw(method::DAEMON_SHUTDOWN, None, json!({}), None)
+            .await;
+        let mut child = self.0.take().unwrap();
+        let deadline = Instant::now() + Duration::from_secs(20);
+        while child.try_wait().unwrap().is_none() {
+            assert!(Instant::now() < deadline, "daemon did not stop");
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+    }
+}
+
+fn dr(root: &Path) -> DataRoot {
+    DataRoot::resolve(Some(root)).unwrap()
+}
+
+async fn host(root: &Path) -> Client {
+    Client::connect_host(&dr(root), "host").await.unwrap()
+}
+
+async fn call(c: &mut Client, m: &str, p: &str, params: Value) -> Value {
+    c.call_raw(m, Some(p), params, None)
+        .await
+        .unwrap_or_else(|e| panic!("{m}: {e}"))
+}
+
+async fn register(c: &mut Client, proj: &Path) -> String {
+    std::fs::create_dir_all(proj).unwrap();
+    let v = c
+        .call_raw(
+            method::PROJECT_REGISTER,
+            None,
+            json!({"root": proj.display().to_string(), "storeKind": "managed", "write": true}),
+            None,
+        )
+        .await
+        .unwrap();
+    v["project"]["projectId"].as_str().unwrap().to_string()
+}
+
+/// Every non-deleted memory row whose text contains `needle`, as the host
+/// (no session) sees it.
+async fn rows_with(c: &mut Client, p: &str, needle: &str) -> Vec<String> {
+    let page = call(c, method::MEMORY_LIST_PAGE, p, json!({"limit": 200})).await;
+    page["items"]
+        .as_array()
+        .or_else(|| page["memories"].as_array())
+        .expect("listPage items")
+        .iter()
+        .filter(|m| m["text"].as_str().unwrap_or("").contains(needle))
+        .map(|m| m["id"].as_str().unwrap().to_string())
+        .collect()
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn crash_after_commit_before_reply_replays_idempotent_remember() {
+    for round in 0..5 {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("home");
+        let proj = tmp.path().join("proj");
+        let mut d = Daemon::start(&root, Some("after_commit_before_reply:memory.remember")).await;
+        let mut h = host(&root).await;
+        let p = register(&mut h, &proj).await;
+        let params = json!({"text": format!("Crash-safe deploy fact round {round}")});
+        let first = h
+            .call_raw(
+                method::MEMORY_REMEMBER,
+                Some(&p),
+                params.clone(),
+                Some("k-crash"),
+            )
+            .await;
+        assert!(
+            matches!(first, Err(CallError::Transport(_) | CallError::Protocol(_))),
+            "client must observe a transport failure, got {first:?}"
+        );
+        d.expect_crash().await;
+
+        // Stale discovery + abandoned owner lock: a fresh daemon recovers.
+        let d = Daemon::start(&root, None).await;
+        let mut h = host(&root).await;
+        let retry = h
+            .call_raw(
+                method::MEMORY_REMEMBER,
+                Some(&p),
+                params.clone(),
+                Some("k-crash"),
+            )
+            .await
+            .unwrap();
+        assert_eq!(retry["replayed"], true, "round {round}: receipt replay");
+        let ids = rows_with(&mut h, &p, "Crash-safe deploy fact").await;
+        assert_eq!(ids, vec![retry["id"].as_str().unwrap().to_string()]);
+        // A second retry is still the same single outcome.
+        let again = h
+            .call_raw(method::MEMORY_REMEMBER, Some(&p), params, Some("k-crash"))
+            .await
+            .unwrap();
+        assert_eq!(again["id"], retry["id"]);
+        assert_eq!(
+            rows_with(&mut h, &p, "Crash-safe deploy fact").await.len(),
+            1
+        );
+        drop(h);
+        d.stop(&root).await;
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn injected_failure_before_commit_rolls_back_everything() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("home");
+    let d = Daemon::start(&root, Some("before_commit")).await;
+    let mut h = host(&root).await;
+    let p = register(&mut h, &tmp.path().join("proj")).await;
+    let params = json!({"text": "Rollback-safe cache invalidation fact"});
+    let failed = h
+        .call_raw(
+            method::MEMORY_REMEMBER,
+            Some(&p),
+            params.clone(),
+            Some("k-io"),
+        )
+        .await;
+    match failed {
+        Err(CallError::Remote(e)) => assert!(e.message.contains("before_commit"), "{e:?}"),
+        other => panic!("expected a typed error, got {other:?}"),
+    }
+    // Nothing persisted: no memory row …
+    assert!(rows_with(&mut h, &p, "Rollback-safe").await.is_empty());
+    // … and no receipt: the same key now executes fresh (not a replay).
+    let ok = h
+        .call_raw(
+            method::MEMORY_REMEMBER,
+            Some(&p),
+            params.clone(),
+            Some("k-io"),
+        )
+        .await
+        .unwrap();
+    assert_eq!(ok["replayed"], false);
+    let ids = rows_with(&mut h, &p, "Rollback-safe").await;
+    assert_eq!(ids, vec![ok["id"].as_str().unwrap().to_string()]);
+    // The store keeps working for unrelated writes.
+    call(
+        &mut h,
+        method::MEMORY_REMEMBER,
+        &p,
+        json!({"text": "A later independent write succeeds"}),
+    )
+    .await;
+    drop(h);
+    d.stop(&root).await;
+
+    // Durable across restart.
+    let d = Daemon::start(&root, None).await;
+    let mut h = host(&root).await;
+    assert_eq!(rows_with(&mut h, &p, "Rollback-safe").await.len(), 1);
+    let replay = h
+        .call_raw(method::MEMORY_REMEMBER, Some(&p), params, Some("k-io"))
+        .await
+        .unwrap();
+    assert_eq!(replay["replayed"], true);
+    assert_eq!(replay["id"], ok["id"]);
+    drop(h);
+    d.stop(&root).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn crash_during_candidate_accept_is_accepted_exactly_once() {
+    for round in 0..5 {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("home");
+        let mut d = Daemon::start(&root, Some("after_commit_before_reply:candidate.accept")).await;
+        let mut h = host(&root).await;
+        let p = register(&mut h, &tmp.path().join("proj")).await;
+        let text = format!("Accepted-once queue retry policy round {round}");
+        let cid = call(&mut h, method::CANDIDATE_PROPOSE, &p, json!({"text": text})).await["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        let first = h
+            .call_raw(method::CANDIDATE_ACCEPT, Some(&p), json!({"id": cid}), None)
+            .await;
+        assert!(
+            matches!(first, Err(CallError::Transport(_) | CallError::Protocol(_))),
+            "got {first:?}"
+        );
+        d.expect_crash().await;
+
+        let d = Daemon::start(&root, None).await;
+        let mut h = host(&root).await;
+        let accepted = call(
+            &mut h,
+            method::CANDIDATE_LIST,
+            &p,
+            json!({"status": "accepted"}),
+        )
+        .await;
+        let cand = accepted["candidates"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["id"] == cid.as_str())
+            .unwrap_or_else(|| panic!("round {round}: candidate not accepted: {accepted}"))
+            .clone();
+        let mid = cand["acceptedMemoryId"]
+            .as_str()
+            .or_else(|| cand["memoryId"].as_str())
+            .or_else(|| cand["resolution"]["memoryId"].as_str())
+            .unwrap_or_else(|| panic!("no memory id on {cand}"))
+            .to_string();
+        assert_eq!(
+            rows_with(&mut h, &p, "Accepted-once queue retry").await,
+            vec![mid.clone()]
+        );
+        let again = call(&mut h, method::CANDIDATE_ACCEPT, &p, json!({"id": cid})).await;
+        assert_eq!(again["alreadyResolved"], true);
+        assert_eq!(
+            rows_with(&mut h, &p, "Accepted-once queue retry")
+                .await
+                .len(),
+            1
+        );
+        drop(h);
+        d.stop(&root).await;
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn idle_kill_leaves_recoverable_discovery_and_lock() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("home");
+    let proj = tmp.path().join("proj");
+    let mut d = Daemon::start(&root, None).await;
+    let mut h = host(&root).await;
+    let p = register(&mut h, &proj).await;
+    call(
+        &mut h,
+        method::MEMORY_REMEMBER,
+        &p,
+        json!({"text": "Survives a hard kill"}),
+    )
+    .await;
+    drop(h);
+    for _ in 0..5 {
+        let mut child = d.0.take().unwrap();
+        child.kill().unwrap();
+        child.wait().unwrap();
+        assert!(
+            dr(&root).endpoint_file().exists(),
+            "a hard kill cannot retract discovery"
+        );
+        // The stale endpoint refuses: nobody is listening.
+        assert!(Client::connect_host(&dr(&root), "stale").await.is_err());
+        d = Daemon::start(&root, None).await;
+        let mut h = host(&root).await;
+        // The store's owner lock was released by the OS; writes still work.
+        assert_eq!(rows_with(&mut h, &p, "Survives a hard kill").await.len(), 1);
+        call(
+            &mut h,
+            method::MEMORY_RECORD_USAGE,
+            &p,
+            json!({"ids": [], "kind": "use"}),
+        )
+        .await;
+        let hz = h
+            .call_raw(method::DAEMON_HEALTH, None, json!({}), None)
+            .await
+            .unwrap();
+        assert!(hz.is_object());
+    }
+    // Writes after the restarts land in the same store.
+    let mut h = host(&root).await;
+    call(
+        &mut h,
+        method::MEMORY_REMEMBER,
+        &p,
+        json!({"text": "Written after restarts"}),
+    )
+    .await;
+    drop(h);
+    d.stop(&root).await;
+}

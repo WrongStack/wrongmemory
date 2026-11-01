@@ -301,7 +301,7 @@ impl SageStore {
             });
         }
         let mut targets: Vec<String> = Vec::new();
-        let mut globs: Vec<String> = Vec::new();
+        let mut symbol_prefixes: Vec<String> = Vec::new();
         let mut add = |t: String| {
             if !targets.contains(&t) {
                 targets.push(t);
@@ -309,7 +309,7 @@ impl SageStore {
         };
         for p in &rel {
             add(format!("file:{p}"));
-            globs.push(format!("symbol:{}#*", escape_glob(p)));
+            symbol_prefixes.push(format!("symbol:{p}"));
             if ancestors {
                 let parts: Vec<&str> = p.split('/').filter(|s| !s.is_empty()).collect();
                 for i in (1..=parts.len()).rev() {
@@ -322,11 +322,21 @@ impl SageStore {
         let audience_ok = opts.include_audience_scoped != Some(false);
         let mut args: Vec<rusqlite::types::Value> = Vec::new();
         let target_ph = placeholders(&mut args, &targets);
-        let glob_clause: Vec<String> = globs
+        // `to_node GLOB 'symbol:<escaped p>#*'` is exactly the BINARY prefix
+        // range ['symbol:p#', 'symbol:p$'). As separate UNION ALL arms each
+        // part is an `idx_edge_to` lookup; OR-ing a GLOB into the IN forced a
+        // full edges scan (WM-604: 42 ms p50 at 25k memories).
+        let symbol_arms: String = symbol_prefixes
             .iter()
-            .map(|g| {
-                args.push(g.clone().into());
-                format!("e.to_node GLOB ?{}", args.len())
+            .map(|p| {
+                args.push(format!("{p}#").into());
+                let lo = args.len();
+                args.push(format!("{p}$").into());
+                format!(
+                    " UNION ALL SELECT SUBSTR(e.from_node, 5) FROM edges e
+                       WHERE e.to_node >= ?{lo} AND e.to_node < ?{} AND e.from_node GLOB 'mem:*'",
+                    lo + 1
+                )
             })
             .collect();
         let status_ph = placeholders(&mut args, &statuses);
@@ -335,10 +345,10 @@ impl SageStore {
             "SELECT DISTINCT m.data FROM memories m
               WHERE m.id IN (
                 SELECT SUBSTR(e.from_node, 5) FROM edges e
-                 WHERE e.from_node GLOB 'mem:*' AND (e.to_node IN ({target_ph}) OR {}))
+                 WHERE e.to_node IN ({target_ph}) AND e.from_node GLOB 'mem:*'{})
                 AND m.status IN ({status_ph}) AND {session}{}
               ORDER BY m.importance DESC, m.updated_at DESC LIMIT {}",
-            glob_clause.join(" OR "),
+            symbol_arms,
             if audience_ok {
                 ""
             } else {
@@ -568,6 +578,22 @@ impl SageStore {
         hidden: &mut HashSet<String>,
         allowed: &mut HashSet<String>,
     ) -> StoreResult<()> {
+        // Structural nodes (file/dir/symbol/...) are shared between memories
+        // but are derived from their anchors. A node whose whole subtree is
+        // referenced only by memories this viewer cannot see would disclose a
+        // hidden anchor (e.g. a private symbol name), so it is hidden too
+        // (WM-603). Orphan structure and anything a visible memory supports
+        // stays visible, so stores without hidden rows traverse unchanged.
+        for n in nodes {
+            if n.starts_with("mem:") || hidden.contains(n) || allowed.contains(n) {
+                continue;
+            }
+            if self.structural_node_hidden(n, viewer)? {
+                hidden.insert(n.clone());
+            } else {
+                allowed.insert(n.clone());
+            }
+        }
         let mut ids: Vec<String> = nodes
             .iter()
             .filter_map(|n| n.strip_prefix("mem:"))
@@ -590,6 +616,29 @@ impl SageStore {
         Ok(())
     }
 
+    fn structural_node_hidden(&self, node: &str, viewer: &Viewer) -> StoreResult<bool> {
+        let mut args: Vec<rusqlite::types::Value> = vec![node.to_string().into()];
+        let visible = session_sql("m.", viewer, &mut args);
+        let sql = format!(
+            "WITH RECURSIVE sub(node) AS (
+               SELECT ?1
+               UNION
+               SELECT e.from_node FROM edges e JOIN sub ON e.to_node = sub.node
+                WHERE e.from_node NOT GLOB 'mem:*'
+             ),
+             refs AS (
+               SELECT COALESCE({visible}, 0) AS ok FROM edges e
+                 JOIN sub ON e.to_node = sub.node
+                 JOIN memories m ON e.from_node = 'mem:' || m.id
+             )
+             SELECT EXISTS(SELECT 1 FROM refs WHERE ok = 0)
+                AND NOT EXISTS(SELECT 1 FROM refs WHERE ok = 1)"
+        );
+        self.conn
+            .query_row(&sql, params_from_iter(args), |r| r.get::<_, bool>(0))
+            .map_err(sql_err)
+    }
+
     /// `traverseSqliteGraph` with hub damping, made visibility-safe: hidden
     /// or deleted memory nodes are neither returned nor traversed through.
     pub fn traverse(
@@ -605,7 +654,8 @@ impl SageStore {
         let mut hidden: HashSet<String> = HashSet::new();
         let mut allowed: HashSet<String> = HashSet::new();
         let is_hidden = |hidden: &HashSet<String>, n: &str| {
-            n.strip_prefix("mem:").is_some_and(|id| hidden.contains(id))
+            n.strip_prefix("mem:")
+                .map_or_else(|| hidden.contains(n), |id| hidden.contains(id))
         };
         self.classify(starts, viewer, &mut hidden, &mut allowed)?;
         let mut visited_nodes: HashSet<String> = start_set.clone();
@@ -890,17 +940,39 @@ impl SageStore {
             let (k, v) = r.map_err(sql_err)?;
             by_kind.insert(k, v);
         }
+        // Counts are an existence oracle: session-private candidates and
+        // edges touching a hidden memory are excluded like the rows (WM-603).
+        // Structural anchor edges (symbol->file->dir) carry no owner, so only
+        // memory-owned edges are counted.
         let pending: i64 = self
             .conn
             .query_row(
-                "SELECT COUNT(*) FROM candidates WHERE status = 'pending'",
-                [],
+                "SELECT COUNT(*) FROM candidates WHERE status = 'pending'
+                   AND (NOT json_valid(data)
+                        OR json_extract(data, '$.scope') IS NOT 'session'
+                        OR (json_extract(data, '$.ownerSessionId') IS NOT NULL
+                            AND json_extract(data, '$.ownerSessionId') = ?1))",
+                rusqlite::params![viewer.session_id],
                 |r| r.get(0),
             )
             .map_err(sql_err)?;
+        let mut args = Vec::new();
+        let from_visible = session_sql("m.", viewer, &mut args);
+        let to_visible = session_sql("m.", viewer, &mut args);
         let edges: i64 = self
             .conn
-            .query_row("SELECT COUNT(*) FROM edges", [], |r| r.get(0))
+            .query_row(
+                &format!(
+                    "SELECT COUNT(*) FROM edges e
+                      WHERE e.from_node GLOB 'mem:*'
+                        AND NOT EXISTS (SELECT 1 FROM memories m
+                              WHERE e.from_node = 'mem:' || m.id AND NOT COALESCE({from_visible}, 0))
+                        AND NOT EXISTS (SELECT 1 FROM memories m
+                              WHERE e.to_node = 'mem:' || m.id AND NOT COALESCE({to_visible}, 0))"
+                ),
+                params_from_iter(args),
+                |r| r.get(0),
+            )
             .map_err(sql_err)?;
         Ok(
             json!({"byStatus": counts, "byKind": by_kind, "pendingCandidates": pending, "edges": edges}),
