@@ -410,7 +410,7 @@ impl SageStore {
         }
     }
 
-    fn select_hits(
+    pub(crate) fn select_hits(
         &self,
         f: &Filter<'_>,
         extra_where: &str,
@@ -1250,11 +1250,11 @@ pub(crate) fn session_clause(prefix: &str, viewer: &Viewer, n: usize) -> String 
     }
 }
 
-struct Filter<'a> {
-    statuses: &'a [String],
-    kinds: Option<&'a [String]>,
-    exclude_never: bool,
-    viewer: &'a Viewer,
+pub(crate) struct Filter<'a> {
+    pub(crate) statuses: &'a [String],
+    pub(crate) kinds: Option<&'a [String]>,
+    pub(crate) exclude_never: bool,
+    pub(crate) viewer: &'a Viewer,
 }
 
 impl Filter<'_> {

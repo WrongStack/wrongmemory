@@ -53,6 +53,19 @@ The installed runtime needs no Bun, Node, or source checkout.
 
 Run `wrongmemory migrate inspect <store>` before adopting. It is read-only and prints what admission would do.
 
+### Semantic recall (optional)
+
+| Command | Effect |
+|---|---|
+| `wrongmemory project semantic <id>` | Shows the provider (`none` by default) and how many memories are indexed |
+| `wrongmemory project semantic <id> --provider ngram-hash` | Builds the vector cache and enables fused search for MCP clients |
+| `wrongmemory project semantic <id> --provider none` | Disables it and deletes the cache |
+
+- `ngram-hash` is the only built-in provider. It compares hashed character n-grams (sub-word similarity). It is offline and needs no model download, but it is not a neural embedding model. It mainly finds matches the lexical index cannot: substrings of unspaced Chinese/Japanese text, inflected and compound words.
+- The cache lives in `<data root>\cache\semantic\<projectId>.sqlite`, never inside `sage.db`. It is derived data, rebuilt on demand, and deleted on disable, detach and export.
+- The MCP `memory_search` tool fuses when a provider is set and stays lexical otherwise. IPC callers choose per request with `semantic`: `lexical` (default), `auto`, or `required` (fails with `SEMANTIC_UNAVAILABLE` when no provider is set). The WrongStack adapter keeps its own vector fusion and asks for `lexical`, so results are never fused twice.
+- The vector channel never widens visibility: a vector hit is returned only if the caller could see the record through ordinary search (session, status, `contextPolicy`), and only at the revision the vector was built from.
+
 ## Backup and restore
 
 - `wrongmemory backup <project-id> --output <file>` takes a consistent online snapshot through the SQLite backup API from a read-only connection. It includes committed WAL content, runs `integrity_check`, and reports a SHA-256. It works while the daemon is running and never overwrites `<file>`.

@@ -443,7 +443,11 @@ impl Bridge {
                 let Some(query) = arg_str(&args, "query") else {
                     return bad_input("query is required");
                 };
-                let mut params = json!({"query": query, "limit": arg_limit(&args)});
+                // MCP clients have no host-side fusion, so the daemon is the
+                // single fusion owner: semantic when the project has a
+                // provider, lexical otherwise (WM-508/509).
+                let mut params =
+                    json!({"query": query, "limit": arg_limit(&args), "semantic": "auto"});
                 if let Some(k) = args.get("kinds") {
                     params["kinds"] = k.clone();
                 }

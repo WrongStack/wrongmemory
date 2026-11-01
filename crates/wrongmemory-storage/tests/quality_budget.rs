@@ -140,7 +140,45 @@ fn retrieval_quality_stays_within_budget() {
             }
         }
     }
+    // WM-508/509 measurement: the same queries through hybrid search.
+    let provider = wrongmemory_storage::semantic::NgramHashProvider::new();
+    let mut cache = wrongmemory_storage::semantic::SemanticCache::open(
+        &tmp.path().join("semantic.sqlite"),
+        wrongmemory_storage::semantic::EmbeddingProvider::profile(&provider),
+    )
+    .unwrap();
+    let (mut h1, mut h5, mut hrr) = (0usize, 0usize, 0.0f64);
+    let mut hybrid_misses = Vec::new();
+    for q in queries {
+        let text = q["q"].as_str().unwrap();
+        let target = &ids[q["target"].as_str().unwrap()];
+        let hits = store
+            .hybrid_search(&mut cache, &provider, text, 10, None, None, &viewer)
+            .unwrap()
+            .hits;
+        let rank = hits.iter().position(|h| &h.memory.id == target);
+        if let Some(r) = rank {
+            hrr += 1.0 / (r as f64 + 1.0);
+            h1 += usize::from(r == 0);
+            h5 += usize::from(r < 5);
+        }
+        if rank.is_none_or(|r| r >= 5) {
+            hybrid_misses.push(format!("{text:?} -> rank {rank:?}"));
+        }
+        for h in &hits {
+            if negatives.contains(&&h.memory.id) {
+                leaks.push(format!(
+                    "hybrid {text:?} returned a hard negative {}",
+                    h.memory.text
+                ));
+            }
+        }
+    }
     let n = queries.len() as f64;
+    let (hr1, hr5, hmrr) = (h1 as f64 / n, h5 as f64 / n, hrr / n);
+    println!(
+        "quality hybrid: recall@1={hr1:.3} recall@5={hr5:.3} mrr={hmrr:.3} misses={hybrid_misses:#?}"
+    );
     let (r1, r5, mrr) = (at1 as f64 / n, at5 as f64 / n, rr / n);
     println!(
         "quality: queries={} recall@1={r1:.3} recall@5={r5:.3} mrr={mrr:.3} misses={misses:#?}",
@@ -156,4 +194,11 @@ fn retrieval_quality_stays_within_budget() {
         "recall@5 {r5:.3} < {BUDGET_RECALL_AT_5}"
     );
     assert!(mrr >= BUDGET_MRR, "mrr {mrr:.3} < {BUDGET_MRR}");
+    // Hybrid (n-gram provider, daemon fusion) measured 2026-11-01: recall@1
+    // 0.975, recall@5 1.000, MRR 0.988. It must never fall below lexical.
+    assert!(hr1 >= r1 && hr5 >= r5, "hybrid recall below lexical");
+    assert!(
+        hr1 >= BUDGET_RECALL_AT_1 && hr5 >= BUDGET_RECALL_AT_5 && hmrr >= BUDGET_MRR,
+        "hybrid below budget: {hr1:.3} {hr5:.3} {hmrr:.3}"
+    );
 }

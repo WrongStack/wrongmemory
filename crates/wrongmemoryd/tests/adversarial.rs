@@ -278,6 +278,8 @@ async fn grants_cannot_cross_projects_or_sessions() {
         method::MAINTENANCE_RUN,
         method::EVENTS_SINCE,
         method::JOBS_LIST,
+        method::SEMANTIC_STATUS,
+        method::SEMANTIC_CONFIGURE,
     ];
     let probe = json!({"id": w.b_mem, "query": "gateway", "path": "src/a.rs", "text": "x",
                        "ids": [w.b_mem], "kind": "use", "generation": 0});

@@ -11,6 +11,7 @@ mod fault;
 mod log;
 mod projects;
 mod scheduler;
+mod semantic;
 mod server;
 
 use std::path::PathBuf;

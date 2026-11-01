@@ -188,6 +188,36 @@ fn multilingual_and_path_corpus_controls_hold() {
             )),
         }
     }
+    // WM-508/509: the same queries through the built-in n-gram provider and
+    // daemon-side fusion. Every target, including the unspaced CJK ones the
+    // lexical term split misses, must rank in the top five, and no hard
+    // negative may enter through the vector channel.
+    let provider = wrongmemory_storage::semantic::NgramHashProvider::new();
+    let mut cache = wrongmemory_storage::semantic::SemanticCache::open(
+        &tmp.path().join("cache").join("semantic.sqlite"),
+        wrongmemory_storage::semantic::EmbeddingProvider::profile(&provider),
+    )
+    .unwrap();
+    let mut hybrid_ranked = 0;
+    for q in corpus["search"].as_array().unwrap() {
+        let text = q["q"].as_str().unwrap();
+        let target = q["target"].as_str().unwrap();
+        let hits = store
+            .hybrid_search(&mut cache, &provider, text, 10, None, None, &viewer)
+            .unwrap()
+            .hits;
+        let keys: Vec<&str> = hits.iter().map(|h| key_of[&h.memory.id]).collect();
+        for k in &keys {
+            if negatives.contains(k) {
+                problems.push(format!("hybrid {text:?} returned hard negative {k}"));
+            }
+        }
+        match keys.iter().position(|k| *k == target) {
+            Some(r) if r < 5 => hybrid_ranked += 1,
+            rank => problems.push(format!("hybrid {text:?}: {target} at {rank:?} in {keys:?}")),
+        }
+    }
+    println!("corpus hybrid: {hybrid_ranked} search targets in the top five");
     println!(
         "corpus: {ranked}/{} search targets in the top five, {} path queries",
         corpus["search"].as_array().unwrap().len(),

@@ -19,7 +19,8 @@ use wrongmemory_contracts::{
     GrantCreateParams, GrantCreateResult, Health, Hello, Limits, MAX_AUTH_FRAME_BYTES,
     MAX_FRAME_BYTES, MAX_PAGE_SIZE, PROTOCOL_MAJOR, PROTOCOL_MINOR, PolicyProfile, PrincipalInfo,
     ProposeParams, RegisterProjectParams, RememberParams, Request, Response, SEMANTIC_PROFILE_ID,
-    STORAGE_PROFILE_ID, SearchParams, SessionAcquireParams, SessionInfo, method,
+    STORAGE_PROFILE_ID, SearchParams, SemanticConfigureParams, SessionAcquireParams, SessionInfo,
+    method,
 };
 use wrongmemory_contracts::{
     Admission, EventsSinceParams, EventsSinceResult, JobInfo, MaintenanceConfigureParams, StoreKind,
@@ -75,6 +76,7 @@ pub struct Shared {
     pub(crate) inflight: AtomicUsize,
     pub events: Events,
     pub scheduler: Scheduler,
+    pub semantic: crate::semantic::SemanticCaches,
 }
 
 /// Authenticated identity of one connection. Built by the daemon only.
@@ -231,6 +233,7 @@ pub async fn run(cfg: Config) -> Result<(), StartError> {
         inflight: AtomicUsize::new(0),
         events: Events::new(events::DEFAULT_RING),
         scheduler: Scheduler::new(cfg.scheduler_tick),
+        semantic: Default::default(),
     });
     {
         let me = shared.clone();
@@ -583,7 +586,8 @@ fn required_action(m: &str) -> Option<Action> {
         | method::MAINTENANCE_STATUS
         | method::JOBS_LIST
         | method::JOBS_GET
-        | method::EVENTS_SINCE => Action::Read,
+        | method::EVENTS_SINCE
+        | method::SEMANTIC_STATUS => Action::Read,
         method::CANDIDATE_LIST
         | method::CANDIDATE_PROPOSE
         | method::MEMORY_FEEDBACK
@@ -603,7 +607,8 @@ fn required_action(m: &str) -> Option<Action> {
         | method::MEMORY_LEGACY_CLEAR
         | method::MAINTENANCE_CONFIGURE
         | method::MAINTENANCE_RUN
-        | method::JOBS_CANCEL => Action::Curate,
+        | method::JOBS_CANCEL
+        | method::SEMANTIC_CONFIGURE => Action::Curate,
         method::DAEMON_SHUTDOWN
         | method::PROJECT_REGISTER
         | method::PROJECT_DETACH
@@ -672,6 +677,7 @@ fn export_project(s: &Shared, id: &str, instance: &str) -> Result<Value, ErrorBo
     let detached = s.reg(|r| r.detach_project(id))?;
     drop(lane);
     s.stores.invalidate(id, &s.registry, instance, "exported");
+    s.semantic.drop_project(&s.root, id);
     Ok(json!({
         "projectId": id,
         "legacyStorePath": target.display().to_string(),
@@ -808,6 +814,7 @@ async fn dispatch_inner(
         || req.method.starts_with("candidate.")
         || req.method.starts_with("maintenance.")
         || req.method.starts_with("events.")
+        || req.method.starts_with("semantic.")
         || (req.method == method::JOBS_LIST && req.project_id.is_some());
     let project_id = if project_scoped {
         let id = req
@@ -887,6 +894,7 @@ async fn dispatch_inner(
             let detached = shared
                 .blocking(move |s| {
                     s.stores.invalidate(&id, &s.registry, &instance, "detached");
+                    s.semantic.drop_project(&s.root, &id);
                     s.reg(|r| r.detach_project(&id))
                 })
                 .await?;
@@ -990,17 +998,29 @@ async fn dispatch_inner(
                 session_id: state.session.clone(),
             };
             let pid = project_id.expect("scoped");
+            let mode = p.semantic.clone().unwrap_or_else(|| "lexical".into());
+            if !wrongmemory_contracts::SEMANTIC_MODES.contains(&mode.as_str()) {
+                return Err(err(
+                    ErrorCode::InvalidRequest,
+                    "semantic must be lexical, auto or required",
+                ));
+            }
             let r = shared
-                .blocking(move |s| {
-                    let h = s.stores.handle(&s.registry, &s.instance_id, &pid)?;
-                    let store = h.lock()?;
-                    store.search(
-                        &p.query,
-                        p.limit.unwrap_or(20),
-                        p.kinds.as_deref(),
-                        p.statuses.as_deref(),
-                        &viewer,
-                    )
+                .blocking(move |s| crate::semantic::search(s, &pid, &p, &mode, &viewer))
+                .await?;
+            to_value(r)
+        }
+        method::SEMANTIC_STATUS | method::SEMANTIC_CONFIGURE => {
+            let pid = project_id.expect("scoped");
+            let configure = if req.method == method::SEMANTIC_CONFIGURE {
+                Some(parse::<SemanticConfigureParams>(req.params)?)
+            } else {
+                None
+            };
+            let r = shared
+                .blocking(move |s| match configure {
+                    Some(p) => crate::semantic::configure(s, &pid, &p.provider),
+                    None => crate::semantic::status(s, &pid),
                 })
                 .await?;
             to_value(r)

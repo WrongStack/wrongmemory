@@ -193,6 +193,39 @@ impl Registry {
         Ok(())
     }
 
+    // ─── Semantic provider (WM-508) ─────────────────────────────────────────
+    // Kept in `registry_meta` (key `semantic.provider:<projectId>`), so the
+    // registry schema does not change; absent means `none`.
+
+    pub fn semantic_provider(&self, project_id: &str) -> Result<Option<String>, RegistryError> {
+        Ok(self
+            .conn
+            .query_row(
+                "SELECT value FROM registry_meta WHERE key = ?1",
+                [format!("semantic.provider:{project_id}")],
+                |r| r.get::<_, String>(0),
+            )
+            .optional()?)
+    }
+
+    pub fn set_semantic_provider(
+        &mut self,
+        project_id: &str,
+        provider: Option<&str>,
+    ) -> Result<(), RegistryError> {
+        let key = format!("semantic.provider:{project_id}");
+        match provider {
+            Some(p) => self.conn.execute(
+                "INSERT OR REPLACE INTO registry_meta(key, value) VALUES (?1, ?2)",
+                [key.as_str(), p],
+            )?,
+            None => self
+                .conn
+                .execute("DELETE FROM registry_meta WHERE key = ?1", [key.as_str()])?,
+        };
+        Ok(())
+    }
+
     // ─── Projects ───────────────────────────────────────────────────────────
 
     pub fn find_project_by_store(

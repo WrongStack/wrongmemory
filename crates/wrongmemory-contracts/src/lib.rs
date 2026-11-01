@@ -75,6 +75,9 @@ pub enum ErrorCode {
     ShuttingDown,
     DeadlineExceeded,
     StoreUnavailable,
+    /// An explicit semantic request, but no semantic provider is configured
+    /// for the project (or it failed). Lexical retrieval is unaffected.
+    SemanticUnavailable,
     Internal,
 }
 
@@ -113,6 +116,7 @@ impl ErrorCode {
             ErrorCode::ShuttingDown => "SHUTTING_DOWN",
             ErrorCode::DeadlineExceeded => "DEADLINE_EXCEEDED",
             ErrorCode::StoreUnavailable => "STORE_UNAVAILABLE",
+            ErrorCode::SemanticUnavailable => "SEMANTIC_UNAVAILABLE",
             ErrorCode::Internal => "INTERNAL",
         }
     }
@@ -137,7 +141,8 @@ impl ErrorCode {
             ErrorCode::ShuttingDown
             | ErrorCode::QueueSaturated
             | ErrorCode::DatabaseBusy
-            | ErrorCode::StoreUnavailable => exit_code::SERVICE_UNAVAILABLE,
+            | ErrorCode::StoreUnavailable
+            | ErrorCode::SemanticUnavailable => exit_code::SERVICE_UNAVAILABLE,
             ErrorCode::DeadlineExceeded => exit_code::TIMEOUT,
             ErrorCode::DatabaseCorrupt | ErrorCode::DiskFull => exit_code::FAILED,
             ErrorCode::Internal => exit_code::INTERNAL,
@@ -404,6 +409,8 @@ pub mod method {
     pub const JOBS_GET: &str = "jobs.get";
     pub const JOBS_CANCEL: &str = "jobs.cancel";
     pub const EVENTS_SINCE: &str = "events.since";
+    pub const SEMANTIC_STATUS: &str = "semantic.status";
+    pub const SEMANTIC_CONFIGURE: &str = "semantic.configure";
 
     /// Every method, in a stable order.
     pub const ALL: &[&str] = &[
@@ -459,6 +466,8 @@ pub mod method {
         JOBS_GET,
         JOBS_CANCEL,
         EVENTS_SINCE,
+        SEMANTIC_STATUS,
+        SEMANTIC_CONFIGURE,
     ];
 }
 
@@ -616,6 +625,23 @@ pub struct SearchParams {
     /// Defaults to `["active"]`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub statuses: Option<Vec<String>>,
+    /// Semantic channel (WM-508/509): `lexical` (default; the host may fuse
+    /// its own vectors), `auto` (fuse when the project has a provider, else
+    /// lexical), `required` (fuse, or fail with `SEMANTIC_UNAVAILABLE`).
+    /// Exactly one fusion owner per request: a caller that fuses itself must
+    /// not ask the daemon to.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub semantic: Option<String>,
+}
+
+pub const SEMANTIC_MODES: &[&str] = &["lexical", "auto", "required"];
+
+/// `semantic.configure`: choose the project's semantic provider (`none`
+/// disables it and drops the derived cache).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SemanticConfigureParams {
+    pub provider: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

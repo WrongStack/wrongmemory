@@ -169,6 +169,15 @@ enum ProjectCmd {
     Export {
         project: String,
     },
+    /// Show or choose the project's semantic provider (WM-508): `none`
+    /// (lexical only, the default) or `ngram-hash` (built-in sub-word
+    /// similarity; offline, no model). The vector cache is derived data under
+    /// `<data root>/cache/semantic/` and is deleted when disabled.
+    Semantic {
+        project: String,
+        #[arg(long)]
+        provider: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -422,6 +431,28 @@ async fn run(cli: Cli, root: DataRoot) -> i32 {
                 );
                 print(j, &v, |v| {
                     format!("detached: {} (store files are kept)", v["detached"])
+                });
+            }
+            ProjectCmd::Semantic { project, provider } => {
+                let mut c = connect!(false);
+                let v = match provider {
+                    Some(p) => call!(
+                        c,
+                        method::SEMANTIC_CONFIGURE,
+                        Some(&project),
+                        json!({"provider": p})
+                    ),
+                    None => call!(c, method::SEMANTIC_STATUS, Some(&project), json!({})),
+                };
+                print(j, &v, |v| {
+                    let mut out = format!(
+                        "semantic provider: {}",
+                        v["provider"].as_str().unwrap_or_default()
+                    );
+                    if let Some(n) = v["indexed"].as_u64() {
+                        out.push_str(&format!(" ({n} memories indexed)"));
+                    }
+                    out
                 });
             }
             ProjectCmd::Export { project } => {
