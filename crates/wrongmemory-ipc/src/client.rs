@@ -54,7 +54,13 @@ impl Client {
         let cred = Credential::Host {
             token: discovery.token.clone(),
         };
-        Self::connect_with(&discovery.info.endpoint, cred, client_name).await
+        Self::connect_inner(
+            &discovery.info.endpoint,
+            cred,
+            client_name,
+            Some(&discovery.token),
+        )
+        .await
     }
 
     /// Connect with a scoped grant (external MCP bridges). The secret is read
@@ -72,7 +78,13 @@ impl Client {
             grant_id: grant_id.to_string(),
             secret,
         };
-        Self::connect_with(&discovery.info.endpoint, cred, client_name).await
+        Self::connect_inner(
+            &discovery.info.endpoint,
+            cred,
+            client_name,
+            Some(&discovery.token),
+        )
+        .await
     }
 
     /// Connect with an explicit endpoint and credential.
@@ -81,8 +93,40 @@ impl Client {
         credential: Credential,
         client_name: &str,
     ) -> Result<Self, CallError> {
+        Self::connect_inner(endpoint, credential, client_name, None).await
+    }
+
+    /// When `proof_token` is set, the daemon must first prove possession of
+    /// the owner-private host token (HMAC over a fresh nonce) before any
+    /// credential is sent. Complements the server-SID check in `win.rs`.
+    async fn connect_inner(
+        endpoint: &str,
+        credential: Credential,
+        client_name: &str,
+        proof_token: Option<&str>,
+    ) -> Result<Self, CallError> {
         let stream = open(endpoint).await?;
         let mut stream = BufReader::new(stream);
+        if let Some(token) = proof_token {
+            let nonce = crate::endpoint::generate_token()
+                .map_err(|e| CallError::Protocol(e.to_string()))?;
+            write_frame(
+                stream.get_mut(),
+                &serde_json::json!({"type": "challenge", "nonce": nonce}),
+                MAX_FRAME_BYTES,
+            )
+            .await?;
+            let reply: Value = read_frame(&mut stream, MAX_FRAME_BYTES)
+                .await?
+                .ok_or_else(|| CallError::Protocol("connection closed during challenge".into()))?;
+            let expected = crate::endpoint::server_proof(token, &nonce);
+            let got = reply.get("proof").and_then(Value::as_str).unwrap_or("");
+            if !crate::endpoint::token_eq(got, &expected) {
+                return Err(CallError::Unavailable(format!(
+                    "{endpoint} did not prove it is this user's WrongMemory daemon; no credential sent"
+                )));
+            }
+        }
         let auth = AuthRequest {
             protocol_major: PROTOCOL_MAJOR,
             protocol_minor: PROTOCOL_MINOR,

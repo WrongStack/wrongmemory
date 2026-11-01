@@ -34,6 +34,7 @@ export const ERROR_CODES = [
   'DISK_FULL',
   'SHUTTING_DOWN',
   'DEADLINE_EXCEEDED',
+  'STORE_UNAVAILABLE',
   'INTERNAL',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -79,6 +80,13 @@ export const METHODS = {
   MEMORY_RECOVER: 'memory.recover',
   MEMORY_BACKFILL: 'memory.backfill',
   MEMORY_HYGIENE: 'memory.hygiene',
+  MAINTENANCE_STATUS: 'maintenance.status',
+  MAINTENANCE_CONFIGURE: 'maintenance.configure',
+  MAINTENANCE_RUN: 'maintenance.run',
+  JOBS_LIST: 'jobs.list',
+  JOBS_GET: 'jobs.get',
+  JOBS_CANCEL: 'jobs.cancel',
+  EVENTS_SINCE: 'events.since',
 } as const;
 export type Method = (typeof METHODS)[keyof typeof METHODS];
 

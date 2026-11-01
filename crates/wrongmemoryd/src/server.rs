@@ -21,14 +21,20 @@ use wrongmemory_contracts::{
     ProposeParams, RegisterProjectParams, RememberParams, Request, Response, SEMANTIC_PROFILE_ID,
     STORAGE_PROFILE_ID, SearchParams, SessionAcquireParams, SessionInfo, method,
 };
+use wrongmemory_contracts::{
+    Admission, EventsSinceParams, EventsSinceResult, JobInfo, MaintenanceConfigureParams,
+};
 use wrongmemory_ipc::endpoint::{generate_token, token_eq};
 use wrongmemory_ipc::frame::{FrameError, read_frame, write_frame};
 use wrongmemory_ipc::{DataRoot, Discovery};
+use wrongmemory_registry::jobs::JobAdmission;
 use wrongmemory_registry::{Registry, now_iso, now_ms};
 use wrongmemory_storage::mutate::UsageKind;
 use wrongmemory_storage::{MutationCtx, Viewer};
 
-use crate::projects::{self, Stores};
+use crate::events::{self, Events};
+use crate::projects::{self, Stores, invalidates_handle};
+use crate::scheduler::{self, Scheduler};
 use crate::{info, warn};
 
 const AUTH_DEADLINE: Duration = Duration::from_secs(5);
@@ -37,6 +43,10 @@ const MAX_CONNECTIONS: usize = 64;
 pub struct Config {
     pub root: DataRoot,
     pub drain: Duration,
+    /// Cap on simultaneously open stores (LRU eviction of idle handles).
+    pub max_open_stores: usize,
+    /// Maintenance scheduler tick.
+    pub scheduler_tick: Duration,
 }
 
 #[derive(Debug)]
@@ -62,7 +72,9 @@ pub struct Shared {
     pub shutdown: watch::Sender<bool>,
     connections: AtomicUsize,
     /// In-flight blocking mutations; drained before stores close.
-    inflight: AtomicUsize,
+    pub(crate) inflight: AtomicUsize,
+    pub events: Events,
+    pub scheduler: Scheduler,
 }
 
 /// Authenticated identity of one connection. Built by the daemon only.
@@ -118,7 +130,7 @@ impl Shared {
             .map_err(|e| err(ErrorCode::Internal, format!("worker failed: {e}")))?
     }
 
-    fn reg<T>(
+    pub(crate) fn reg<T>(
         &self,
         f: impl FnOnce(&mut Registry) -> Result<T, wrongmemory_registry::RegistryError>,
     ) -> Result<T, ErrorBody> {
@@ -206,7 +218,7 @@ pub async fn run(cfg: Config) -> Result<(), StartError> {
     let shared = Arc::new(Shared {
         root: cfg.root.clone(),
         registry: Arc::new(Mutex::new(registry)),
-        stores: Stores::default(),
+        stores: Stores::new(cfg.max_open_stores),
         instance_id: instance_id.clone(),
         host_token: generate_token()?,
         started_at_ms,
@@ -214,7 +226,17 @@ pub async fn run(cfg: Config) -> Result<(), StartError> {
         shutdown: shutdown_tx,
         connections: AtomicUsize::new(0),
         inflight: AtomicUsize::new(0),
+        events: Events::new(events::DEFAULT_RING),
+        scheduler: Scheduler::new(cfg.scheduler_tick),
     });
+    {
+        let me = shared.clone();
+        tokio::task::spawn_blocking(move || scheduler::recover(&me))
+            .await
+            .map_err(|e| anyhow::anyhow!("scheduler recovery: {e}"))?
+            .map_err(|e| anyhow::anyhow!("scheduler recovery: {}", e.message))?;
+    }
+    let scheduler_task = tokio::spawn(scheduler::run(shared.clone()));
     let info = EndpointInfo {
         endpoint: endpoint.clone(),
         daemon_instance_id: instance_id.clone(),
@@ -265,14 +287,16 @@ pub async fn run(cfg: Config) -> Result<(), StartError> {
     while shared.inflight.load(Ordering::SeqCst) > 0 && tokio::time::Instant::now() < deadline {
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
+    // The scheduler records a running job's outcome before it exits; past
+    // the drain deadline the job stays `running` and the next start marks
+    // it interrupted.
+    let _ = tokio::time::timeout(
+        deadline.saturating_duration_since(tokio::time::Instant::now()),
+        scheduler_task,
+    )
+    .await;
     for handle in shared.stores.drain_all() {
-        let id = handle.info.project_id.clone();
-        let epoch = handle.info.owner_epoch;
-        let writable = handle.store.lock().map(|s| s.writable()).unwrap_or(false);
-        drop(handle);
-        if writable {
-            let _ = shared.reg(|r| r.record_release(&id, epoch, &instance_id));
-        }
+        projects::release(handle, &shared.registry, &instance_id, "shutdown");
     }
     let retracted = Discovery::retract(&cfg.root, &instance_id).unwrap_or(false);
     info!("stopped", {"instanceId": instance_id, "discoveryRetracted": retracted});
@@ -309,15 +333,49 @@ where
         return;
     }
 
-    let auth: AuthRequest = match tokio::time::timeout(
+    // Optional pre-auth challenge: the daemon proves it holds the host token
+    // before the client reveals any credential (pipe-squatting defense for
+    // clients that cannot check the server's OS identity).
+    let first = match tokio::time::timeout(
         AUTH_DEADLINE,
-        read_frame::<_, AuthRequest>(&mut conn, MAX_AUTH_FRAME_BYTES),
+        read_frame::<_, Value>(&mut conn, MAX_AUTH_FRAME_BYTES),
     )
     .await
     {
-        Ok(Ok(Some(a))) => a,
-        Ok(Ok(None)) | Err(_) => return,
-        Ok(Err(e)) => {
+        Ok(Ok(Some(v))) => v,
+        _ => return,
+    };
+    let first = if first.get("type").and_then(Value::as_str) == Some("challenge") {
+        let nonce = first.get("nonce").and_then(Value::as_str).unwrap_or("");
+        if nonce.len() < 32 || nonce.len() > 128 || !nonce.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return;
+        }
+        let proof = wrongmemory_ipc::endpoint::server_proof(&shared.host_token, nonce);
+        if write_frame(
+            conn.get_mut(),
+            &json!({"type": "proof", "proof": proof}),
+            MAX_FRAME_BYTES,
+        )
+        .await
+        .is_err()
+        {
+            return;
+        }
+        match tokio::time::timeout(
+            AUTH_DEADLINE,
+            read_frame::<_, Value>(&mut conn, MAX_AUTH_FRAME_BYTES),
+        )
+        .await
+        {
+            Ok(Ok(Some(v))) => v,
+            _ => return,
+        }
+    } else {
+        first
+    };
+    let auth: AuthRequest = match serde_json::from_value::<AuthRequest>(first) {
+        Ok(a) => a,
+        Err(e) => {
             reply_auth(
                 conn.get_mut(),
                 &AuthResponse::Error {
@@ -507,7 +565,11 @@ fn required_action(m: &str) -> Option<Action> {
         | method::MEMORY_LIST_PAGE
         | method::MEMORY_RELATED
         | method::MEMORY_GRAPH
-        | method::MEMORY_STATS => Action::Read,
+        | method::MEMORY_STATS
+        | method::MAINTENANCE_STATUS
+        | method::JOBS_LIST
+        | method::JOBS_GET
+        | method::EVENTS_SINCE => Action::Read,
         method::CANDIDATE_LIST
         | method::CANDIDATE_PROPOSE
         | method::MEMORY_FEEDBACK
@@ -519,7 +581,10 @@ fn required_action(m: &str) -> Option<Action> {
         | method::CANDIDATE_RESOLVE
         | method::MEMORY_RECOVER
         | method::MEMORY_BACKFILL
-        | method::MEMORY_HYGIENE => Action::Curate,
+        | method::MEMORY_HYGIENE
+        | method::MAINTENANCE_CONFIGURE
+        | method::MAINTENANCE_RUN
+        | method::JOBS_CANCEL => Action::Curate,
         method::DAEMON_SHUTDOWN
         | method::PROJECT_REGISTER
         | method::PROJECT_DETACH
@@ -558,10 +623,7 @@ where
     shared
         .blocking(move |s| {
             let h = s.stores.handle(&s.registry, &s.instance_id, &pid)?;
-            let mut store = h
-                .store
-                .lock()
-                .map_err(|_| err(ErrorCode::Internal, "store lock poisoned"))?;
+            let mut store = h.lock()?;
             f(&mut store)
         })
         .await
@@ -577,9 +639,42 @@ fn to_value<T: serde::Serialize>(v: T) -> Result<Value, ErrorBody> {
     serde_json::to_value(v).map_err(|e| err(ErrorCode::Internal, e.to_string()))
 }
 
+/// Dispatch plus post-commit effects: successful mutations publish change
+/// events (after the store transaction committed); store failures drop the
+/// cached handle so a later request reopens it (WM-208).
+async fn dispatch(
+    shared: &Arc<Shared>,
+    state: &mut Conn,
+    req: Request,
+) -> Result<Value, ErrorBody> {
+    let m = req.method.clone();
+    let pid = req.project_id.clone();
+    let result = dispatch_inner(shared, state, req).await;
+    if let Some(pid) = pid {
+        match &result {
+            Ok(v) if m.starts_with("memory.") || m.starts_with("candidate.") => {
+                shared.events.publish(&pid, events::drafts_for(&m, v));
+            }
+            Err(e) if invalidates_handle(e) => {
+                warn!("store_unavailable", {"projectId": pid, "code": e.code.as_str()});
+                let me = shared.clone();
+                let _ = me
+                    .blocking(move |s| {
+                        s.stores
+                            .invalidate(&pid, &s.registry, &s.instance_id, "store_error");
+                        Ok(())
+                    })
+                    .await;
+            }
+            _ => {}
+        }
+    }
+    result
+}
+
 /// Authorize, then route. Order: method known -> action allowed for the
 /// principal -> grant still active -> project in the grant's allowlist.
-async fn dispatch(
+async fn dispatch_inner(
     shared: &Arc<Shared>,
     state: &mut Conn,
     req: Request,
@@ -619,7 +714,10 @@ async fn dispatch(
 
     let project_scoped = req.method == method::PROJECT_GET
         || req.method.starts_with("memory.")
-        || req.method.starts_with("candidate.");
+        || req.method.starts_with("candidate.")
+        || req.method.starts_with("maintenance.")
+        || req.method.starts_with("events.")
+        || (req.method == method::JOBS_LIST && req.project_id.is_some());
     let project_id = if project_scoped {
         let id = req
             .project_id
@@ -697,14 +795,7 @@ async fn dispatch(
             let instance = shared.instance_id.clone();
             let detached = shared
                 .blocking(move |s| {
-                    if let Some(h) = s.stores.close(&id) {
-                        let epoch = h.info.owner_epoch;
-                        let writable = h.store.lock().map(|st| st.writable()).unwrap_or(false);
-                        drop(h);
-                        if writable {
-                            s.reg(|r| r.record_release(&id, epoch, &instance))?;
-                        }
-                    }
+                    s.stores.invalidate(&id, &s.registry, &instance, "detached");
                     s.reg(|r| r.detach_project(&id))
                 })
                 .await?;
@@ -798,10 +889,7 @@ async fn dispatch(
             let r = shared
                 .blocking(move |s| {
                     let h = s.stores.handle(&s.registry, &s.instance_id, &pid)?;
-                    let store = h
-                        .store
-                        .lock()
-                        .map_err(|_| err(ErrorCode::Internal, "store lock poisoned"))?;
+                    let store = h.lock()?;
                     store.search(
                         &p.query,
                         p.limit.unwrap_or(20),
@@ -822,10 +910,7 @@ async fn dispatch(
             let r = shared
                 .blocking(move |s| {
                     let h = s.stores.handle(&s.registry, &s.instance_id, &pid)?;
-                    let store = h
-                        .store
-                        .lock()
-                        .map_err(|_| err(ErrorCode::Internal, "store lock poisoned"))?;
+                    let store = h.lock()?;
                     store.get(&p.id, &viewer)
                 })
                 .await?
@@ -841,10 +926,7 @@ async fn dispatch(
             let r = shared
                 .blocking(move |s| {
                     let h = s.stores.handle(&s.registry, &s.instance_id, &pid)?;
-                    let store = h
-                        .store
-                        .lock()
-                        .map_err(|_| err(ErrorCode::Internal, "store lock poisoned"))?;
+                    let store = h.lock()?;
                     store.for_path(&p.path, p.limit.unwrap_or(20), &viewer)
                 })
                 .await?;
@@ -859,10 +941,7 @@ async fn dispatch(
             let r = shared
                 .blocking(move |s| {
                     let h = s.stores.handle(&s.registry, &s.instance_id, &pid)?;
-                    let store = h
-                        .store
-                        .lock()
-                        .map_err(|_| err(ErrorCode::Internal, "store lock poisoned"))?;
+                    let store = h.lock()?;
                     let (candidates, truncated, corrupt_skipped) = store.list_candidates(
                         p.status.as_deref().unwrap_or("pending"),
                         p.limit.unwrap_or(50),
@@ -893,10 +972,7 @@ async fn dispatch(
             let result = shared
                 .blocking(move |s| {
                     let h = s.stores.handle(&s.registry, &s.instance_id, &pid)?;
-                    let mut store = h
-                        .store
-                        .lock()
-                        .map_err(|_| err(ErrorCode::Internal, "store lock poisoned"))?;
+                    let mut store = h.lock()?;
                     if is_remember {
                         let p: RememberParams = parse(params)?;
                         store.remember(&p, &ctx)
@@ -1120,9 +1196,256 @@ async fn dispatch(
             })
             .await
         }
+        method::MAINTENANCE_STATUS
+        | method::MAINTENANCE_CONFIGURE
+        | method::MAINTENANCE_RUN
+        | method::JOBS_LIST
+        | method::JOBS_GET
+        | method::JOBS_CANCEL => {
+            maintenance(shared, state, &req.method, project_id, req.params).await
+        }
+        method::EVENTS_SINCE => {
+            let p: EventsSinceParams = parse(req.params)?;
+            let pid = project_id.expect("scoped");
+            events_since(shared, state, pid, p).await
+        }
         other => Err(err(
             ErrorCode::MethodNotFound,
             format!("unknown method {other}"),
         )),
+    }
+}
+
+/// `events.since`: committed changes after `generation`, filtered by what
+/// the caller may see. Hidden and absent records are indistinguishable:
+/// an event about a record the viewer cannot read is simply omitted.
+async fn events_since(
+    shared: &Arc<Shared>,
+    state: &Conn,
+    pid: String,
+    p: EventsSinceParams,
+) -> Result<Value, ErrorBody> {
+    let instance = shared.instance_id.clone();
+    // The project must exist (and be visible) even when no events exist.
+    let id = pid.clone();
+    shared
+        .blocking(move |s| s.reg(|r| r.get_project(&id)))
+        .await?
+        .ok_or_else(|| err(ErrorCode::ProjectNotFound, "project not found"))?;
+    let foreign = p
+        .daemon_instance_id
+        .as_deref()
+        .is_some_and(|d| d != instance);
+    let since = shared.events.since(&pid, p.generation);
+    if foreign || since.resync {
+        return to_value(EventsSinceResult {
+            daemon_instance_id: instance,
+            generation: since.generation,
+            resync: true,
+            events: vec![],
+        });
+    }
+    let session = state.session.clone();
+    let mut candidates: Vec<events::Entry> = since
+        .entries
+        .into_iter()
+        .filter(|e| match &e.owner_session {
+            Some(owner) => session.as_deref() == Some(owner.as_str()),
+            None => true,
+        })
+        .collect();
+    let ids: Vec<String> = candidates
+        .iter()
+        .filter_map(|e| e.event.memory_id.clone())
+        .collect();
+    if !ids.is_empty() {
+        let viewer = Viewer {
+            session_id: session.clone(),
+        };
+        let visible = store_op(shared, pid, move |store| {
+            let mut ok = std::collections::HashSet::new();
+            for id in ids {
+                if store.get(&id, &viewer)?.is_some() {
+                    ok.insert(id);
+                }
+            }
+            Ok(ok)
+        })
+        .await?;
+        candidates.retain(|e| {
+            e.event
+                .memory_id
+                .as_ref()
+                .is_none_or(|id| visible.contains(id))
+        });
+    }
+    to_value(EventsSinceResult {
+        daemon_instance_id: instance,
+        generation: since.generation,
+        resync: false,
+        events: candidates.into_iter().map(|e| e.event).collect(),
+    })
+}
+
+fn job_visible(state: &Conn, job: &JobInfo) -> bool {
+    state
+        .principal
+        .grant
+        .as_ref()
+        .is_none_or(|g| g.projects.contains(&job.project_id))
+}
+
+/// `maintenance.*` and `jobs.*`.
+async fn maintenance(
+    shared: &Arc<Shared>,
+    state: &Conn,
+    m: &str,
+    project_id: Option<String>,
+    params: Value,
+) -> Result<Value, ErrorBody> {
+    let params = obj(params)?;
+    let job_id = || {
+        params
+            .get("jobId")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .ok_or_else(|| err(ErrorCode::InvalidRequest, "jobId is required"))
+    };
+    // Resolve a scoped project and its schedule (writable projects only get
+    // schedules; read-only stores are never maintained).
+    let project = |pid: String| async move {
+        shared
+            .blocking(move |s| {
+                let p = s
+                    .reg(|r| r.get_project(&pid))?
+                    .ok_or_else(|| err(ErrorCode::ProjectNotFound, "project not found"))?;
+                if p.admission != Admission::ReadWrite {
+                    return Err(err(
+                        ErrorCode::ReadOnly,
+                        "maintenance requires a writable store",
+                    ));
+                }
+                let sched = s.reg(|r| r.ensure_schedule(&pid))?;
+                Ok((p, sched))
+            })
+            .await
+    };
+    match m {
+        method::MAINTENANCE_STATUS => {
+            let pid = project_id.expect("scoped");
+            let (_, schedule) = project(pid.clone()).await?;
+            let running = shared.scheduler.running_job();
+            let jobs = shared
+                .blocking(move |s| s.reg(|r| r.list_jobs(Some(&pid), 10)))
+                .await?;
+            to_value(json!({
+                "schedule": schedule,
+                "recentJobs": jobs,
+                "schedulerBusy": running.is_some(),
+            }))
+        }
+        method::MAINTENANCE_CONFIGURE => {
+            let pid = project_id.expect("scoped");
+            let p: MaintenanceConfigureParams = parse(Value::Object(params))?;
+            if let Some(c) = p.cadence_ms
+                && c < 1000
+            {
+                return Err(err(ErrorCode::InvalidRequest, "cadenceMs must be >= 1000"));
+            }
+            if let Some(o) = &p.options {
+                scheduler::validate_options(o)?;
+            }
+            project(pid.clone()).await?;
+            let r = shared
+                .blocking(move |s| {
+                    s.reg(|r| {
+                        r.configure_schedule(
+                            &pid,
+                            p.cadence_ms,
+                            p.options.as_ref(),
+                            p.enabled,
+                            p.expected_options_revision,
+                        )
+                    })
+                })
+                .await?;
+            match r {
+                Ok(schedule) => to_value(json!({ "schedule": schedule })),
+                Err(current) => Err(err(
+                    ErrorCode::RevisionConflict,
+                    format!(
+                        "options revision is {}, not the expected revision",
+                        current.options_revision
+                    ),
+                )),
+            }
+        }
+        method::MAINTENANCE_RUN => {
+            let pid = project_id.expect("scoped");
+            let options = params.get("options").cloned();
+            if let Some(o) = &options {
+                scheduler::validate_options(o)?;
+            }
+            let (_, schedule) = project(pid.clone()).await?;
+            let options = options.unwrap_or(schedule.options);
+            let admitted = shared
+                .blocking(move |s| {
+                    s.reg(|r| {
+                        r.admit_job(
+                            &pid,
+                            scheduler::KIND_HYGIENE,
+                            scheduler::PRIORITY_MANUAL,
+                            &options,
+                        )
+                    })
+                })
+                .await?;
+            match admitted {
+                JobAdmission::Queued(job) => to_value(json!({"job": job, "coalesced": false})),
+                JobAdmission::Coalesced(job) => to_value(json!({"job": job, "coalesced": true})),
+                JobAdmission::Saturated => Err(err(
+                    ErrorCode::QueueSaturated,
+                    "maintenance queue is full; retry later",
+                )),
+            }
+        }
+        method::JOBS_LIST => {
+            let limit = params
+                .get("limit")
+                .and_then(Value::as_u64)
+                .unwrap_or(50)
+                .min(MAX_PAGE_SIZE as u64) as usize;
+            let jobs = shared
+                .blocking(move |s| s.reg(|r| r.list_jobs(project_id.as_deref(), limit)))
+                .await?;
+            let jobs: Vec<_> = jobs.into_iter().filter(|j| job_visible(state, j)).collect();
+            to_value(json!({ "jobs": jobs }))
+        }
+        method::JOBS_GET | method::JOBS_CANCEL => {
+            let id = job_id()?;
+            let lookup = id.clone();
+            let job = shared
+                .blocking(move |s| s.reg(|r| r.get_job(&lookup)))
+                .await?
+                .filter(|j| job_visible(state, j))
+                .ok_or_else(|| err(ErrorCode::NotFound, "job not found"))?;
+            if m == method::JOBS_GET {
+                return to_value(job);
+            }
+            let canceled = shared
+                .blocking(move |s| s.reg(|r| r.cancel_job(&id)))
+                .await?;
+            if !canceled {
+                return Err(err(
+                    ErrorCode::InvalidRequest,
+                    format!("job is {}; only queued jobs can be canceled", job.state),
+                ));
+            }
+            let job = shared
+                .blocking(move |s| s.reg(|r| r.get_job(&job.job_id)))
+                .await?;
+            to_value(json!({ "canceled": true, "job": job }))
+        }
+        _ => Err(err(ErrorCode::MethodNotFound, "unknown method")),
     }
 }

@@ -1,0 +1,49 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - name: Install pinned toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Test
+        run: cargo test --workspace --locked
+      - name: Package
+        run: bun scripts/release/package.ts
+      - name: Build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/*.zip
+            dist/SHA256SUMS
+      - name: Draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<EOF
+          WrongMemory ${GITHUB_REF_NAME} (Windows x64, per-user).
+
+          - Binaries are **unsigned** (no Authenticode signature). Verify the zip against SHA256SUMS and the GitHub build-provenance attestation:
+            \`gh attestation verify <zip> --repo ${GITHUB_REPOSITORY}\`
+          - Install: unzip, then \`bin\\wrongmemory.exe install\`. See docs/operations.md.
+          - Scope and verification status: docs/status.md.
+          EOF
+          gh release create "$GITHUB_REF_NAME" dist/*.zip dist/SHA256SUMS --draft --title "WrongMemory $GITHUB_REF_NAME" --notes-file notes.md

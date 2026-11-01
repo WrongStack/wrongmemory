@@ -4,6 +4,8 @@
 //! Tables: `registry_meta`, `projects`, `client_grants`,
 //! `ownership_transitions`. Jobs/schedules/event offsets arrive with M2.
 
+pub mod jobs;
+
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -13,7 +15,7 @@ use wrongmemory_contracts::{
     Admission, ErrorBody, ErrorCode, GrantInfo, PolicyProfile, ProjectInfo, StoreKind,
 };
 
-pub const REGISTRY_SCHEMA_VERSION: i64 = 1;
+pub const REGISTRY_SCHEMA_VERSION: i64 = 2;
 
 pub fn now_ms() -> i64 {
     SystemTime::now()
@@ -65,6 +67,8 @@ impl From<RegistryError> for ErrorBody {
     }
 }
 
+use jobs::MIGRATION_2;
+
 const MIGRATION_1: &str = r#"
 CREATE TABLE registry_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE projects (
@@ -106,7 +110,7 @@ CREATE TABLE ownership_transitions (
 "#;
 
 pub struct Registry {
-    conn: Connection,
+    pub(crate) conn: Connection,
 }
 
 /// Case/separator-insensitive key for a filesystem path on Windows; exact on
@@ -173,6 +177,15 @@ impl Registry {
             tx.execute_batch(MIGRATION_1)?;
             tx.execute(
                 "INSERT INTO registry_meta(key, value) VALUES ('schema_version', '1')",
+                [],
+            )?;
+            tx.commit()?;
+        }
+        if v < 2 {
+            let tx = self.conn.transaction()?;
+            tx.execute_batch(MIGRATION_2)?;
+            tx.execute(
+                "UPDATE registry_meta SET value = '2' WHERE key = 'schema_version'",
                 [],
             )?;
             tx.commit()?;

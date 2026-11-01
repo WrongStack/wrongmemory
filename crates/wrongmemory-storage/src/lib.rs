@@ -6,6 +6,7 @@
 //! * [`owner`] — OS-backed owner guard per store.
 //! * [`text`] — JS-compatible text/path normalization.
 
+pub mod backup;
 pub mod candidates;
 pub mod hygiene;
 pub mod inspect;
@@ -18,6 +19,7 @@ pub mod schema;
 pub mod similarity;
 pub mod store;
 pub mod text;
+pub mod wrongstack_paths;
 
 pub use inspect::{Inspection, Verdict, inspect};
 pub use owner::OwnerGuard;

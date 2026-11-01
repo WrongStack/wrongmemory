@@ -4,6 +4,7 @@
 
 mod connect;
 mod mcp;
+mod ops;
 mod spawn;
 
 use std::path::PathBuf;
@@ -109,6 +110,27 @@ enum Cmd {
         #[command(subcommand)]
         action: ClientCmd,
     },
+    /// Consistent online backup of a project store (never overwrites).
+    Backup(ops::BackupArgs),
+    /// Read-only migration planning for an existing store.
+    Migrate {
+        #[command(subcommand)]
+        action: ops::MigrateCmd,
+    },
+    /// Bounded, redacted diagnostics bundle.
+    Diagnostics {
+        #[command(subcommand)]
+        action: ops::DiagnosticsCmd,
+    },
+    /// Per-user start at sign-in (Windows Run key).
+    Autostart {
+        #[command(subcommand)]
+        action: ops::AutostartCmd,
+    },
+    /// Install the CLI and daemon into a per-user directory.
+    Install(ops::InstallArgs),
+    /// Stop the daemon and remove installed binaries and autostart.
+    Uninstall(ops::UninstallArgs),
 }
 
 #[derive(Debug, Subcommand)]
@@ -632,6 +654,12 @@ async fn run(cli: Cli, root: DataRoot) -> i32 {
         Cmd::Client {
             action: ClientCmd::Doctor(args),
         } => return connect::run_doctor(&root, j, args).await,
+        Cmd::Backup(args) => return ops::run_backup(&root, j, args).await,
+        Cmd::Migrate { action } => return ops::run_migrate(j, action),
+        Cmd::Diagnostics { action } => return ops::run_diagnostics(&root, j, action).await,
+        Cmd::Autostart { action } => return ops::run_autostart(&root, j, action),
+        Cmd::Install(args) => return ops::run_install(&root, j, args).await,
+        Cmd::Uninstall(args) => return ops::run_uninstall(&root, j, args).await,
     }
     exit_code::SUCCESS
 }

@@ -4,32 +4,114 @@
 //! is the project's serialized writer lane, and SQLite work always runs on the
 //! blocking pool. Writable handles hold the store's [`OwnerGuard`] and an
 //! owner epoch recorded in the registry (WM-INV-01).
+//!
+//! Open handles are capped (default 32). Opening one more evicts the least
+//! recently used idle handle: no request holds it and none is waiting for
+//! its lane. Eviction closes SQLite, releases the owner guard, and journals
+//! the release. A handle whose store failed (missing file, disk full, I/O)
+//! is dropped so a later request reopens it after recovery (WM-208); an
+//! adopted store is never recreated.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use wrongmemory_contracts::{
     Admission, ErrorBody, ErrorCode, ProjectInfo, RegisterProjectParams, RegisterProjectResult,
     STORAGE_PROFILE_ID, StoreKind,
 };
 use wrongmemory_ipc::DataRoot;
-use wrongmemory_registry::{NewProject, Registry, now_iso};
+use wrongmemory_registry::{NewProject, Registry, now_iso, now_ms};
 use wrongmemory_storage::{OwnerGuard, SageStore, inspect};
+
+/// Default cap on simultaneously open stores.
+pub const DEFAULT_MAX_OPEN_STORES: usize = 32;
 
 pub struct ProjectHandle {
     pub info: ProjectInfo,
     pub store: Mutex<SageStore>,
     _guard: Option<OwnerGuard>,
+    /// Requests currently waiting for or holding this project's lane.
+    waiting: AtomicUsize,
+    last_used_ms: AtomicI64,
 }
 
-#[derive(Default)]
+/// Holds the project lane; decrements the waiter count on drop.
+pub struct Lane<'a> {
+    guard: MutexGuard<'a, SageStore>,
+    waiting: &'a AtomicUsize,
+}
+
+impl std::ops::Deref for Lane<'_> {
+    type Target = SageStore;
+    fn deref(&self) -> &SageStore {
+        &self.guard
+    }
+}
+
+impl std::ops::DerefMut for Lane<'_> {
+    fn deref_mut(&mut self) -> &mut SageStore {
+        &mut self.guard
+    }
+}
+
+impl Drop for Lane<'_> {
+    fn drop(&mut self) {
+        self.waiting.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+impl ProjectHandle {
+    /// Interactive acquisition of the project lane (counted as waiting so
+    /// maintenance yields to it).
+    pub fn lock(&self) -> Result<Lane<'_>, ErrorBody> {
+        self.waiting.fetch_add(1, Ordering::SeqCst);
+        self.last_used_ms.store(now_ms(), Ordering::Relaxed);
+        match self.store.lock() {
+            Ok(guard) => Ok(Lane {
+                guard,
+                waiting: &self.waiting,
+            }),
+            Err(_) => {
+                self.waiting.fetch_sub(1, Ordering::SeqCst);
+                Err(internal("store lock poisoned"))
+            }
+        }
+    }
+
+    /// Requests waiting for or holding the lane.
+    pub fn waiting(&self) -> usize {
+        self.waiting.load(Ordering::SeqCst)
+    }
+
+    pub fn writable(&self) -> bool {
+        self._guard.is_some()
+    }
+}
+
 pub struct Stores {
     open: Mutex<HashMap<String, Arc<ProjectHandle>>>,
+    max_open: usize,
+}
+
+impl Default for Stores {
+    fn default() -> Self {
+        Self::new(DEFAULT_MAX_OPEN_STORES)
+    }
 }
 
 fn internal(e: impl std::fmt::Display) -> ErrorBody {
     ErrorBody::new(ErrorCode::Internal, e.to_string())
+}
+
+/// Errors after which a cached handle must not be reused.
+pub fn invalidates_handle(e: &ErrorBody) -> bool {
+    matches!(
+        e.code,
+        ErrorCode::StoreUnavailable | ErrorCode::DiskFull | ErrorCode::DatabaseCorrupt
+    ) || (e.code == ErrorCode::Internal
+        && (e.message.contains("disk I/O error") || e.message.contains("unable to open")))
 }
 
 /// Canonical absolute directory. Strips the Windows verbatim prefix so the
@@ -60,8 +142,20 @@ pub fn adopted_store_path(root: &Path) -> PathBuf {
 }
 
 impl Stores {
+    pub fn new(max_open: usize) -> Self {
+        Self {
+            open: Mutex::new(HashMap::new()),
+            max_open: max_open.max(1),
+        }
+    }
+
     pub fn count(&self) -> usize {
         self.open.lock().map(|m| m.len()).unwrap_or(0)
+    }
+
+    /// Existing handle without opening one.
+    pub fn peek(&self, project_id: &str) -> Option<Arc<ProjectHandle>> {
+        self.open.lock().ok()?.get(project_id).cloned()
     }
 
     /// Open (or reuse) the handle for a registered project. Blocking.
@@ -72,6 +166,7 @@ impl Stores {
         project_id: &str,
     ) -> Result<Arc<ProjectHandle>, ErrorBody> {
         if let Some(h) = self.open.lock().map_err(internal)?.get(project_id) {
+            h.last_used_ms.store(now_ms(), Ordering::Relaxed);
             return Ok(h.clone());
         }
         let info = registry
@@ -80,14 +175,56 @@ impl Stores {
             .get_project(project_id)
             .map_err(ErrorBody::from)?
             .ok_or_else(|| ErrorBody::new(ErrorCode::ProjectNotFound, "project not found"))?;
+        // Make room first so the owner guard of an evicted store is released
+        // before another may be acquired.
+        self.evict_to(self.max_open - 1, registry, instance_id)?;
         let handle = Arc::new(open_handle(registry, instance_id, info)?);
         let mut open = self.open.lock().map_err(internal)?;
         // Another request may have opened it meanwhile; keep the first.
         Ok(open.entry(project_id.to_string()).or_insert(handle).clone())
     }
 
-    pub fn close(&self, project_id: &str) -> Option<Arc<ProjectHandle>> {
-        self.open.lock().ok()?.remove(project_id)
+    /// Evict idle least-recently-used handles until at most `target` remain.
+    /// Busy handles (in use or awaited) are never evicted; the cap is then
+    /// temporarily exceeded rather than blocking.
+    fn evict_to(
+        &self,
+        target: usize,
+        registry: &Mutex<Registry>,
+        instance_id: &str,
+    ) -> Result<(), ErrorBody> {
+        let mut evicted = Vec::new();
+        {
+            let mut open = self.open.lock().map_err(internal)?;
+            while open.len() > target {
+                let victim = open
+                    .iter()
+                    .filter(|(_, h)| Arc::strong_count(h) == 1 && h.waiting() == 0)
+                    .min_by_key(|(_, h)| h.last_used_ms.load(Ordering::Relaxed))
+                    .map(|(k, _)| k.clone());
+                match victim.and_then(|k| open.remove(&k)) {
+                    Some(h) => evicted.push(h),
+                    None => break,
+                }
+            }
+        }
+        for h in evicted {
+            release(h, registry, instance_id, "evicted");
+        }
+        Ok(())
+    }
+
+    /// Drop a handle (failure or detach) and journal its release.
+    pub fn invalidate(
+        &self,
+        project_id: &str,
+        registry: &Mutex<Registry>,
+        instance_id: &str,
+        why: &str,
+    ) {
+        if let Some(h) = self.open.lock().ok().and_then(|mut m| m.remove(project_id)) {
+            release(h, registry, instance_id, why);
+        }
     }
 
     pub fn drain_all(&self) -> Vec<Arc<ProjectHandle>> {
@@ -98,13 +235,45 @@ impl Stores {
     }
 }
 
+/// Close a handle (SQLite first, then the owner guard) and journal it.
+pub fn release(h: Arc<ProjectHandle>, registry: &Mutex<Registry>, instance_id: &str, why: &str) {
+    let id = h.info.project_id.clone();
+    let epoch = h.info.owner_epoch;
+    let writable = h.writable();
+    drop(h);
+    if writable && let Ok(mut r) = registry.lock() {
+        let _ = r.record_release(&id, epoch, instance_id);
+    }
+    crate::info!("store_released", {"projectId": id, "reason": why});
+}
+
+fn missing_store(path: &Path) -> ErrorBody {
+    ErrorBody::new(
+        ErrorCode::StoreUnavailable,
+        format!(
+            "store {} is missing or unreachable; it is never recreated automatically",
+            path.display()
+        ),
+    )
+}
+
 fn open_handle(
     registry: &Mutex<Registry>,
     instance_id: &str,
-    mut info: ProjectInfo,
+    info: ProjectInfo,
 ) -> Result<ProjectHandle, ErrorBody> {
     let store_path = PathBuf::from(&info.store_path);
     let root = PathBuf::from(&info.root);
+    if info.admission != Admission::Refused && !store_path.is_file() {
+        return Err(missing_store(&store_path));
+    }
+    let handle = |store, guard| ProjectHandle {
+        info: info.clone(),
+        store: Mutex::new(store),
+        _guard: guard,
+        waiting: AtomicUsize::new(0),
+        last_used_ms: AtomicI64::new(now_ms()),
+    };
     match info.admission {
         Admission::Refused => Err(ErrorBody::new(
             ErrorCode::ProfileUnsupported,
@@ -112,19 +281,19 @@ fn open_handle(
         )),
         Admission::ReadOnly => {
             let (store, _) = SageStore::open(&store_path, false, Some(root), &now_iso())?;
-            Ok(ProjectHandle {
-                info,
-                store: Mutex::new(store),
-                _guard: None,
-            })
+            Ok(handle(store, None))
         }
         Admission::ReadWrite => {
             let epoch_next = info.owner_epoch + 1;
             let guard = OwnerGuard::acquire(&store_path, epoch_next, instance_id).map_err(|e| {
-                ErrorBody::new(
-                    ErrorCode::OwnerConflict,
-                    format!("cannot acquire store ownership: {e}"),
-                )
+                if e.kind() == std::io::ErrorKind::NotFound {
+                    missing_store(&store_path)
+                } else {
+                    ErrorBody::new(
+                        ErrorCode::OwnerConflict,
+                        format!("cannot acquire store ownership: {e}"),
+                    )
+                }
             })?;
             let (store, _) = SageStore::open(&store_path, true, Some(root), &now_iso())?;
             let epoch = registry
@@ -132,12 +301,9 @@ fn open_handle(
                 .map_err(internal)?
                 .begin_ownership(&info.project_id, instance_id)
                 .map_err(ErrorBody::from)?;
-            info.owner_epoch = epoch;
-            Ok(ProjectHandle {
-                info,
-                store: Mutex::new(store),
-                _guard: Some(guard),
-            })
+            let mut h = handle(store, Some(guard));
+            h.info.owner_epoch = epoch;
+            Ok(h)
         }
     }
 }
@@ -157,6 +323,10 @@ pub fn register(
     let mut reg = registry.lock().map_err(internal)?;
     match p.store_kind {
         StoreKind::Adopted => {
+            // SAGE resolves the store from the canonical repository root, so a
+            // linked worktree shares its main checkout's store (WM-INV-14).
+            let root =
+                PathBuf::from(wrongmemory_storage::wrongstack_paths::canonical_project_root(&root));
             let store = adopted_store_path(&root);
             if let Some(existing) = reg.find_project_by_store(&store).map_err(ErrorBody::from)? {
                 return Ok(RegisterProjectResult {

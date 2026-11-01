@@ -387,3 +387,66 @@ mod tests {
         assert!(!token_eq("abc", "abcd"));
     }
 }
+
+/// Domain-separation prefix for the daemon's proof of credential possession.
+pub const SERVER_PROOF_CONTEXT: &str = "wrongmemory-server-proof-v1";
+
+/// HMAC-SHA256 (RFC 2104) over `context:nonce`, keyed by the host token.
+///
+/// Clients that cannot verify the pipe server's OS identity (the Node
+/// adapter) send `{"type":"challenge","nonce":..}` first and only send a
+/// credential after checking this proof against the owner-private token, so
+/// a squatted pipe name never receives a grant secret or host token.
+pub fn server_proof(token: &str, nonce: &str) -> String {
+    const B: usize = 64;
+    let mut key = token.as_bytes().to_vec();
+    if key.len() > B {
+        key = Sha256::digest(&key).to_vec();
+    }
+    key.resize(B, 0);
+    let ipad: Vec<u8> = key.iter().map(|b| b ^ 0x36).collect();
+    let opad: Vec<u8> = key.iter().map(|b| b ^ 0x5c).collect();
+    let msg = format!("{SERVER_PROOF_CONTEXT}:{nonce}");
+    let inner = Sha256::new()
+        .chain_update(&ipad)
+        .chain_update(msg.as_bytes())
+        .finalize();
+    hex::encode(
+        Sha256::new()
+            .chain_update(&opad)
+            .chain_update(inner)
+            .finalize(),
+    )
+}
+
+#[cfg(test)]
+mod proof_tests {
+    use super::*;
+
+    #[test]
+    fn hmac_matches_rfc4231_case_2() {
+        // RFC 4231 test case 2 uses key "Jefe" and data
+        // "what do ya want for nothing?"; recompute through the same core.
+        const B: usize = 64;
+        let mut key = b"Jefe".to_vec();
+        key.resize(B, 0);
+        let ipad: Vec<u8> = key.iter().map(|b| b ^ 0x36).collect();
+        let opad: Vec<u8> = key.iter().map(|b| b ^ 0x5c).collect();
+        let inner = Sha256::new()
+            .chain_update(&ipad)
+            .chain_update(b"what do ya want for nothing?")
+            .finalize();
+        let mac = hex::encode(
+            Sha256::new()
+                .chain_update(&opad)
+                .chain_update(inner)
+                .finalize(),
+        );
+        assert_eq!(
+            mac,
+            "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843"
+        );
+        assert_ne!(server_proof("a", "n"), server_proof("b", "n"));
+        assert_eq!(server_proof("a", "n").len(), 64);
+    }
+}
