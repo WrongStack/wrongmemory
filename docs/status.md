@@ -91,11 +91,13 @@ Branch `feat/wrongmemory-adapter` in the worktree `D:/Codebox/PROJECTS/WrongStac
 - `478fa2333`: the adapter.
 - `c13cf9657`: re-copies the client at `40f7275` to pick up the HMAC proof fix.
 - `49eb02d39`: `retrieveForAudience` through `memory.forAudience`.
-- A later commit: legacy `forget`, `consolidate` and `clear` through `memory.legacy*`.
+- `fa00a83a4`: legacy `forget`, `consolidate` and `clear` through `memory.legacy*`.
+- `a9de6daed`: `findMemoriesForFile` through `memory.forFile`.
+- `3ee3ca973`: `verify` and `verifyForPaths` through `memory.verify`. Adapter tests: 24/24 against the real daemon.
 
 | ID | State | Evidence / gap |
 |---|---|---|
-| WM-400 | Done (branch) | `packages/sage/src/wrongmemory-port.ts`. Typed `UNAVAILABLE` errors; it never falls back to local SQLite. Port tests run against a real daemon. Still `NOT_IMPLEMENTED`: `verify`, `findMemoriesForFile`, and unified search with audience, anchor or freshness filters. |
+| WM-400 | Done (branch) | `packages/sage/src/wrongmemory-port.ts`. Typed `UNAVAILABLE` errors; it never falls back to local SQLite. Port tests run against a real daemon. The only `NOT_IMPLEMENTED` paths left are unified search cursors and its audience, anchor and freshness filters. |
 | WM-401 | Done (branch) | `Sage.service` is `local` (the default), `wrongmemory` or `auto`; a repo's own config cannot set it. |
 | WM-402 | Partial | The port binds `session.acquire{hostSessionId}` on every call. The host session id is not yet passed through the container. |
 | WM-403 | Partial | The daemon serves audience retrieval, `findMemoriesForFile`, `verify` and `verifyForPaths`. Host session id wiring and setup-time injection remain open. |
