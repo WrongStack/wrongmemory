@@ -16,6 +16,7 @@ wrongmemory-contracts.workspace = true
 wrongmemory-storage.workspace = true
 wrongmemory-ipc.workspace = true
 anyhow.workspace = true
+getrandom.workspace = true
 clap.workspace = true
 rmcp.workspace = true
 serde.workspace = true

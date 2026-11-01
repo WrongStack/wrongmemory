@@ -5,6 +5,7 @@
 //! service when the bridge exits.
 
 use std::path::PathBuf;
+#[cfg(not(windows))]
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
@@ -25,55 +26,132 @@ pub fn daemon_exe() -> anyhow::Result<PathBuf> {
 
 pub fn spawn_daemon(root: &DataRoot) -> anyhow::Result<u32> {
     let exe = daemon_exe()?;
-    let mut cmd = Command::new(&exe);
-    cmd.arg("--data-root")
-        .arg(root.path())
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
     #[cfg(windows)]
     {
-        use std::os::windows::process::CommandExt;
-        // CreateProcess inherits every inheritable handle. Our own stdio
-        // handles are the coding tool's pipes; a long-lived daemon holding a
-        // copy would keep the tool's stdout pipe open forever after the
-        // bridge exits. Make them non-inheritable before spawning.
-        disable_std_handle_inheritance();
-        const DETACHED_PROCESS: u32 = 0x0000_0008;
-        const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
-        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-        const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
-        let base = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW;
-        cmd.creation_flags(base | CREATE_BREAKAWAY_FROM_JOB);
-        match cmd.spawn() {
-            Ok(child) => return Ok(child.id()),
-            // A job that forbids breakaway rejects the flag (access denied):
-            // fall back to a plain detached start.
-            Err(_) => {
-                cmd.creation_flags(base);
-            }
-        }
+        win::spawn_detached(
+            &exe,
+            &[std::ffi::OsStr::new("--data-root"), root.path().as_os_str()],
+        )
     }
-    Ok(cmd.spawn()?.id())
+    #[cfg(not(windows))]
+    {
+        let child = Command::new(&exe)
+            .arg("--data-root")
+            .arg(root.path())
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?;
+        Ok(child.id())
+    }
 }
 
+/// Windows start without handle inheritance.
+///
+/// `std::process::Command` always calls `CreateProcessW` with
+/// `bInheritHandles = TRUE`, so a long-lived daemon would inherit every
+/// inheritable handle this CLI holds, including handles a coding tool or
+/// harness leaked into it (not just our own stdio, which is all
+/// `SetHandleInformation` on the std handles could cover). The daemon needs
+/// none: its stdio is unused and it logs to its own file. So it is created
+/// here with inheritance off, detached, in a new process group, without a
+/// window, and outside the caller's job when the job allows breakaway.
 #[cfg(windows)]
-fn disable_std_handle_inheritance() {
-    use windows_sys::Win32::Foundation::{
-        HANDLE_FLAG_INHERIT, INVALID_HANDLE_VALUE, SetHandleInformation,
+mod win {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+    use std::path::Path;
+
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::System::Threading::{
+        CREATE_BREAKAWAY_FROM_JOB, CREATE_NEW_PROCESS_GROUP, CREATE_NO_WINDOW,
+        CREATE_UNICODE_ENVIRONMENT, CreateProcessW, DETACHED_PROCESS, PROCESS_INFORMATION,
+        STARTUPINFOW,
     };
-    use windows_sys::Win32::System::Console::{
-        GetStdHandle, STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
-    };
-    for which in [STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE] {
-        // SAFETY: GetStdHandle has no preconditions; SetHandleInformation is
-        // only called on a non-null, valid handle and only clears a flag.
-        unsafe {
-            let h = GetStdHandle(which);
-            if !h.is_null() && h != INVALID_HANDLE_VALUE {
-                SetHandleInformation(h, HANDLE_FLAG_INHERIT, 0);
+
+    /// Quote one argument for `CommandLineToArgvW` / the MSVC runtime.
+    pub(super) fn quote(arg: &OsStr, out: &mut Vec<u16>) {
+        const SPACE: u16 = b' ' as u16;
+        const TAB: u16 = b'\t' as u16;
+        const QUOTE: u16 = b'"' as u16;
+        const BACKSLASH: u16 = b'\\' as u16;
+        let wide: Vec<u16> = arg.encode_wide().collect();
+        let needs = wide.is_empty() || wide.iter().any(|&c| c == SPACE || c == TAB || c == QUOTE);
+        if !needs {
+            out.extend_from_slice(&wide);
+            return;
+        }
+        out.push(QUOTE);
+        let mut backslashes = 0usize;
+        for &c in &wide {
+            if c == BACKSLASH {
+                backslashes += 1;
+                continue;
+            }
+            // Backslashes are literal unless they precede a quote.
+            let repeat = if c == QUOTE {
+                2 * backslashes + 1
+            } else {
+                backslashes
+            };
+            out.extend(std::iter::repeat_n(BACKSLASH, repeat));
+            backslashes = 0;
+            out.push(c);
+        }
+        // Trailing backslashes precede the closing quote: double them.
+        out.extend(std::iter::repeat_n(BACKSLASH, 2 * backslashes));
+        out.push(QUOTE);
+    }
+
+    pub(super) fn spawn_detached(exe: &Path, args: &[&OsStr]) -> anyhow::Result<u32> {
+        let mut cmdline = Vec::new();
+        quote(exe.as_os_str(), &mut cmdline);
+        for a in args {
+            cmdline.push(b' ' as u16);
+            quote(a, &mut cmdline);
+        }
+        cmdline.push(0);
+        let app: Vec<u16> = exe
+            .as_os_str()
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+        let base = DETACHED_PROCESS
+            | CREATE_NEW_PROCESS_GROUP
+            | CREATE_NO_WINDOW
+            | CREATE_UNICODE_ENVIRONMENT;
+        let mut last = std::io::Error::other("not started");
+        for flags in [base | CREATE_BREAKAWAY_FROM_JOB, base] {
+            // SAFETY: zeroed STARTUPINFOW/PROCESS_INFORMATION are valid
+            // initial states; `cb` is set; both strings are NUL-terminated
+            // and `cmdline` is a writable buffer as CreateProcessW requires.
+            unsafe {
+                let mut si: STARTUPINFOW = std::mem::zeroed();
+                si.cb = std::mem::size_of::<STARTUPINFOW>() as u32;
+                let mut pi: PROCESS_INFORMATION = std::mem::zeroed();
+                let mut line = cmdline.clone();
+                let ok = CreateProcessW(
+                    app.as_ptr(),
+                    line.as_mut_ptr(),
+                    std::ptr::null(),
+                    std::ptr::null(),
+                    0, // bInheritHandles = FALSE
+                    flags,
+                    std::ptr::null(),
+                    std::ptr::null(),
+                    &si,
+                    &mut pi,
+                );
+                if ok != 0 {
+                    CloseHandle(pi.hThread);
+                    CloseHandle(pi.hProcess);
+                    return Ok(pi.dwProcessId);
+                }
+                // A job that forbids breakaway refuses the flag: retry without it.
+                last = std::io::Error::last_os_error();
             }
         }
+        Err(last.into())
     }
 }
 
@@ -160,5 +238,27 @@ pub async fn start_and_wait(root: &DataRoot) -> Result<(), CallError> {
             }
             Err(e) => return Err(e),
         }
+    }
+}
+
+#[cfg(all(test, windows))]
+mod quote_tests {
+    use std::ffi::OsStr;
+
+    fn q(s: &str) -> String {
+        let mut out = Vec::new();
+        super::win::quote(OsStr::new(s), &mut out);
+        String::from_utf16(&out).unwrap()
+    }
+
+    #[test]
+    fn arguments_survive_the_msvc_command_line_rules() {
+        assert_eq!(q(r"C:\data"), r"C:\data");
+        assert_eq!(q(r"C:\My Data\wm"), r#""C:\My Data\wm""#);
+        // A trailing backslash before the closing quote is doubled.
+        assert_eq!(q(r"C:\My Data\"), r#""C:\My Data\\""#);
+        assert_eq!(q(r#"a"b"#), r#""a\"b""#);
+        assert_eq!(q(r#"a\"b c"#), r#""a\\\"b c""#);
+        assert_eq!(q(""), r#""""#);
     }
 }

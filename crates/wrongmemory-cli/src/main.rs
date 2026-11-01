@@ -6,6 +6,7 @@ mod connect;
 mod mcp;
 mod ops;
 mod spawn;
+mod ui;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -90,6 +91,16 @@ enum Cmd {
     Inspect { store: PathBuf },
     /// Read-only health report.
     Doctor,
+    /// Read-only dashboard in the browser: projects, memories, candidates,
+    /// live activity, audit trail and health. Serves 127.0.0.1 only.
+    Ui {
+        /// Loopback port (default: a free one).
+        #[arg(long, default_value_t = 0)]
+        port: u16,
+        /// Print the link without opening a browser.
+        #[arg(long)]
+        no_open: bool,
+    },
     /// MCP stdio bridge for external coding tools.
     Mcp {
         #[arg(long)]
@@ -691,6 +702,12 @@ async fn run(cli: Cli, root: DataRoot) -> i32 {
             print(j, &report, |v| {
                 serde_json::to_string_pretty(v).unwrap_or_default()
             });
+        }
+        Cmd::Ui { port, no_open } => {
+            if let Err(e) = ui::run(root, port, !no_open).await {
+                eprintln!("wrongmemory ui: {e:#}");
+                return exit_code::SERVICE_UNAVAILABLE;
+            }
         }
         Cmd::Mcp {
             project,

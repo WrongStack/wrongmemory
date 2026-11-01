@@ -66,6 +66,15 @@ Run `wrongmemory migrate inspect <store>` before adopting. It is read-only and p
 - The MCP `memory_search` tool fuses when a provider is set and stays lexical otherwise. IPC callers choose per request with `semantic`: `lexical` (default), `auto`, or `required` (fails with `SEMANTIC_UNAVAILABLE` when no provider is set). The WrongStack adapter keeps its own vector fusion and asks for `lexical`, so results are never fused twice.
 - The vector channel never widens visibility: a vector hit is returned only if the caller could see the record through ordinary search (session, status, `contextPolicy`), and only at the revision the vector was built from.
 
+## Dashboard
+
+`wrongmemory ui` opens a read-only dashboard in the browser. It shows the daemon status, the projects with memory counts, each project's memories (search, status and kind filters, full record), candidates, live activity, audit trail, health check, maintenance schedule and semantic provider, and the client grants.
+
+- It only reads. The page can call read methods only; the health check never applies repairs.
+- It is local to this user: it listens on `127.0.0.1` only and opens with a fresh random key printed on start. The key becomes an `HttpOnly`, `SameSite=Strict` cookie, requests naming another host are refused, and grant secrets and the host token never reach the page.
+- `--port <n>` picks the port (default: a free one); `--no-open` prints the link without opening a browser. Ctrl+C stops it; the daemon keeps running.
+- Session-private memories are not listed: the dashboard has no session.
+
 ## Backup and restore
 
 - `wrongmemory backup <project-id> --output <file>` takes a consistent online snapshot through the SQLite backup API from a read-only connection. It includes committed WAL content, runs `integrity_check`, and reports a SHA-256. It works while the daemon is running and never overwrites `<file>`.

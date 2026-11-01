@@ -188,7 +188,13 @@ Two gaps remain open:
 
 ## M8
 
-Not started: GUI, other platforms (Unix sockets exist only on the client side), WrongIndex adapter, native embeddings.
+| ID | State | Evidence / gap |
+|---|---|---|
+| WM-800 | Partial | `wrongmemory ui`: a read-only browser dashboard served by the CLI on loopback (projects and counts, memories with search/filters and the full record, candidates, live activity from `events.since`, audit trail, report-only health check, maintenance, semantic provider, grants, daemon status). Access rules: a fresh 256-bit key per run exchanged for an `HttpOnly`/`SameSite=Strict` cookie, `Host` must name the loopback listener (no DNS rebinding), GET only, 16 KiB request cap, strict CSP with no inline script and `frame-ancestors 'none'`, a read-only method allowlist with `memory.doctor` forced to report-only, and no secret in any response. Store values are inserted as text, never as HTML. `dashboard_is_loopback_keyed_and_read_only` drives the real command over raw HTTP; with the `Host` check disabled it fails. Checked in a browser with Playwright: every view renders, and a CLI write appeared in Live activity within seconds. NOT RUN / not built: review actions (accept/reject) and a desktop/tray app (the plan's WM-800 scope); the dashboard never stops the daemon. |
+
+Not started: other platforms (Unix sockets exist only on the client side), WrongIndex adapter, native embeddings (WM-805).
+
+**Daemon spawn without handle inheritance (found while testing WM-800).** `std::process::Command` always creates the child with handle inheritance on. Clearing the CLI's own stdio inheritance did not stop the auto-started daemon from inheriting other inheritable handles leaked into the CLI by its parent (a coding tool or a test harness), so the long-lived daemon could keep the parent's pipes open after the CLI exited. That was seen as a `cargo test | grep` pipeline that never finished. The CLI now starts the daemon with `CreateProcessW` and `bInheritHandles = FALSE` (detached, new process group, no window, job breakaway when allowed; the environment is still inherited). `autostarted_daemon_inherits_no_handle_from_its_launcher` failed before the change (the pipe never reached EOF) and passes after it; command-line quoting has a unit test.
 
 ## Performance (WM-010 / WM-604 / WM-605, synthetic)
 
@@ -234,8 +240,8 @@ Findings from the M run:
 |---|---|
 | `cargo fmt --all -- --check` | PASS |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo test --workspace --locked` | PASS 160/160 |
-| `cargo test -p wrongmemoryd -p wrongmemory-cli --tests` ×5 (IPC methods, restart ownership) | PASS 53/53 on each run; no leftover daemon processes |
+| `cargo test --workspace --locked` | PASS 165/165 |
+| `cargo test -p wrongmemoryd -p wrongmemory-cli --tests` ×5 (IPC methods, restart ownership, daemon spawn) | PASS 59/59 on each run; no leftover daemon processes |
 | `bun run certification:surface` (with `--adapter`) | PASS: 46 COVERED, 0 UNSUPPORTED |
 | `bun run test:client` (TS client 10/10, contract parity: 54 methods, 23 error codes) | PASS |
 | Adapter: sage port unit + real-daemon integration 43/43 against the debug daemon (adapter `b982b6c16`) | PASS |
