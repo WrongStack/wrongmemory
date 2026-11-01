@@ -10,6 +10,7 @@ pub mod backup;
 pub mod candidates;
 pub mod hygiene;
 pub mod inspect;
+pub mod legacy;
 pub mod mutate;
 pub mod owner;
 pub mod recovery;

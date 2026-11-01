@@ -49,6 +49,12 @@
       "description": "retrieveForAudience: role/taskType/mode matching, case folding, limits, session clause, truncation audit",
       "steps": 32,
       "errors": 0
+    },
+    {
+      "scenario": "legacy-bulk",
+      "description": "legacy MemoryStore forget / consolidate / clear: scope filters, permanent safeguard, reference cleanup, audits",
+      "steps": 21,
+      "errors": 0
     }
   ],
   "warnings": 1

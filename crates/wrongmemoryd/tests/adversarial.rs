@@ -256,6 +256,9 @@ async fn grants_cannot_cross_projects_or_sessions() {
         method::MEMORY_RECOVER,
         method::MEMORY_BACKFILL,
         method::MEMORY_HYGIENE,
+        method::MEMORY_LEGACY_FORGET,
+        method::MEMORY_LEGACY_CONSOLIDATE,
+        method::MEMORY_LEGACY_CLEAR,
         method::CANDIDATE_LIST,
         method::CANDIDATE_PROPOSE,
         method::CANDIDATE_ACCEPT,
@@ -882,4 +885,82 @@ async fn audience_context_is_bounded_before_it_reaches_the_audit_log() {
     .await;
     assert_eq!(ok["memories"].as_array().unwrap().len(), 1);
     assert_eq!(ok["truncated"]["returned"], 1);
+}
+
+/// Legacy bulk mutations are curator-only, demand an explicit scope (or
+/// `all`), and never reach rows the caller cannot see.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn legacy_bulk_mutations_are_curated_and_session_safe() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("home");
+    let _d = start(&root).await;
+    let mut h = Client::connect_host(&dr(&root), "host").await.unwrap();
+    let mut w = world(&root, tmp.path(), &mut h).await;
+    add_private(&mut h, &mut w).await;
+    let curator = grant(&mut h, "curator", &w.a).await;
+
+    let mut wr = connect(&root, &w.wr).await;
+    for (m, p) in [
+        (method::MEMORY_LEGACY_FORGET, json!({"query": "gateway"})),
+        (
+            method::MEMORY_LEGACY_CONSOLIDATE,
+            json!({"scope": "project-memory"}),
+        ),
+        (method::MEMORY_LEGACY_CLEAR, json!({"all": true})),
+    ] {
+        let (code, _) = fail(&mut wr, m, Some(&w.a), p).await;
+        assert_eq!(code, ErrorCode::Forbidden, "writer may not call {m}");
+    }
+
+    let mut cur = connect(&root, &curator).await;
+    let (code, _) = fail(&mut cur, method::MEMORY_LEGACY_CLEAR, Some(&w.a), json!({})).await;
+    assert_eq!(code, ErrorCode::InvalidRequest);
+    let (code, _) = fail(
+        &mut cur,
+        method::MEMORY_LEGACY_CLEAR,
+        Some(&w.a),
+        json!({"scope": "everything"}),
+    )
+    .await;
+    assert_eq!(code, ErrorCode::InvalidRequest);
+
+    // The grant's own session cannot see host-s1's private row, so neither
+    // forget nor clear may touch it.
+    let forgot = call(
+        &mut cur,
+        method::MEMORY_LEGACY_FORGET,
+        Some(&w.a),
+        json!({"query": PRIV_MARK}),
+    )
+    .await;
+    assert_eq!(forgot["record"]["removed"], 0);
+    let cleared = call(
+        &mut cur,
+        method::MEMORY_LEGACY_CLEAR,
+        Some(&w.a),
+        json!({"all": true}),
+    )
+    .await;
+    assert_eq!(cleared["record"]["deleted"], 1, "only the public memory");
+    assert_clean(
+        "legacy clear result",
+        &cleared,
+        &[w.private.as_str(), PRIV_MARK],
+    );
+    let own = call(
+        &mut h,
+        method::MEMORY_GET,
+        Some(&w.a),
+        json!({"id": w.private}),
+    )
+    .await;
+    assert_eq!(own["status"], "active");
+    let public = call(
+        &mut h,
+        method::MEMORY_GET,
+        Some(&w.a),
+        json!({"id": w.public}),
+    )
+    .await;
+    assert_eq!(public["status"], "deleted");
 }

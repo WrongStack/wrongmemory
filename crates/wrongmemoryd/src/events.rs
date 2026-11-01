@@ -224,6 +224,21 @@ pub fn drafts_for(m: &str, result: &Value) -> Vec<Entry> {
                 owner_session: None,
             }]
         }
+        method::MEMORY_LEGACY_FORGET
+        | method::MEMORY_LEGACY_CONSOLIDATE
+        | method::MEMORY_LEGACY_CLEAR => {
+            let record = result.get("record").cloned().unwrap_or(Value::Null);
+            let changed = ["removed", "deleted"]
+                .iter()
+                .any(|k| record.get(k).and_then(Value::as_u64).unwrap_or(0) > 0);
+            if result.get("replayed").and_then(Value::as_bool) == Some(true) || !changed {
+                return vec![];
+            }
+            vec![Entry {
+                event: draft(m),
+                owner_session: None,
+            }]
+        }
         method::MEMORY_BACKFILL | method::MEMORY_HYGIENE => {
             if result.get("dryRun").and_then(Value::as_bool) != Some(false) {
                 return vec![];

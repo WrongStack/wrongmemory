@@ -88,15 +88,18 @@ Legend: **Done**, meaning implemented and covered by an automated test or record
 
 Branch `feat/wrongmemory-adapter` in the worktree `D:/Codebox/PROJECTS/WrongStack-wrongmemory`. It is local and not pushed.
 
-- Commit `478fa2333` is the adapter.
-- Commit after it: re-copies the client at `40f7275` to pick up the HMAC proof fix.
+- `478fa2333`: the adapter.
+- `c13cf9657`: re-copies the client at `40f7275` to pick up the HMAC proof fix.
+- `49eb02d39`: `retrieveForAudience` through `memory.forAudience`.
+- A later commit: legacy `forget`, `consolidate` and `clear` through `memory.legacy*`.
 
 | ID | State | Evidence / gap |
 |---|---|---|
-| WM-400 | Done (branch) | `packages/sage/src/wrongmemory-port.ts`. Typed `UNAVAILABLE` errors; it never falls back to local SQLite. 20/20 port tests, including tests against a real daemon. |
+| WM-400 | Done (branch) | `packages/sage/src/wrongmemory-port.ts`. Typed `UNAVAILABLE` errors; it never falls back to local SQLite. Port tests run against a real daemon. Still `NOT_IMPLEMENTED`: `verify`, `findMemoriesForFile`, and unified search with audience, anchor or freshness filters. |
 | WM-401 | Done (branch) | `Sage.service` is `local` (the default), `wrongmemory` or `auto`; a repo's own config cannot set it. |
 | WM-402 | Partial | The port binds `session.acquire{hostSessionId}` on every call. The host session id is not yet passed through the container. |
-| WM-403..408 | Not started | Setup-time injection parity (audience and verify-for-paths); vector fusion; WebUI/slash/desktop; MCP connect migration; HQ sync. |
+| WM-403 | Partial | Audience retrieval is served by the daemon. Verify-for-paths and host session id wiring are still open. |
+| WM-404..408 | Not started | Capture/remap hooks; vector fusion; WebUI/slash/desktop; MCP connect migration; HQ sync. |
 | WM-409 | Partial | `local` mode leaves behaviour unchanged. `auto` uses WrongMemory only if a daemon is already running and the project is registered. Ownership-safe rollback is not exercised. |
 
 Without the adapter, the WrongStack suites on the branch give core 10305/10305 pass. With it:
@@ -114,12 +117,12 @@ These failures are not caused by the adapter. The main checkout was not modified
 | WM-501 | Done | `tests/oracle_retrieval_replay.rs` replays the oracle's graph-retrieval and audience scenarios and compares results. Path, related, graph, traverse, audience (including the truncation audit), search, list paging and stats `byStatus`/`byKind` all match. This replay found and fixed three gaps: `graphFor` now adds the anchors of every memory start, and `findRelated` is a full port of the baseline candidate collection (anchor-path ancestors, about_* targets, importance-ordered tags, command families, final ranking). `memory.forAudience` is exposed over IPC. |
 | WM-502 | Done | Remember, exact and near-duplicate merge, supersedes and contradicts, raw-JSON patch on update, revision guard (lifecycle oracle replay). |
 | WM-503 | Done | Feedback (up to 8 entries; session and principal set by the server), usage counters. |
-| WM-504 | Done | Candidates: propose with dedupe; accept, reject and resolve in one transaction; reverted resolution writes an audit record. Consolidation is not implemented. |
-| WM-505 | Done | Tombstone, cascade, recover, backfill. Purge is not implemented. |
+| WM-504 | Done | Candidates: propose with dedupe; accept, reject and resolve in one transaction; reverted resolution writes an audit record. Accepting a consolidation proposal supersedes its members. Legacy `consolidate(scope)` is `memory.legacyConsolidate` (see WM-510). |
+| WM-505 | Done | Tombstone, cascade, recover, backfill. Tombstone purge runs through hygiene (`purgeDeletedAfterDays`), and the oracle's `hygiene-purge` step matches. |
 | WM-506 | Partial | Validity rules have no shell or regex evaluation. Verification of checkout evidence is not implemented. |
 | WM-507 | Done | Hygiene with protections for critical memories (oracle replay). Expiry is scheduled through jobs. |
 | WM-508 / 509 | Not started (optional L4) | Semantic provider and vector mirror. |
-| WM-510 | Partial | Corrupt rows read as absent. Older and JSONL stores are refused: open them with SAGE first. No conversion. |
+| WM-510 | Partial | Corrupt rows read as absent. Legacy `MemoryStore` bulk mutations are curator-only, and the replay of the oracle's `legacy-bulk` scenario matches state, merged anchors and sources, counts and audit details:<ul><li>`memory.legacyForget`</li><li>`memory.legacyConsolidate`</li><li>`memory.legacyClear` (with no scope it needs `all=true`)</li></ul>Deliberate deviation: these only touch rows the caller's session can see, so one session cannot erase another session's private memories. Older and JSONL stores are refused: open them with SAGE first. There is no conversion. |
 | WM-511 | Not started | Full native differential certification. |
 
 ## M6 — hardening
@@ -179,6 +182,7 @@ target/release/wrongmemory-bench --corpus s --runs 5 --calls 200 --out benchmark
 |---|---|---|---|---|---|---|---|
 | S (1,000) | 4.0 s | 16.4 MiB | 0.38 / 0.70 / 0.94 ms | 0.45 / 0.77 / 1.11 ms | 0.29 / 0.45 / 0.85 ms | 1.00 (300 queries) | 0 |
 | M (25,000), before the path fix | 1,085 s (inherited, see below) | 18.7 MiB | 2.27 / 4.66 / 5.84 ms | 42.3 / 53.8 / 60.9 ms | 0.40 / 0.93 / 1.28 ms | 1.00 (300 queries) | 0 |
+| M (25,000), after the path fix (`benchmarks/results/2026-11-01-m.json`) | 954 s (inherited, see below) | 18.8 MiB | 1.22 / 2.78 / 4.02 ms | 2.87 / 5.13 / 7.31 ms | 0.24 / 0.45 / 1.36 ms | 1.00 (300 queries) | 0 |
 
 The recall figure comes from a synthetic corpus of code tokens. It is not a quality claim for real tasks.
 
@@ -192,7 +196,7 @@ Findings from the M run:
   Now the hit ids are materialized with `idx_edge_to` pinned on every arm (an exact BINARY prefix range replaces the GLOB) and joined to `memories` by primary key. The result is the same rows; the path oracle passes, including symbol anchors.
   - Reproduction on a 25k-row copy: 9.2 ms → 0.013 ms.
   - A first attempt that only split the GLOB did not help (45 ms in the second M run).
-  - Re-measuring M is pending.
+  - Re-measured M: 45 ms → 2.87 ms p50 (other builds were running on the machine during the load phase).
 - **Inherited baseline cost, kept for parity: the lexical near-duplicate window.** It is `bm25` over an OR of every prefix term with `LIMIT 32`, as in `sqlite-store-remember.ts` at `222d23a`.
   - It scores every row that shares any term, so `remember` slows as lexically overlapping rows grow.
   - About 60 ms per write at 16k in this corpus, where every row shares common words.
@@ -204,7 +208,7 @@ Findings from the M run:
 |---|---|
 | `cargo fmt --all -- --check` | PASS |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo test --workspace --locked` ×5 | PASS 112/112 on each run; no leftover daemon processes |
+| `cargo test --workspace --locked` ×5 | PASS 115/115 on each run; no leftover daemon processes |
 | `bun run test:client` (TS client 10/10, contract parity) | PASS |
 | Adapter: wrongmemory-client 6/6, sage port 20/20 against the release daemon | PASS |
 | Hosted CI (`32f0e8b`) | PASS |

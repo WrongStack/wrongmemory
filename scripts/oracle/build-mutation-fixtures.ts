@@ -713,6 +713,42 @@ const idOf = (v: unknown) => (v as { id?: string } | undefined)?.id;
   await aud('role-nobody', { role: 'nobody' }, 3);
 }
 
+// ─── legacy bulk mutations ──────────────────────────────────────────────────
+{
+  const s = new Scenario(
+    'legacy-bulk',
+    'legacy MemoryStore forget / consolidate / clear: scope filters, permanent safeguard, reference cleanup, audits',
+  );
+  scenarios.push(s);
+  const rem = async (label: string, input: Row) =>
+    s.label(idOf(await s.run(`remember-${label}`, 'rememberSage', input, () => s.store.rememberSage(input), { state: false })), label)!;
+  // Same normalized text, kept apart by audience (consolidate ignores audience).
+  const pnpm = 'Use pnpm for every dependency install in this repository.';
+  await rem('dupPlain', { text: pnpm, importance: 0.5, tags: ['tooling'], anchors: [{ type: 'file', path: 'package.json' }] });
+  await rem('dupCoder', { text: pnpm, importance: 0.7, confidence: 0.6, tags: ['install'], anchors: [{ type: 'file', path: 'pnpm-lock.yaml' }], audience: { roles: ['coder'] } });
+  await rem('dupReviewer', { text: pnpm, importance: 0.7, confidence: 0.9, tags: ['tooling', 'review'], anchors: [{ type: 'file', path: 'package.json' }], audience: { roles: ['reviewer'] } });
+  await rem('dupPermanent', { text: pnpm, importance: 0.9, persistence: 'permanent', audience: { roles: ['ops'] } });
+  await rem('userA', { text: 'The user prefers dark mode in every editor.', scope: 'user', kind: 'preference', importance: 0.4 });
+  await rem('userB', { text: 'The user prefers dark mode in every editor.', scope: 'user', kind: 'preference', importance: 0.6, audience: { roles: ['coder'] } });
+  const deployText = await rem('deployText', { text: 'Deploy through the blue-green pipeline only.', tags: ['release'] });
+  await rem('deployTag', { text: 'Release notes are drafted from merged pull requests.', tags: ['deploy'] });
+  await rem('deployAnchor', { text: 'This script must stay idempotent.', anchors: [{ type: 'file', path: 'infra/deploy.sh' }] });
+  await rem('deployPermanent', { text: 'Rotate deploy keys every quarter without exception.', persistence: 'permanent' });
+  await rem('successor', { text: 'Releases now use the canary pipeline instead of blue-green.', supersedes: [deployText] });
+  await rem('unrelated', { text: 'Logs are shipped to the central collector hourly.' });
+  await s.run('state', 'dump', {}, () => undefined);
+  await s.run('consolidate-user', 'consolidate', { scope: 'user-memory' }, () => s.store.consolidate('user-memory'));
+  await s.run('consolidate-project', 'consolidate', { scope: 'project-memory' }, () => s.store.consolidate('project-memory'));
+  await s.run('consolidate-project-again', 'consolidate', { scope: 'project-memory' }, () => s.store.consolidate('project-memory'));
+  await s.run('forget-blank', 'forget', { query: '   ', scope: 'project-memory' }, () => s.store.forget('   ', 'project-memory'));
+  await s.run('forget-user-text-in-project-scope', 'forget', { query: 'dark mode', scope: 'project-memory' }, () =>
+    s.store.forget('dark mode', 'project-memory'),
+  );
+  await s.run('forget-deploy', 'forget', { query: 'DEPLOY', scope: 'project-memory' }, () => s.store.forget('DEPLOY', 'project-memory'));
+  await s.run('clear-user', 'clear', { scope: 'user-memory' }, () => s.store.clear('user-memory'));
+  await s.run('clear-all', 'clear', {}, () => s.store.clear());
+}
+
 // ─── Write ──────────────────────────────────────────────────────────────────
 mkdirSync(outDir, { recursive: true });
 const index: Array<{ scenario: string; description: string; steps: number; errors: number }> = [];

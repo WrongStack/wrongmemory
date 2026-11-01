@@ -779,3 +779,155 @@ fn verification_rejects_paths_escaping_the_root() {
         "stale"
     );
 }
+
+/// Legacy `forget` / `consolidate` / `clear` against the oracle
+/// (`legacy-bulk.json`): per-step memory state (status, revision,
+/// relationships, tags), the merged keeper's anchors and sources, returned
+/// counts, and audit event names with their `details`.
+#[test]
+fn legacy_bulk_scenario_matches_oracle() {
+    let f = fixture("legacy-bulk");
+    let mut r = Replay::new();
+    let mut diffs = Vec::new();
+    let mut clock = "2026-11-01T00:00:00.000Z".to_string();
+    for st in f["steps"].as_array().unwrap() {
+        let step = st["step"].as_str().unwrap();
+        let input = &st["call"]["input"];
+        let method = st["call"]["method"].as_str().unwrap();
+        clock = bump_second(&clock);
+        let c = ctx(&clock, None);
+        let result: Option<Value> = match method {
+            "rememberSage" => {
+                let mut inp = input.clone();
+                if let Some(a) = inp.get("supersedes").cloned() {
+                    inp["supersedes"] = json!(
+                        a.as_array()
+                            .unwrap()
+                            .iter()
+                            .map(|x| r.real(x.as_str().unwrap()))
+                            .collect::<Vec<_>>()
+                    );
+                }
+                let (p, _) = remember_params(&inp);
+                let o = r.store.remember(&p, &c).unwrap();
+                r.ids.insert(
+                    Replay::fixture_label(st["result"]["id"].as_str().unwrap()),
+                    o.id,
+                );
+                r.new_audit_events();
+                continue;
+            }
+            "dump" => None,
+            "consolidate" => Some(
+                r.store
+                    .legacy_consolidate(input["scope"].as_str().unwrap(), &c)
+                    .unwrap()
+                    .record,
+            ),
+            "forget" => Some(
+                r.store
+                    .legacy_forget(
+                        input["query"].as_str().unwrap(),
+                        input["scope"].as_str().unwrap(),
+                        &c,
+                    )
+                    .unwrap()
+                    .record,
+            ),
+            "clear" => Some(
+                r.store
+                    .legacy_clear(input["scope"].as_str(), &c)
+                    .unwrap()
+                    .record,
+            ),
+            other => panic!("unhandled oracle method {other}"),
+        };
+        if method == "forget" {
+            let got = result.as_ref().unwrap()["removed"].clone();
+            if st["result"] != got {
+                diffs.push(format!(
+                    "{step}: removed oracle={} ours={got}",
+                    st["result"]
+                ));
+            }
+        }
+        diffs.extend(r.compare_state(step, &st["state"]));
+        // Merged keeper contents.
+        for m in st["state"]["memories"].as_array().unwrap() {
+            let d = &m["data"];
+            let label = Replay::fixture_label(d["id"].as_str().unwrap());
+            let ours: Value = {
+                let c = r.conn();
+                let data: String = c
+                    .query_row(
+                        "SELECT data FROM memories WHERE id = ?1",
+                        [r.real(&label)],
+                        |row| row.get(0),
+                    )
+                    .unwrap();
+                serde_json::from_str(&data).unwrap()
+            };
+            for key in ["anchors", "sources"] {
+                if d[key] != ours[key] {
+                    diffs.push(format!(
+                        "{step}: {label}.{key}\n  oracle={}\n  ours  ={}",
+                        d[key], ours[key]
+                    ));
+                }
+            }
+        }
+        // Audit events with their details (memory ids mapped to labels).
+        let want: Vec<Value> = st["state"]["auditEvents"]
+            .as_array()
+            .map(|a| {
+                a.iter()
+                    .map(|e| {
+                        let mut d = e["data"].clone();
+                        if let Some(sk) = d["details"]["skipped"].as_array() {
+                            d["details"]["skipped"] = json!(
+                                sk.iter()
+                                    .map(|x| Replay::fixture_label(x.as_str().unwrap()))
+                                    .collect::<Vec<_>>()
+                            );
+                        }
+                        json!([e["event"], d])
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        let got: Vec<Value> = {
+            let c = r.conn();
+            let rows: Vec<(i64, String, String)> = c
+                .prepare("SELECT id, event, data FROM audit_log WHERE id > ?1 ORDER BY id")
+                .unwrap()
+                .query_map([r.audit_mark], |row| {
+                    Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+                })
+                .unwrap()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            if let Some((last, ..)) = rows.last() {
+                r.audit_mark = *last;
+            }
+            rows.into_iter()
+                .map(|(_, e, d)| {
+                    let mut d: Value = serde_json::from_str(&d).unwrap();
+                    if let Some(sk) = d["details"]["skipped"].as_array() {
+                        d["details"]["skipped"] = json!(
+                            sk.iter()
+                                .map(|x| r.label_of(x.as_str().unwrap()))
+                                .collect::<Vec<_>>()
+                        );
+                    }
+                    json!([e, d])
+                })
+                .collect()
+        };
+        if want != got {
+            diffs.push(format!(
+                "{step}: audit\n  oracle={want:?}\n  ours  ={got:?}"
+            ));
+        }
+    }
+    assert_no_diffs(diffs);
+}

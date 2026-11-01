@@ -587,6 +587,9 @@ fn required_action(m: &str) -> Option<Action> {
         | method::MEMORY_RECOVER
         | method::MEMORY_BACKFILL
         | method::MEMORY_HYGIENE
+        | method::MEMORY_LEGACY_FORGET
+        | method::MEMORY_LEGACY_CONSOLIDATE
+        | method::MEMORY_LEGACY_CLEAR
         | method::MAINTENANCE_CONFIGURE
         | method::MAINTENANCE_RUN
         | method::JOBS_CANCEL => Action::Curate,
@@ -1010,7 +1013,10 @@ async fn dispatch_inner(
         | method::CANDIDATE_RESOLVE
         | method::MEMORY_RECOVER
         | method::MEMORY_BACKFILL
-        | method::MEMORY_HYGIENE => {
+        | method::MEMORY_HYGIENE
+        | method::MEMORY_LEGACY_FORGET
+        | method::MEMORY_LEGACY_CONSOLIDATE
+        | method::MEMORY_LEGACY_CLEAR => {
             let ctx = mutation_ctx(state, req.idempotency_key.clone());
             let curator = state
                 .principal
@@ -1117,6 +1123,37 @@ async fn dispatch_inner(
                                 err(ErrorCode::InvalidRequest, format!("invalid options: {e}"))
                             })?;
                         to_value(store.hygiene(&opts, &ctx)?)
+                    }
+                    method::MEMORY_LEGACY_FORGET => {
+                        let query = params
+                            .get("query")
+                            .and_then(Value::as_str)
+                            .ok_or_else(|| err(ErrorCode::InvalidRequest, "query is required"))?;
+                        let scope = params
+                            .get("scope")
+                            .and_then(Value::as_str)
+                            .unwrap_or("project-memory");
+                        to_value(store.legacy_forget(query, scope, &ctx)?)
+                    }
+                    method::MEMORY_LEGACY_CONSOLIDATE => {
+                        let scope = params
+                            .get("scope")
+                            .and_then(Value::as_str)
+                            .ok_or_else(|| err(ErrorCode::InvalidRequest, "scope is required"))?;
+                        to_value(store.legacy_consolidate(scope, &ctx)?)
+                    }
+                    method::MEMORY_LEGACY_CLEAR => {
+                        let scope = params.get("scope").and_then(Value::as_str);
+                        // Clearing every scope must be asked for explicitly.
+                        if scope.is_none()
+                            && params.get("all").and_then(Value::as_bool) != Some(true)
+                        {
+                            return Err(err(
+                                ErrorCode::InvalidRequest,
+                                "pass a scope, or all=true to clear every scope",
+                            ));
+                        }
+                        to_value(store.legacy_clear(scope, &ctx)?)
                     }
                     method::CANDIDATE_REJECT => {
                         let reason = params

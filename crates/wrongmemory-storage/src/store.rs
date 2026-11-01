@@ -1195,7 +1195,7 @@ pub fn fts_prefix_terms(query: &str) -> Vec<String> {
 /// SAGE `buildSessionClause` without the `includeAllSessions` bypass: with a
 /// bound session, session rows owned by it; without one, only legacy unowned
 /// session rows (owner NULL). `n` is the positional index of the session arg.
-fn session_clause(prefix: &str, viewer: &Viewer, n: usize) -> String {
+pub(crate) fn session_clause(prefix: &str, viewer: &Viewer, n: usize) -> String {
     if viewer.session_id.is_some() {
         format!("({prefix}scope != 'session' OR {prefix}owner_session_id = ?{n})")
     } else {
