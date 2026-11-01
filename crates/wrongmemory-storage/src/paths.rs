@@ -81,16 +81,36 @@ fn relative_under(root: &Path, abs: &Path) -> Option<String> {
     })
 }
 
+pub(crate) fn resolved_root_of(project_root: &Path) -> PathBuf {
+    node_resolve(project_root)
+}
+
+pub(crate) fn lexically_inside(root: &Path, p: &Path) -> bool {
+    relative_under(root, p).is_some()
+}
+
 /// `normalizeProjectPath(projectRoot, inputPath)`.
 pub fn normalize_project_path(project_root: &Path, input: &str) -> Result<String, String> {
     let resolved_root = node_resolve(project_root);
     let root = realpath(&resolved_root).unwrap_or(resolved_root);
     let input_path = Path::new(input);
+    let escape = || format!("Memory path must stay inside the project root: {input}");
+    // Lexical guard before any filesystem call: UNC, verbatim and device
+    // paths, and absolute paths outside the root, are rejected without being
+    // touched (a stat or canonicalize on a UNC path contacts a network share).
+    if input.starts_with("\\\\") || input.starts_with("//") {
+        return Err(escape());
+    }
     let raw_abs = if input_path.is_absolute() {
         node_resolve(input_path)
     } else {
         node_resolve(&root.join(input_path))
     };
+    if !lexically_inside(&root, &raw_abs)
+        && !lexically_inside(&resolved_root_of(project_root), &raw_abs)
+    {
+        return Err(escape());
+    }
     let abs = match (raw_abs.parent(), raw_abs.file_name()) {
         (Some(parent), Some(base)) => {
             let base = base.to_os_string();
@@ -129,6 +149,9 @@ mod tests {
             "src/server/http.ts"
         );
         assert!(n("../outside.ts").is_err());
+        assert!(n(r"\\attacker\share\x.ts").is_err());
+        assert!(n("//attacker/share/x.ts").is_err());
+        assert!(n(r"\\?\C:\Windows\x.ts").is_err());
         assert!(n(&tmp.path().join("other.ts").to_string_lossy()).is_err());
         if cfg!(windows) {
             let upper = root.join("SRC/server/http.ts");

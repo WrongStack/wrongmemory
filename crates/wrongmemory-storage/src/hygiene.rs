@@ -169,8 +169,21 @@ fn existence_proves(anchors: &[MemoryAnchor]) -> bool {
 }
 
 /// Canonical path under the real root, or `None` when missing / escaping.
+///
+/// Stored anchor paths are not trusted (adopted stores may hold absolute or
+/// UNC paths): anything that is not lexically inside the root is rejected
+/// before the filesystem is touched, so no network share is ever contacted.
 fn resolve_under(root: &Path, real_root: &Path, rel: &str) -> Option<PathBuf> {
-    let real = std::fs::canonicalize(root.join(rel)).ok()?;
+    if rel.starts_with("\\\\") || rel.starts_with("//") {
+        return None;
+    }
+    let joined = crate::wrongstack_paths::node_resolve(&root.join(rel));
+    if !crate::paths::lexically_inside(&crate::paths::resolved_root_of(root), &joined)
+        && !crate::paths::lexically_inside(real_root, &joined)
+    {
+        return None;
+    }
+    let real = std::fs::canonicalize(&joined).ok()?;
     real.starts_with(real_root).then_some(real)
 }
 
@@ -1179,4 +1192,25 @@ fn run_pass(
     )
     .map_err(sql_err)?;
     Ok(report)
+}
+
+#[cfg(test)]
+mod path_guard_tests {
+    use super::*;
+
+    #[test]
+    fn stored_anchor_paths_outside_the_root_are_never_resolved() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("proj");
+        std::fs::create_dir_all(root.join("src")).unwrap();
+        std::fs::write(root.join("src/a.rs"), "x").unwrap();
+        std::fs::write(tmp.path().join("outside.rs"), "x").unwrap();
+        let real_root = std::fs::canonicalize(&root).unwrap();
+        assert!(resolve_under(&root, &real_root, "src/a.rs").is_some());
+        assert!(resolve_under(&root, &real_root, "../outside.rs").is_none());
+        let abs = tmp.path().join("outside.rs");
+        assert!(resolve_under(&root, &real_root, &abs.to_string_lossy()).is_none());
+        assert!(resolve_under(&root, &real_root, r"\attacker\share\a.rs").is_none());
+        assert!(resolve_under(&root, &real_root, "//attacker/share/a.rs").is_none());
+    }
 }

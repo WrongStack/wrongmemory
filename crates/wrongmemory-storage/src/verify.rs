@@ -206,17 +206,37 @@ fn is_executable_file(meta: &std::fs::Metadata) -> bool {
     }
 }
 
-/// `commandExists`: explicit paths are stat'ed (relative to the project
-/// root); bare names are probed on PATH with the Windows extensions.
-fn command_exists(root: &Path, exe: &str) -> bool {
+/// `commandExists`, restricted: `Some(found)`, or `None` when the anchor
+/// names a location the daemon must not touch.
+///
+/// Explicit paths are only probed when they resolve inside the project root;
+/// UNC, verbatim and device paths and absolute paths elsewhere are never
+/// stat'ed (a stored anchor must not make the daemon open a network share or
+/// act as an existence oracle for arbitrary files). Bare names are probed on
+/// the daemon's own `PATH`.
+fn command_exists(root: &Path, real_root: &Path, exe: &str) -> Option<bool> {
     if exe.contains('/') || exe.contains('\\') {
+        if exe.starts_with("\\\\") || exe.starts_with("//") {
+            return None;
+        }
         let p = Path::new(exe);
-        let target = if p.is_absolute() {
-            p.to_path_buf()
-        } else {
-            root.join(p)
+        if p.is_absolute() || p.has_root() || exe.contains(':') {
+            return None;
+        }
+        let target = crate::wrongstack_paths::node_resolve(&root.join(p));
+        if !same_or_inside(&crate::wrongstack_paths::node_resolve(root), &target) {
+            return None;
+        }
+        let Ok(real) = std::fs::canonicalize(&target).map(strip_verbatim) else {
+            return Some(false);
         };
-        return std::fs::metadata(target).is_ok_and(|m| is_executable_file(&m));
+        if !same_or_inside(real_root, &real) {
+            return None;
+        }
+        return Some(std::fs::metadata(real).is_ok_and(|m| is_executable_file(&m)));
+    }
+    if exe.contains(':') || exe == "." || exe == ".." {
+        return None;
     }
     let exts: &[&str] = if cfg!(windows) {
         &[".exe", ".cmd", ".bat", ".com", ""]
@@ -237,18 +257,18 @@ fn command_exists(root: &Path, exe: &str) -> bool {
             if std::fs::metadata(dir.join(format!("{exe}{ext}")))
                 .is_ok_and(|m| is_executable_file(&m))
             {
-                return true;
+                return Some(true);
             }
         }
     }
-    false
+    Some(false)
 }
 
 fn result(anchor: &Value, status: &str, reason: String) -> Value {
     json!({"anchor": anchor, "status": status, "reason": reason})
 }
 
-fn command_anchor(root: &Path, a: &MemoryAnchor, raw: &Value) -> Value {
+fn command_anchor(root: &Path, real_root: &Path, a: &MemoryAnchor, raw: &Value) -> Value {
     let r = resolve_command(a.command.as_deref().unwrap_or(""));
     let Some(exe) = r.executable else {
         return result(
@@ -264,7 +284,14 @@ fn command_anchor(root: &Path, a: &MemoryAnchor, raw: &Value) -> Value {
             format!("Command \"{exe}\" is a shell builtin (provided by the shell)."),
         );
     }
-    if command_exists(root, &exe) {
+    let Some(found) = command_exists(root, real_root, &exe) else {
+        return result(
+            raw,
+            "unknown",
+            format!("Command executable \"{exe}\" is outside the project root; not probed."),
+        );
+    };
+    if found {
         return result(
             raw,
             "verified",
@@ -514,7 +541,7 @@ fn verify_memory(root: &Path, real_root: &Path, raw: &Value, m: &SageRecord, at:
         .map(|(i, a)| {
             let ra = raw_anchors.get(i).cloned().unwrap_or(Value::Null);
             match a.kind.as_str() {
-                "command" => command_anchor(root, a, &ra),
+                "command" => command_anchor(root, real_root, a, &ra),
                 "agent" => agent_anchor(root, a, &ra),
                 _ => path_anchor(root, real_root, a, &ra),
             }
@@ -776,6 +803,39 @@ mod tests {
             Some("C:\\Program Files\\node\\node.exe")
         );
         assert!(resolve_command("   ").executable.is_none());
+    }
+
+    #[test]
+    fn explicit_command_paths_never_leave_the_project_root() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("proj");
+        std::fs::create_dir_all(root.join("scripts")).unwrap();
+        std::fs::write(root.join("scripts/build.sh"), "#!/bin/sh\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(
+                root.join("scripts/build.sh"),
+                std::fs::Permissions::from_mode(0o755),
+            )
+            .unwrap();
+        }
+        std::fs::write(tmp.path().join("outside.exe"), "x").unwrap();
+        let real_root = strip_verbatim(std::fs::canonicalize(&root).unwrap());
+        let probe = |exe: &str| command_exists(&root, &real_root, exe);
+        assert_eq!(probe("./scripts/build.sh"), Some(true));
+        assert_eq!(probe("scripts/missing.sh"), Some(false));
+        assert_eq!(probe("../outside.exe"), None);
+        assert_eq!(
+            probe(&tmp.path().join("outside.exe").to_string_lossy()),
+            None
+        );
+        assert_eq!(probe(r"\\attacker\share\tool.exe"), None);
+        assert_eq!(probe("//attacker/share/tool"), None);
+        assert_eq!(probe(r"\\?\C:\Windows\notepad.exe"), None);
+        assert_eq!(probe(r"\Windows\notepad.exe"), None);
+        assert_eq!(probe("C:tool.exe"), None);
+        assert_eq!(probe("zz-wrongmemory-missing-tool"), Some(false));
     }
 
     #[test]
