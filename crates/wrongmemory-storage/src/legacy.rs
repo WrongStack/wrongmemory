@@ -25,6 +25,8 @@ use crate::text::normalize_text_key;
 
 /// A scanned record with its stored JSON object.
 type Member = (SageRecord, Map<String, Value>);
+/// Consolidation group: `(Some(owner session) for session rows, normalized text)`.
+type GroupKey = (Option<String>, String);
 
 const LEGACY_SCOPES: &[&str] = &["project-agents", "project-memory", "user-memory"];
 
@@ -288,8 +290,8 @@ impl SageStore {
         let scope = scope.to_string();
         self.with_receipt(ctx, "memory.legacyConsolidate", &fp, |conn| {
             // Insertion-ordered groups (the baseline's Map).
-            let mut keys: Vec<String> = Vec::new();
-            let mut groups: std::collections::HashMap<String, Vec<Member>> = Default::default();
+            let mut keys: Vec<GroupKey> = Vec::new();
+            let mut groups: std::collections::HashMap<GroupKey, Vec<Member>> = Default::default();
             for data in scoped_rows(conn, "status IN ('active','stale')", Some(&scope), &viewer)? {
                 let Some(m) = decode_memory(&data) else {
                     continue;
@@ -304,15 +306,11 @@ impl SageStore {
                 // grouped only with rows of the same owning session, so a
                 // merge never moves private content into a shared row or
                 // makes a shared row point at a private one.
-                let key = if m.scope == "session" {
-                    format!(
-                        "session {} {}",
-                        m.owner_session_id.as_deref().unwrap_or(""),
-                        normalize_text_key(&m.text)
-                    )
-                } else {
-                    normalize_text_key(&m.text)
-                };
+                // Structured key: no text can collide with a session key.
+                let key: GroupKey = (
+                    (m.scope == "session").then(|| m.owner_session_id.clone().unwrap_or_default()),
+                    normalize_text_key(&m.text),
+                );
                 if !groups.contains_key(&key) {
                     keys.push(key.clone());
                 }
