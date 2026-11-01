@@ -854,12 +854,21 @@ impl SageStore {
             ));
         }
         validate_supersedes(p)?;
+        // A proposal may only name memories the proposer can see, so it can
+        // neither probe hidden IDs nor have a curator retire another
+        // session's private row (WM-INV-08). Hidden and absent read alike.
+        let viewer = Viewer {
+            session_id: ctx.session_id.clone(),
+        };
+        for member in p.supersedes_memory_ids.iter().flatten() {
+            if self.get(member, &viewer)?.is_none() {
+                return Err(ErrorBody::new(
+                    ErrorCode::NotFound,
+                    "supersedes member not found",
+                ));
+            }
+        }
         if let Some(target) = &p.target_memory_id {
-            // A proposal may only target a memory the proposer can see, so a
-            // review proposal cannot probe hidden IDs (WM-INV-08).
-            let viewer = Viewer {
-                session_id: ctx.session_id.clone(),
-            };
             // A stale `targetRevision` is accepted here, as in the baseline:
             // resolution passes it as `expectedRevision`, so a stale review
             // fails there and the candidate stays pending.

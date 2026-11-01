@@ -323,6 +323,31 @@ mod tests {
                 .unwrap()
                 .is_some_and(|m| m.status == "active")
         );
+        // A consolidation proposal cannot name another session's private
+        // memory: hidden reads like absent.
+        let merge = |ids: Vec<String>| ProposeParams {
+            text: "merged fact".into(),
+            supersedes_revisions: Some(vec![1; ids.len()]),
+            supersedes_memory_ids: Some(ids),
+            ..Default::default()
+        };
+        let hidden_err = store
+            .propose(
+                &merge(vec![target.clone(), hidden.clone()]),
+                &ctx(Some("s2"), None),
+            )
+            .unwrap_err();
+        let absent_err = store
+            .propose(
+                &merge(vec![target.clone(), "mem_absent".into()]),
+                &ctx(Some("s2"), None),
+            )
+            .unwrap_err();
+        assert_eq!(hidden_err.code, ErrorCode::NotFound);
+        assert_eq!(
+            (hidden_err.code, hidden_err.message),
+            (absent_err.code, absent_err.message)
+        );
         let probe = ProposeParams {
             target_memory_id: Some(hidden),
             target_revision: None,

@@ -179,15 +179,32 @@ impl SageStore {
                     if *member == keeper {
                         continue;
                     }
-                    let current = s.get(member, &Viewer { session_id: inner.session_id.clone() })?;
+                    let current = s.get(
+                        member,
+                        &Viewer {
+                            session_id: inner.session_id.clone(),
+                        },
+                    )?;
                     match current {
-                        Some(r) if r.status == "active" && r.revision == *rev => {
+                        // A session-private member is retired only by a
+                        // proposal of its own session: the curator's view
+                        // must not widen what the proposer could name.
+                        Some(r)
+                            if r.status == "active"
+                                && r.revision == *rev
+                                && (r.owner_session_id.is_none()
+                                    || r.owner_session_id == c.owner_session_id) =>
+                        {
                             let mut input = Map::new();
                             input.insert("status".into(), json!("superseded"));
                             input.insert("supersededBy".into(), json!(keeper));
                             input.insert("expectedRevision".into(), json!(rev));
-                            s.update(member, &input, &inner, false)?;
-                            superseded.push(member.clone());
+                            // As in the baseline, a member that cannot be
+                            // retired keeps its own lifecycle.
+                            match s.update(member, &input, &inner, false) {
+                                Ok(_) => superseded.push(member.clone()),
+                                Err(_) => skipped.push(member.clone()),
+                            }
                         }
                         _ => skipped.push(member.clone()),
                     }
