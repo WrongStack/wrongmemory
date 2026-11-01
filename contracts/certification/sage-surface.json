@@ -1,0 +1,630 @@
+{
+  "generatedBy": "scripts/certification/build-sage-surface.ts",
+  "baseline": {
+    "commit": "222d23a90ae9",
+    "protocol": "packages/sage/src/project-server-protocol.ts",
+    "protocolSha256": "676e8c1cf550cf76cfa6301184760b8f946b1690a3d1313aced8e2706b08b6ae",
+    "operations": 46
+  },
+  "adapterEvidence": {
+    "file": "packages/sage/tests/wrongmemory-port.integration.test.ts",
+    "checked": true
+  },
+  "summary": {
+    "covered": 46,
+    "unsupported": 0
+  },
+  "operations": [
+    {
+      "op": "getHqSyncVersion",
+      "status": "COVERED",
+      "methods": [
+        "memory.hqSyncVersion"
+      ],
+      "rustEvidence": [
+        "hq_sync_scenario_matches_oracle",
+        "hq_sync_is_host_only_and_never_projects_sessions"
+      ],
+      "adapterEvidence": [
+        "HQ sync runs through the daemon in wrongmemory mode (WM-408)"
+      ]
+    },
+    {
+      "op": "listHqSync",
+      "status": "COVERED",
+      "methods": [
+        "memory.hqSyncList"
+      ],
+      "rustEvidence": [
+        "hq_sync_scenario_matches_oracle",
+        "hq_sync_is_host_only_and_never_projects_sessions"
+      ],
+      "adapterEvidence": [
+        "HQ sync runs through the daemon in wrongmemory mode (WM-408)"
+      ]
+    },
+    {
+      "op": "applyHqSync",
+      "status": "COVERED",
+      "methods": [
+        "memory.hqSyncApply"
+      ],
+      "rustEvidence": [
+        "hq_sync_scenario_matches_oracle",
+        "hq_sync_is_host_only_and_never_projects_sessions"
+      ],
+      "adapterEvidence": [
+        "HQ sync runs through the daemon in wrongmemory mode (WM-408)"
+      ]
+    },
+    {
+      "op": "ping",
+      "status": "COVERED",
+      "methods": [
+        "daemon.health"
+      ],
+      "rustEvidence": [
+        "grants_projects_sessions_and_receipts_hold_across_restart"
+      ],
+      "adapterEvidence": [
+        "registers a managed project and reports ready"
+      ],
+      "note": "Served as daemon health plus project admission; the SAGE project-server status shape is not reproduced."
+    },
+    {
+      "op": "readAll",
+      "status": "COVERED",
+      "methods": [
+        "memory.listPage"
+      ],
+      "rustEvidence": [],
+      "adapterEvidence": [
+        "serves legacy MemoryStore reads from SAGE"
+      ],
+      "note": "Composed in the adapter with the baseline formatter (readAllSqliteMemory)."
+    },
+    {
+      "op": "read",
+      "status": "COVERED",
+      "methods": [
+        "memory.listPage"
+      ],
+      "rustEvidence": [],
+      "adapterEvidence": [
+        "serves legacy MemoryStore reads from SAGE"
+      ],
+      "note": "Composed in the adapter with the baseline formatter (readSqliteMemory)."
+    },
+    {
+      "op": "remember",
+      "status": "COVERED",
+      "methods": [
+        "memory.remember"
+      ],
+      "rustEvidence": [
+        "core_mutation_scenarios_match_oracle"
+      ],
+      "adapterEvidence": [
+        "serves legacy MemoryStore reads from SAGE"
+      ]
+    },
+    {
+      "op": "forget",
+      "status": "COVERED",
+      "methods": [
+        "memory.legacyForget"
+      ],
+      "rustEvidence": [
+        "legacy_bulk_scenario_matches_oracle",
+        "legacy_bulk_mutations_are_curated_and_session_safe"
+      ],
+      "adapterEvidence": [
+        "legacy forget / consolidate / clear run on the daemon"
+      ]
+    },
+    {
+      "op": "consolidate",
+      "status": "COVERED",
+      "methods": [
+        "memory.legacyConsolidate"
+      ],
+      "rustEvidence": [
+        "legacy_bulk_scenario_matches_oracle",
+        "legacy_bulk_mutations_are_curated_and_session_safe"
+      ],
+      "adapterEvidence": [
+        "legacy forget / consolidate / clear run on the daemon"
+      ]
+    },
+    {
+      "op": "clear",
+      "status": "COVERED",
+      "methods": [
+        "memory.legacyClear"
+      ],
+      "rustEvidence": [
+        "legacy_bulk_scenario_matches_oracle",
+        "legacy_bulk_mutations_are_curated_and_session_safe"
+      ],
+      "adapterEvidence": [
+        "legacy forget / consolidate / clear run on the daemon"
+      ]
+    },
+    {
+      "op": "list",
+      "status": "COVERED",
+      "methods": [
+        "memory.listPage"
+      ],
+      "rustEvidence": [
+        "graph_retrieval_reads_match_oracle"
+      ],
+      "adapterEvidence": [
+        "serves legacy MemoryStore reads from SAGE"
+      ]
+    },
+    {
+      "op": "search",
+      "status": "COVERED",
+      "methods": [
+        "memory.search"
+      ],
+      "rustEvidence": [
+        "search_matches_oracle"
+      ],
+      "adapterEvidence": [
+        "serves legacy MemoryStore reads from SAGE"
+      ]
+    },
+    {
+      "op": "findRelated",
+      "status": "COVERED",
+      "methods": [
+        "memory.search"
+      ],
+      "rustEvidence": [
+        "search_matches_oracle"
+      ],
+      "adapterEvidence": [
+        "serves legacy MemoryStore reads from SAGE"
+      ],
+      "note": "As in the baseline service capability, legacy findRelated is the legacy search."
+    },
+    {
+      "op": "scoreRelevant",
+      "status": "COVERED",
+      "methods": [
+        "memory.search"
+      ],
+      "rustEvidence": [
+        "search_matches_oracle"
+      ],
+      "adapterEvidence": [
+        "serves legacy MemoryStore reads from SAGE"
+      ],
+      "note": "Composed in the adapter like the in-process SAGE port (search ranked by position)."
+    },
+    {
+      "op": "stats",
+      "status": "COVERED",
+      "methods": [
+        "memory.stats"
+      ],
+      "rustEvidence": [
+        "graph_retrieval_reads_match_oracle"
+      ],
+      "adapterEvidence": [
+        "createCandidate -> acceptCandidate -> retrieveForPath"
+      ]
+    },
+    {
+      "op": "listSage",
+      "status": "COVERED",
+      "methods": [
+        "memory.listPage"
+      ],
+      "rustEvidence": [
+        "graph_retrieval_reads_match_oracle"
+      ],
+      "adapterEvidence": [
+        "legacy forget / consolidate / clear run on the daemon"
+      ]
+    },
+    {
+      "op": "listSagePage",
+      "status": "COVERED",
+      "methods": [
+        "memory.listPage"
+      ],
+      "rustEvidence": [
+        "graph_retrieval_reads_match_oracle"
+      ],
+      "adapterEvidence": [
+        "serves legacy MemoryStore reads from SAGE"
+      ]
+    },
+    {
+      "op": "getSage",
+      "status": "COVERED",
+      "methods": [
+        "memory.get"
+      ],
+      "rustEvidence": [
+        "exact_id_reads_match_oracle_records",
+        "grants_cannot_cross_projects_or_sessions"
+      ],
+      "adapterEvidence": [
+        "remember -> search -> update with expectedRevision conflict"
+      ]
+    },
+    {
+      "op": "rememberSage",
+      "status": "COVERED",
+      "methods": [
+        "memory.remember"
+      ],
+      "rustEvidence": [
+        "core_mutation_scenarios_match_oracle",
+        "crash_after_commit_before_reply_replays_idempotent_remember"
+      ],
+      "adapterEvidence": [
+        "remember -> search -> update with expectedRevision conflict"
+      ]
+    },
+    {
+      "op": "updateSage",
+      "status": "COVERED",
+      "methods": [
+        "memory.update",
+        "memory.feedback"
+      ],
+      "rustEvidence": [
+        "core_mutation_scenarios_match_oracle"
+      ],
+      "adapterEvidence": [
+        "remember -> search -> update with expectedRevision conflict"
+      ],
+      "note": "Deliberate deviation: an ordinary update naming scope/ownerSessionId is refused instead of silently ignored."
+    },
+    {
+      "op": "deleteSage",
+      "status": "COVERED",
+      "methods": [
+        "memory.delete"
+      ],
+      "rustEvidence": [
+        "delete_recover_scenario_matches_oracle"
+      ],
+      "adapterEvidence": [],
+      "note": "Destructive deletes need the curator grant; the client force flag alone never authorizes."
+    },
+    {
+      "op": "retrieveForPath",
+      "status": "COVERED",
+      "methods": [
+        "memory.forPath"
+      ],
+      "rustEvidence": [
+        "path_retrieval_matches_oracle_sets",
+        "graph_retrieval_reads_match_oracle"
+      ],
+      "adapterEvidence": [
+        "createCandidate -> acceptCandidate -> retrieveForPath"
+      ]
+    },
+    {
+      "op": "searchSage",
+      "status": "COVERED",
+      "methods": [
+        "memory.search"
+      ],
+      "rustEvidence": [
+        "search_matches_oracle"
+      ],
+      "adapterEvidence": [
+        "fuses a caller-owned vector channel once, never leaking hidden or stale ids (WM-405)"
+      ]
+    },
+    {
+      "op": "searchSageWithBreakdown",
+      "status": "COVERED",
+      "methods": [
+        "memory.search"
+      ],
+      "rustEvidence": [
+        "search_matches_oracle"
+      ],
+      "adapterEvidence": [
+        "fuses a caller-owned vector channel once, never leaking hidden or stale ids (WM-405)"
+      ]
+    },
+    {
+      "op": "unifiedSearch",
+      "status": "COVERED",
+      "methods": [
+        "memory.unifiedSearch"
+      ],
+      "rustEvidence": [
+        "unified_search_matches_oracle"
+      ],
+      "adapterEvidence": [
+        "unifiedSearchService walks keyset cursors on the daemon"
+      ]
+    },
+    {
+      "op": "findRelatedSage",
+      "status": "COVERED",
+      "methods": [
+        "memory.related"
+      ],
+      "rustEvidence": [
+        "graph_retrieval_reads_match_oracle"
+      ],
+      "adapterEvidence": []
+    },
+    {
+      "op": "recordInjection",
+      "status": "COVERED",
+      "methods": [
+        "memory.recordUsage"
+      ],
+      "rustEvidence": [
+        "core_mutation_scenarios_match_oracle"
+      ],
+      "adapterEvidence": []
+    },
+    {
+      "op": "recordUse",
+      "status": "COVERED",
+      "methods": [
+        "memory.recordUsage"
+      ],
+      "rustEvidence": [
+        "core_mutation_scenarios_match_oracle"
+      ],
+      "adapterEvidence": []
+    },
+    {
+      "op": "retrieveForAudience",
+      "status": "COVERED",
+      "methods": [
+        "memory.forAudience"
+      ],
+      "rustEvidence": [
+        "audience_retrieval_matches_oracle",
+        "audience_context_is_bounded_before_it_reaches_the_audit_log"
+      ],
+      "adapterEvidence": [
+        "retrieveForAudience matches roles case-insensitively and reports truncation"
+      ]
+    },
+    {
+      "op": "graphFor",
+      "status": "COVERED",
+      "methods": [
+        "memory.graph"
+      ],
+      "rustEvidence": [
+        "graph_retrieval_reads_match_oracle"
+      ],
+      "adapterEvidence": []
+    },
+    {
+      "op": "verify",
+      "status": "COVERED",
+      "methods": [
+        "memory.verify"
+      ],
+      "rustEvidence": [
+        "verify_scenario_matches_oracle",
+        "verify_is_curated_and_session_safe"
+      ],
+      "adapterEvidence": [
+        "verify and verifyForPaths reconcile anchors on the daemon"
+      ]
+    },
+    {
+      "op": "verifyForPaths",
+      "status": "COVERED",
+      "methods": [
+        "memory.verify"
+      ],
+      "rustEvidence": [
+        "verify_scenario_matches_oracle",
+        "verify_is_curated_and_session_safe"
+      ],
+      "adapterEvidence": [
+        "verify and verifyForPaths reconcile anchors on the daemon"
+      ]
+    },
+    {
+      "op": "hygiene",
+      "status": "COVERED",
+      "methods": [
+        "memory.hygiene"
+      ],
+      "rustEvidence": [
+        "hygiene_scenario_matches_oracle",
+        "hygiene_never_reactivates_manual_stale_and_dry_run_writes_nothing"
+      ],
+      "adapterEvidence": [
+        "maintenance schedule hands hygiene to the daemon scheduler (WM-404)"
+      ]
+    },
+    {
+      "op": "listCandidates",
+      "status": "COVERED",
+      "methods": [
+        "candidate.list"
+      ],
+      "rustEvidence": [
+        "core_mutation_scenarios_match_oracle",
+        "hidden_candidates_do_not_starve_visible_ones"
+      ],
+      "adapterEvidence": [
+        "createCandidate -> acceptCandidate -> retrieveForPath"
+      ]
+    },
+    {
+      "op": "createCandidate",
+      "status": "COVERED",
+      "methods": [
+        "candidate.propose"
+      ],
+      "rustEvidence": [
+        "core_mutation_scenarios_match_oracle"
+      ],
+      "adapterEvidence": [
+        "consolidation proposals supersede members; a stale review stays pending (WM-511)"
+      ],
+      "note": "Deliberate deviation: consolidation members must be visible to the proposer."
+    },
+    {
+      "op": "resolveCandidate",
+      "status": "COVERED",
+      "methods": [
+        "candidate.resolve"
+      ],
+      "rustEvidence": [
+        "core_mutation_scenarios_match_oracle"
+      ],
+      "adapterEvidence": [
+        "consolidation proposals supersede members; a stale review stays pending (WM-511)"
+      ]
+    },
+    {
+      "op": "acceptCandidate",
+      "status": "COVERED",
+      "methods": [
+        "candidate.accept"
+      ],
+      "rustEvidence": [
+        "core_mutation_scenarios_match_oracle",
+        "crash_during_candidate_accept_is_accepted_exactly_once"
+      ],
+      "adapterEvidence": [
+        "createCandidate -> acceptCandidate -> retrieveForPath"
+      ]
+    },
+    {
+      "op": "rejectCandidate",
+      "status": "COVERED",
+      "methods": [
+        "candidate.reject"
+      ],
+      "rustEvidence": [
+        "core_mutation_scenarios_match_oracle"
+      ],
+      "adapterEvidence": [
+        "consolidation proposals supersede members; a stale review stays pending (WM-511)"
+      ]
+    },
+    {
+      "op": "recoverSage",
+      "status": "COVERED",
+      "methods": [
+        "memory.recover"
+      ],
+      "rustEvidence": [
+        "delete_recover_scenario_matches_oracle"
+      ],
+      "adapterEvidence": []
+    },
+    {
+      "op": "backfillRecoverable",
+      "status": "COVERED",
+      "methods": [
+        "memory.backfill"
+      ],
+      "rustEvidence": [
+        "delete_recover_scenario_matches_oracle",
+        "backfill_skip_reasons_follow_baseline_order"
+      ],
+      "adapterEvidence": []
+    },
+    {
+      "op": "findMemoriesForFile",
+      "status": "COVERED",
+      "methods": [
+        "memory.forFile"
+      ],
+      "rustEvidence": [
+        "for_file_review_hints_respect_sessions"
+      ],
+      "adapterEvidence": [
+        "findMemoriesForFile groups file and symbol matches"
+      ]
+    },
+    {
+      "op": "readAudit",
+      "status": "COVERED",
+      "methods": [
+        "memory.audit"
+      ],
+      "rustEvidence": [
+        "doctor_scenario_matches_oracle",
+        "doctor_and_audit_are_host_only"
+      ],
+      "adapterEvidence": [
+        "doctor and readAudit run on the daemon (WM-406)"
+      ]
+    },
+    {
+      "op": "importLegacyFiles",
+      "status": "COVERED",
+      "methods": [
+        "memory.importLegacy"
+      ],
+      "rustEvidence": [
+        "legacy_import_only_reads_project_files"
+      ],
+      "adapterEvidence": [
+        "importLegacy imports Markdown bullets and refuses files outside the project"
+      ]
+    },
+    {
+      "op": "consolidateSession",
+      "status": "COVERED",
+      "methods": [
+        "memory.search",
+        "candidate.propose",
+        "candidate.accept"
+      ],
+      "rustEvidence": [],
+      "adapterEvidence": [
+        "consolidateSession turns session facts into candidates (WM-511 surface)"
+      ],
+      "note": "Composed in the adapter with the baseline policy (shared/session-consolidation)."
+    },
+    {
+      "op": "maintenance",
+      "status": "COVERED",
+      "methods": [
+        "maintenance.status",
+        "maintenance.configure",
+        "maintenance.run"
+      ],
+      "rustEvidence": [
+        "scheduler_runs_due_jobs_and_recovers_interrupted_ones",
+        "maintenance_pass_self_heals_structural_defects"
+      ],
+      "adapterEvidence": [
+        "maintenance schedule hands hygiene to the daemon scheduler (WM-404)"
+      ]
+    },
+    {
+      "op": "doctor",
+      "status": "COVERED",
+      "methods": [
+        "memory.doctor"
+      ],
+      "rustEvidence": [
+        "doctor_scenario_matches_oracle",
+        "doctor_and_audit_are_host_only"
+      ],
+      "adapterEvidence": [
+        "doctor and readAudit run on the daemon (WM-406)"
+      ]
+    }
+  ]
+}

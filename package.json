@@ -14,6 +14,7 @@
     "test:client": "cd packages/client-ts && bun run check:parity && bun test",
     "typecheck": "cd packages/client-ts && bun run typecheck",
     "oracle:mutations": "bun scripts/oracle/build-mutation-fixtures.ts",
+    "certification:surface": "bun scripts/certification/build-sage-surface.ts",
     "inventory:mcp-tools": "bun scripts/inventory/mcp-tools.ts",
     "inventory:licenses": "bun scripts/inventory/licenses.ts"
   }

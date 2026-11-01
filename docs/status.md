@@ -143,7 +143,7 @@ These failures are not caused by the adapter. The main checkout was not modified
 | WM-507 | Done | Hygiene with protections for critical memories (oracle replay). Expiry is scheduled through jobs. |
 | WM-508 / 509 | Not started (optional L4) | Semantic provider and vector mirror. |
 | WM-510 | Partial | Corrupt rows read as absent. Legacy `MemoryStore` bulk mutations are curator-only, and the replay of the oracle's `legacy-bulk` scenario matches state, merged anchors and sources, counts and audit details:<ul><li>`memory.legacyForget`</li><li>`memory.legacyConsolidate`</li><li>`memory.legacyClear` (with no scope it needs `all=true`)</li></ul>Deliberate deviation: these only touch rows the caller's session can see, so one session cannot erase another session's private memories. `consolidate` also groups session rows only with rows of the same owning session, so a merge cannot copy private content or ids into shared rows. Legacy Markdown notes import through `memory.importLegacy` (`importLegacyFiles` parity: bullet lines become project memories, files must stay inside the project root after realpath, 5 MiB total cap enforced on the bytes read, UNC paths are never touched; Curate action). Deliberate deviations after a security review: only regular `.md`/`.markdown` files are read, nothing under `.wrongstack/` (an adopted store, its WAL and journal) or `.git/`, and a file that is not valid UTF-8 is refused instead of decoded lossily, so the import cannot copy another session's private rows out of the store's bytes. Older and JSONL *stores* are refused: open them with SAGE once first, which converts them. There is no in-place conversion. |
-| WM-511 | Partial | Every mutation oracle scenario now has a replay. The 46-operation certification matrix (`contracts/certification/sage-surface.json`) is not generated yet. |
+| WM-511 | Partial | Every mutation oracle scenario now has a replay. Surface matrix: `bun run certification:surface -- --wrongstack <baseline> --adapter <WrongStack worktree>` generates `contracts/certification/sage-surface.json`, mapping each of the 46 baseline project-server operations (`SAGE_DISPATCH_FIELD_SPECS` at `222d23a`) to the daemon methods that serve it and its Rust and adapter evidence. Result: 46 COVERED, 0 UNSUPPORTED. The generator refuses unmapped ops, unknown methods and missing evidence tests; `certification_matrix_names_real_methods_and_tests` re-checks methods and Rust evidence in CI. Building it found one gap, now fixed: `scoreRelevant` (core's prompt enhancer) rejected with `NotImplemented` in wrongmemory mode; adapter `b982b6c16` composes it like the in-process port. COVERED means served and tested against fixtures and a real daemon; it does not mean a certified MCP client or a live WrongStack host run (NOT RUN). |
 
 ## M6 — hardening
 
@@ -233,8 +233,9 @@ Findings from the M run:
 |---|---|
 | `cargo fmt --all -- --check` | PASS |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo test --workspace --locked` | PASS 149/149 (single run; this change touches storage and the resolve result, not IPC or process lifecycle) |
+| `cargo test --workspace --locked` | PASS 150/150 (single run; these changes touch storage, the resolve result and a contracts test, not IPC or process lifecycle) |
+| `bun run certification:surface` (with `--adapter`) | PASS: 46 COVERED, 0 UNSUPPORTED |
 | `bun run test:client` (TS client 10/10, contract parity) | PASS |
-| Adapter: sage port unit + real-daemon integration 43/43 against the debug daemon | PASS |
+| Adapter: sage port unit + real-daemon integration 43/43 against the debug daemon (adapter `b982b6c16`) | PASS |
 | Hosted CI (`32f0e8b`) | PASS |
 | Real MCP clients, live store adoption, signed release | NOT RUN |
