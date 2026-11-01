@@ -437,6 +437,140 @@ impl SageStore {
     }
 }
 
+/// `importLegacySqliteMemory`: every Markdown bullet line (`- text` or
+/// `* text`) becomes a project memory through `remember`; blank bullets and
+/// bullets `remember` refuses are counted as skipped.
+fn bullet_text(line: &str) -> Option<&str> {
+    let rest = line.trim_start_matches(crate::text::is_js_space);
+    let rest = rest.strip_prefix('-').or_else(|| rest.strip_prefix('*'))?;
+    // `[-*]\s+`: at least one whitespace after the marker.
+    rest.starts_with(crate::text::is_js_space)
+        .then(|| rest.trim_matches(crate::text::is_js_space))
+}
+
+impl SageStore {
+    /// Returns `(imported, skipped)`. Runs in one transaction.
+    pub fn import_legacy_markdown(
+        &mut self,
+        raw: &str,
+        ctx: &MutationCtx,
+    ) -> StoreResult<(usize, usize)> {
+        self.require_writable()?;
+        let lines: Vec<String> = raw
+            .split('\n')
+            .map(|l| l.strip_suffix('\r').unwrap_or(l).to_string())
+            .collect();
+        let inner = MutationCtx {
+            idempotency_key: None,
+            ..ctx.clone()
+        };
+        self.in_transaction(|store| {
+            let (mut imported, mut skipped) = (0, 0);
+            for line in &lines {
+                let Some(text) = bullet_text(line) else {
+                    continue;
+                };
+                if text.is_empty() {
+                    skipped += 1;
+                    continue;
+                }
+                let p = wrongmemory_contracts::RememberParams {
+                    text: text.to_string(),
+                    scope: Some("project".into()),
+                    ..Default::default()
+                };
+                match store.remember(&p, &inner) {
+                    Ok(_) => imported += 1,
+                    Err(_) => skipped += 1,
+                }
+            }
+            Ok((imported, skipped))
+        })
+    }
+}
+
+/// Total bytes `import_legacy_files` reads per call (baseline cap).
+pub const MAX_LEGACY_IMPORT_BYTES: u64 = 5 * 1024 * 1024;
+
+impl SageStore {
+    /// `importLegacyFiles`: import Markdown bullet files that live inside the
+    /// project root (checked lexically first, then on the real path, so UNC
+    /// or out-of-root paths are never touched), at most
+    /// [`MAX_LEGACY_IMPORT_BYTES`] in total. Returns
+    /// `(imported, skipped, files)`.
+    pub fn import_legacy_files(
+        &mut self,
+        files: &[String],
+        ctx: &MutationCtx,
+    ) -> StoreResult<(usize, usize, usize)> {
+        self.require_writable()?;
+        let root = self.project_root.clone().ok_or_else(|| {
+            ErrorBody::new(ErrorCode::NotImplemented, "this store has no project root")
+        })?;
+        let outside = |f: &str| {
+            invalid(format!(
+                "importLegacyFiles: file path must stay inside the project root: {f}"
+            ))
+        };
+        let resolved_root = crate::paths::resolved_root_of(&root);
+        let real_root = std::fs::canonicalize(&root)
+            .map(|p| crate::wrongstack_paths::node_resolve(&PathBufExt::strip_verbatim(p)))
+            .unwrap_or_else(|_| resolved_root.clone());
+        let mut bodies = Vec::new();
+        let mut total = 0u64;
+        for f in files {
+            if f.starts_with("\\\\") || f.starts_with("//") {
+                return Err(outside(f));
+            }
+            let lexical = crate::wrongstack_paths::node_resolve(&root.join(f));
+            if !crate::paths::lexically_inside(&resolved_root, &lexical)
+                && !crate::paths::lexically_inside(&real_root, &lexical)
+            {
+                return Err(outside(f));
+            }
+            let real = std::fs::canonicalize(&lexical)
+                .map(PathBufExt::strip_verbatim)
+                .map_err(|e| invalid(format!("cannot read {f}: {e}")))?;
+            if !crate::paths::lexically_inside(&real_root, &real) {
+                return Err(outside(f));
+            }
+            total += std::fs::metadata(&real)
+                .map_err(|e| invalid(format!("cannot read {f}: {e}")))?
+                .len();
+            if total > MAX_LEGACY_IMPORT_BYTES {
+                return Err(invalid(format!(
+                    "Legacy memory import exceeds {MAX_LEGACY_IMPORT_BYTES} bytes"
+                )));
+            }
+            let body =
+                std::fs::read(&real).map_err(|e| invalid(format!("cannot read {f}: {e}")))?;
+            bodies.push(String::from_utf8_lossy(&body).into_owned());
+        }
+        let (mut imported, mut skipped) = (0, 0);
+        for b in &bodies {
+            let (i, s) = self.import_legacy_markdown(b, ctx)?;
+            imported += i;
+            skipped += s;
+        }
+        Ok((imported, skipped, bodies.len()))
+    }
+}
+
+/// Strip the Windows verbatim prefix from a canonical path.
+trait PathBufExt {
+    fn strip_verbatim(self) -> std::path::PathBuf;
+}
+
+impl PathBufExt for std::path::PathBuf {
+    fn strip_verbatim(self) -> std::path::PathBuf {
+        let s = self.to_string_lossy().into_owned();
+        match s.strip_prefix(r"\?\") {
+            Some(rest) if !rest.starts_with("UNC\\") => std::path::PathBuf::from(rest),
+            _ => self,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -548,6 +682,29 @@ mod tests {
         );
         assert_eq!(status(&store, &shared), "active");
         assert_eq!(status(&store, &private), "active");
+    }
+
+    #[test]
+    fn markdown_bullets_import_as_project_memories() {
+        let tmp = tempfile::tempdir().unwrap();
+        let db = tmp.path().join("sage.db");
+        SageStore::create_managed(&db, "2026-11-01T00:00:00.000Z").unwrap();
+        let (mut store, _) = SageStore::open(&db, true, None, "2026-11-01T00:00:00.000Z").unwrap();
+        let raw = "# Notes\r\n- Use pnpm for installs.\r\n  * Release tags follow vX.Y.Z.\n-\n- \nplain line\n-nospace\n- Use pnpm for installs.\n";
+        let (imported, skipped) = store.import_legacy_markdown(raw, &ctx(None)).unwrap();
+        // The repeated bullet merges into the first (still "imported").
+        assert_eq!((imported, skipped), (3, 1));
+        let n: i64 = store
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM memories WHERE scope = 'project'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(n, 2);
+        assert_eq!(bullet_text("-"), None);
+        assert_eq!(bullet_text("- "), Some(""));
     }
 
     #[test]

@@ -581,7 +581,9 @@ fn required_action(m: &str) -> Option<Action> {
         | method::CANDIDATE_PROPOSE
         | method::MEMORY_FEEDBACK
         | method::MEMORY_RECORD_USAGE => Action::Propose,
-        method::MEMORY_REMEMBER | method::MEMORY_UPDATE => Action::Write,
+        method::MEMORY_REMEMBER | method::MEMORY_UPDATE | method::MEMORY_IMPORT_LEGACY => {
+            Action::Write
+        }
         method::MEMORY_DELETE
         | method::CANDIDATE_ACCEPT
         | method::CANDIDATE_REJECT
@@ -1018,6 +1020,7 @@ async fn dispatch_inner(
         | method::MEMORY_BACKFILL
         | method::MEMORY_HYGIENE
         | method::MEMORY_VERIFY
+        | method::MEMORY_IMPORT_LEGACY
         | method::MEMORY_LEGACY_FORGET
         | method::MEMORY_LEGACY_CONSOLIDATE
         | method::MEMORY_LEGACY_CLEAR => {
@@ -1152,6 +1155,25 @@ async fn dispatch_inner(
                             }
                         };
                         Ok(json!({ "results": results }))
+                    }
+                    method::MEMORY_IMPORT_LEGACY => {
+                        let files: Vec<String> = serde_json::from_value(
+                            params.get("files").cloned().unwrap_or(json!([])),
+                        )
+                        .map_err(|_| {
+                            err(
+                                ErrorCode::InvalidRequest,
+                                "files must be an array of strings",
+                            )
+                        })?;
+                        if files.is_empty() || files.len() > 100 {
+                            return Err(err(
+                                ErrorCode::InvalidRequest,
+                                "files must name 1 to 100 project files",
+                            ));
+                        }
+                        let (imported, skipped, n) = store.import_legacy_files(&files, &ctx)?;
+                        Ok(json!({"imported": imported, "skipped": skipped, "files": n}))
                     }
                     method::MEMORY_LEGACY_FORGET => {
                         let query = params

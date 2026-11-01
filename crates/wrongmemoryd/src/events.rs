@@ -224,6 +224,15 @@ pub fn drafts_for(m: &str, result: &Value) -> Vec<Entry> {
                 owner_session: None,
             }]
         }
+        method::MEMORY_IMPORT_LEGACY => {
+            if result.get("imported").and_then(Value::as_u64).unwrap_or(0) == 0 {
+                return vec![];
+            }
+            vec![Entry {
+                event: draft(m),
+                owner_session: None,
+            }]
+        }
         method::MEMORY_VERIFY => {
             if result
                 .get("results")

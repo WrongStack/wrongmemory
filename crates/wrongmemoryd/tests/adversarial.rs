@@ -261,6 +261,8 @@ async fn grants_cannot_cross_projects_or_sessions() {
         method::MEMORY_LEGACY_FORGET,
         method::MEMORY_LEGACY_CONSOLIDATE,
         method::MEMORY_LEGACY_CLEAR,
+        method::MEMORY_IMPORT_LEGACY,
+        method::MEMORY_VERIFY,
         method::CANDIDATE_LIST,
         method::CANDIDATE_PROPOSE,
         method::CANDIDATE_ACCEPT,
@@ -1112,4 +1114,80 @@ async fn verify_is_curated_and_session_safe() {
     )
     .await;
     assert_eq!(own["results"][0]["status"], "stale");
+}
+
+/// `memory.importLegacy` reads Markdown notes from disk on the daemon's
+/// side, so only files inside the project root may be named.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn legacy_import_only_reads_project_files() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("home");
+    let _d = start(&root).await;
+    let mut h = Client::connect_host(&dr(&root), "host").await.unwrap();
+    let w = world(&root, tmp.path(), &mut h).await;
+    let proj_a = tmp.path().join("proj-a");
+    std::fs::write(
+        proj_a.join("NOTES.md"),
+        "# Notes\n- Imported fact: lint before pushing.\n- \nnot a bullet\n",
+    )
+    .unwrap();
+    std::fs::write(tmp.path().join("outside.md"), "- outside secret fact\n").unwrap();
+    std::fs::write(tmp.path().join("proj-b").join("B.md"), "- project b fact\n").unwrap();
+
+    let mut wr = connect(&root, &w.wr).await;
+    let ok = call(
+        &mut wr,
+        method::MEMORY_IMPORT_LEGACY,
+        Some(&w.a),
+        json!({"files": ["NOTES.md"]}),
+    )
+    .await;
+    assert_eq!(ok, json!({"imported": 1, "skipped": 1, "files": 1}));
+
+    for bad in [
+        json!({"files": ["../outside.md"]}),
+        json!({"files": [tmp.path().join("outside.md").display().to_string()]}),
+        json!({"files": [tmp.path().join("proj-b").join("B.md").display().to_string()]}),
+        json!({"files": [r"\attacker\share\notes.md"]}),
+        json!({"files": []}),
+    ] {
+        let (code, msg) = fail(
+            &mut wr,
+            method::MEMORY_IMPORT_LEGACY,
+            Some(&w.a),
+            bad.clone(),
+        )
+        .await;
+        assert_eq!(code, ErrorCode::InvalidRequest, "{bad}: {msg}");
+    }
+    // A symlinked directory inside the project that points outside it.
+    #[cfg(windows)]
+    if std::os::windows::fs::symlink_dir(tmp.path(), proj_a.join("escape")).is_ok() {
+        let (code, _) = fail(
+            &mut wr,
+            method::MEMORY_IMPORT_LEGACY,
+            Some(&w.a),
+            json!({"files": ["escape/outside.md"]}),
+        )
+        .await;
+        assert_eq!(code, ErrorCode::InvalidRequest, "symlink escape");
+    }
+    let found = call(
+        &mut h,
+        method::MEMORY_SEARCH,
+        Some(&w.a),
+        json!({"query": "outside secret"}),
+    )
+    .await;
+    assert_eq!(found["hits"].as_array().unwrap().len(), 0);
+
+    let mut rp = connect(&root, &w.rp).await;
+    let (code, _) = fail(
+        &mut rp,
+        method::MEMORY_IMPORT_LEGACY,
+        Some(&w.a),
+        json!({"files": ["NOTES.md"]}),
+    )
+    .await;
+    assert_eq!(code, ErrorCode::Forbidden);
 }

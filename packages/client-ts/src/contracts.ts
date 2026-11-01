@@ -84,6 +84,7 @@ export const METHODS = {
   MEMORY_BACKFILL: 'memory.backfill',
   MEMORY_HYGIENE: 'memory.hygiene',
   MEMORY_VERIFY: 'memory.verify',
+  MEMORY_IMPORT_LEGACY: 'memory.importLegacy',
   MEMORY_LEGACY_FORGET: 'memory.legacyForget',
   MEMORY_LEGACY_CONSOLIDATE: 'memory.legacyConsolidate',
   MEMORY_LEGACY_CLEAR: 'memory.legacyClear',
