@@ -34,7 +34,7 @@ Legend: **Done**, meaning implemented and covered by an automated test or record
 | WM-004 | Done | Search with one or more terms, path retrieval, exact ID, cursors, graph, related and audience retrieval, recorded in the oracle fixtures (`oracle-mutations/graph-retrieval.json`, `audience.json`). |
 | WM-005 | Done | Mutation fixtures: remember/merge, update/revision, feedback, delete/recover, candidates, hygiene. |
 | WM-006 | Done | `contracts/inventory/mcp-tools.json` (`sage-mcp` tool and policy inventory). |
-| WM-007 | Partial | Synthetic corpora: multilingual (`unicode`), worktree (temp git repos), session (adversarial tests). No real-task corpus. |
+| WM-007 | Partial | Synthetic corpora: multilingual (`unicode`), worktree (temp git repos), session (adversarial tests), and `tests/fixtures/quality/multilingual-path.json` (`corpus_controls.rs`) with positive controls and hard negatives. That corpus covers Turkish (dotted/dotless i), German, French, Spanish, Russian, Greek, Japanese, Chinese and accented Latin search, plus exact `forPath` sets for file and directory anchors, a Unicode path and backslash spellings. Look-alike paths (`src/app.tsx`, `src/apps/`, `src/app.ts.bak`, `src/api-legacy`, `lib/src/app.ts`) and another session's, superseded and deleted records are hard negatives. Result: every path set exact; 14/16 search targets in the top five; 0 hard negatives. The two misses are unspaced Japanese/Chinese substring queries: the baseline's term split keeps a CJK run as one term, kept for search-order parity (listed in the test, which fails if they start matching). A mutation check (viewer switched to the other session) makes the test fail. No real-task corpus: that needs user data and is not built here. |
 | WM-008 | Partial | The existing SAGE suites run green in the adapter worktree (see M4). The SAGE vector and host suites have no WrongMemory counterpart. |
 | WM-009 | Done | `contracts/profiles/` |
 | WM-010 | Done (synthetic) | `wrongmemory-bench` (see Performance). No baseline taken from SAGE running in process. |
@@ -233,7 +233,7 @@ Findings from the M run:
 |---|---|
 | `cargo fmt --all -- --check` | PASS |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo test --workspace --locked` | PASS 150/150 (single run; these changes touch storage, the resolve result and a contracts test, not IPC or process lifecycle) |
+| `cargo test --workspace --locked` | PASS 151/151 (single run; these changes touch storage, the resolve result and a contracts test, not IPC or process lifecycle) |
 | `bun run certification:surface` (with `--adapter`) | PASS: 46 COVERED, 0 UNSUPPORTED |
 | `bun run test:client` (TS client 10/10, contract parity) | PASS |
 | Adapter: sage port unit + real-daemon integration 43/43 against the debug daemon (adapter `b982b6c16`) | PASS |

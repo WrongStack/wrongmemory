@@ -1,0 +1,60 @@
+{
+  "description": "WM-007 corpus: multilingual text and file-path retrieval with positive controls and hard negatives. Hand-written, not taken from any user store. `search` queries name the one applicable memory; `path` queries name the exact set forPath must return. Hard negatives (another session's private note, a superseded or deleted record, look-alike paths) must never be returned to the default viewer.",
+  "memories": [
+    { "key": "trMigrate", "text": "Veritabanı göçleri her dağıtımdan önce bun run migrate ile çalıştırılır." },
+    { "key": "trCache", "text": "İstemci önbelleği ısınma sırasında devre dışı bırakılır." },
+    { "key": "deConfig", "text": "Die Konfigurationsdateien liegen unter config und werden beim Start geprüft." },
+    { "key": "deUpload", "text": "Größere Uploads über 50 MB werden in Blöcken übertragen." },
+    { "key": "frLogs", "text": "Les journaux de production sont conservés pendant trente jours." },
+    { "key": "esTests", "text": "Las pruebas de integración usan una base de datos temporal por suite." },
+    { "key": "ruSecrets", "text": "Секреты хранятся только в хранилище Vault, никогда в репозитории." },
+    { "key": "elQueue", "text": "Η ουρά εργασιών επαναλαμβάνει κάθε αποτυχημένη εργασία τρεις φορές." },
+    { "key": "jaBuild", "text": "ビルド 成果物 は dist ディレクトリ に 出力 されます。" },
+    { "key": "zhDeploy", "text": "部署 脚本 位于 scripts/deploy 目录。" },
+    { "key": "jaUnspaced", "text": "テストは並列実行されるので共有状態を使わないこと。" },
+    { "key": "zhUnspaced", "text": "生产环境的日志保留九十天。" },
+    { "key": "mixedCafe", "text": "Café mode: the edge cache is flushed on every restart of the naïve résumé service." },
+    { "key": "appTs", "text": "The app entry point wires the router before the store is created.", "file": "src/app.ts" },
+    { "key": "apiDir", "text": "Every handler in the API directory validates input with zod schemas.", "directory": "src/api" },
+    { "key": "usersTs", "text": "User listing endpoints page with opaque cursors, never offsets.", "file": "src/api/users.ts" },
+    { "key": "unicodePath", "text": "The Turkish getting-started guide is kept in sync with the English one.", "file": "docs/çeviri/başlangıç.md" },
+    { "key": "nestedLib", "text": "The vendored copy under lib is generated; do not edit it by hand.", "file": "lib/src/app.ts" }
+  ],
+  "negatives": [
+    { "key": "trPrivate", "text": "Veritabanı göçleri bu oturumda elle çalıştırıldı, otomatik değil.", "session": "other-session" },
+    { "key": "deOld", "text": "Die Konfigurationsdateien lagen früher unter settings und wurden nie geprüft.", "supersededBy": "deConfig" },
+    { "key": "appTsx", "text": "The JSX shell renders the layout around the routed page.", "file": "src/app.tsx" },
+    { "key": "appsMain", "text": "The apps folder holds the desktop and mobile shells.", "file": "src/apps/main.ts" },
+    { "key": "appBak", "text": "Backup copies of the entry point are ignored by the build.", "file": "src/app.ts.bak" },
+    { "key": "apiLegacyDir", "text": "The legacy API directory is frozen and scheduled for removal.", "directory": "src/api-legacy" },
+    { "key": "appPrivate", "text": "In this session the app entry point is patched for local debugging.", "file": "src/app.ts", "session": "other-session" },
+    { "key": "appDeleted", "text": "The app entry point used to bootstrap a service worker.", "file": "src/app.ts", "delete": true }
+  ],
+  "search": [
+    { "q": "dağıtımdan önce veritabanı göçleri nasıl çalıştırılır", "target": "trMigrate" },
+    { "q": "istemci önbelleği ısınma", "target": "trCache" },
+    { "q": "wo liegen die Konfigurationsdateien", "target": "deConfig" },
+    { "q": "größere Uploads in Blöcken", "target": "deUpload" },
+    { "q": "combien de jours les journaux de production sont conservés", "target": "frLogs" },
+    { "q": "base de datos temporal para pruebas de integración", "target": "esTests" },
+    { "q": "где хранятся секреты", "target": "ruSecrets" },
+    { "q": "ουρά εργασιών αποτυχημένη εργασία", "target": "elQueue" },
+    { "q": "ビルド 成果物 出力", "target": "jaBuild" },
+    { "q": "部署 脚本", "target": "zhDeploy" },
+    { "q": "並列実行", "target": "jaUnspaced" },
+    { "q": "テストは並列実行されるので共有状態を使わないこと", "target": "jaUnspaced" },
+    { "q": "日志保留", "target": "zhUnspaced" },
+    { "q": "生产环境的日志保留九十天", "target": "zhUnspaced" },
+    { "q": "cafe mode edge cache restart", "target": "mixedCafe" },
+    { "q": "café mode edge cache", "target": "mixedCafe" }
+  ],
+  "path": [
+    { "path": "src/app.ts", "expect": ["appTs"] },
+    { "path": "src/api/users.ts", "expect": ["apiDir", "usersTs"] },
+    { "path": "src/api/orders.ts", "expect": ["apiDir"] },
+    { "path": "docs/çeviri/başlangıç.md", "expect": ["unicodePath"] },
+    { "path": "lib/src/app.ts", "expect": ["nestedLib"] },
+    { "path": "src/app.tsx", "expect": ["appTsx"] },
+    { "path": "src/missing.ts", "expect": [] }
+  ]
+}
