@@ -21,6 +21,11 @@
 //!   retracting it. Widens the restart windows in which a client reads the
 //!   previous daemon's discovery record (WM-606).
 //!
+//! * `slow_release` — a stopping daemon waits 1.5 s after it stops accepting
+//!   and before it releases its stores' owner locks. Widens the restart
+//!   window in which a newly elected daemon finds a store still owned by its
+//!   predecessor (WM-606).
+//!
 //! The optional `<method>` restricts the fault to one IPC method.
 
 use std::sync::OnceLock;
@@ -64,6 +69,16 @@ pub fn after_commit_before_reply(method: &str) {
     {
         eprintln!("wrongmemoryd: injected fault after_commit_before_reply ({method})");
         std::process::abort();
+    }
+}
+
+/// Called after a stopping daemon leaves its accept loop, before it drains
+/// and releases its stores.
+pub async fn release_pause() {
+    if let Some((point, _)) = spec()
+        && point == "slow_release"
+    {
+        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
     }
 }
 

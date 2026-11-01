@@ -530,3 +530,77 @@ fn copy_dir(from: &Path, to: &Path) {
         }
     }
 }
+
+/// WM-606: a restart elects a new daemon while the previous one is still
+/// draining and holds the store's owner lock (`slow_release` widens that
+/// window). The new daemon waits for its predecessor's release instead of
+/// answering `OWNER_CONFLICT` (the hosted-CI flake of
+/// `concurrent_bridges_share_one_native_daemon`).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn restart_waits_for_the_predecessor_to_release_its_stores() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("home");
+    let mut old = Daemon::start(&root, Some("slow_release")).await;
+    let mut h = host(&root).await;
+    let pid = register(&mut h, &tmp.path().join("P")).await;
+    call(
+        &mut h,
+        method::MEMORY_REMEMBER,
+        &pid,
+        json!({"text": "Restarts keep the store owned once"}),
+    )
+    .await;
+    let old_instance = h
+        .call_raw(method::DAEMON_HEALTH, None, json!({}), None)
+        .await
+        .unwrap()["daemonInstanceId"]
+        .clone();
+    let _ = h
+        .call_raw(method::DAEMON_SHUTDOWN, None, json!({}), None)
+        .await;
+    drop(h);
+
+    // Start the successor right away and wait until it, not the old one, answers.
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_wrongmemoryd"));
+    cmd.arg("--data-root")
+        .arg(&root)
+        .env_remove("WRONGMEMORY_FAULT")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let mut new = Daemon(None);
+    let deadline = Instant::now() + Duration::from_secs(20);
+    let mut c = loop {
+        if new.0.is_none() {
+            new.0 = Some(cmd.spawn().unwrap());
+        }
+        if let Some(child) = new.0.as_mut()
+            && child.try_wait().unwrap().is_some()
+        {
+            new.0 = None; // lost the election to the stopping daemon: retry
+        }
+        if let Ok(mut c) = Client::connect_host(&dr(&root), "successor").await
+            && let Ok(v) = c
+                .call_raw(method::DAEMON_HEALTH, None, json!({}), None)
+                .await
+            && v["daemonInstanceId"] != old_instance
+        {
+            break c;
+        }
+        assert!(Instant::now() < deadline, "no successor daemon");
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    };
+    let r = c
+        .call_raw(
+            method::MEMORY_SEARCH,
+            Some(&pid),
+            json!({"query": "restarts store"}),
+            None,
+        )
+        .await
+        .unwrap_or_else(|e| panic!("successor could not open the store: {e}"));
+    assert_eq!(r["hits"].as_array().unwrap().len(), 1);
+    old.0.take().map(|mut ch| ch.wait());
+    drop(c);
+    new.stop(&root).await;
+}

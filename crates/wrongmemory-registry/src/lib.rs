@@ -358,6 +358,23 @@ impl Registry {
         Ok(())
     }
 
+    /// Whether the latest ownership record of `id` is an activation by
+    /// another instance of this data root that has not recorded its release:
+    /// a predecessor daemon that is still shutting down. A store held by a
+    /// daemon of another data root has no such record here.
+    pub fn predecessor_holds(&self, id: &str, instance: &str) -> Result<bool, RegistryError> {
+        let last: Option<(String, String)> = self
+            .conn
+            .query_row(
+                "SELECT phase, instance_id FROM ownership_transitions
+                  WHERE project_id = ?1 ORDER BY id DESC LIMIT 1",
+                [id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .optional()?;
+        Ok(last.is_some_and(|(phase, holder)| phase == "activated" && holder != instance))
+    }
+
     /// Detach: the registration is disabled; the store is never deleted.
     pub fn detach_project(&mut self, id: &str) -> Result<bool, RegistryError> {
         Ok(self.conn.execute(
@@ -538,6 +555,31 @@ mod tests {
         assert_eq!(iso_from_ms(0), "1970-01-01T00:00:00.000Z");
         assert_eq!(iso_from_ms(1_793_534_400_123), "2026-11-01T12:00:00.123Z");
         assert_eq!(iso_from_ms(951_782_400_000), "2000-02-29T00:00:00.000Z");
+    }
+
+    #[test]
+    fn predecessor_holds_only_after_an_unreleased_activation_by_another_instance() {
+        let (_t, mut r) = reg();
+        let a = r
+            .insert_project(&NewProject {
+                display_name: "a",
+                root: Path::new("C:/Work/A"),
+                store_path: Path::new("C:/Work/A/store/sage.db"),
+                store_kind: StoreKind::Managed,
+                want_write: true,
+                admission: Admission::ReadWrite,
+                admission_reason: "test",
+                storage_profile_id: None,
+            })
+            .unwrap()
+            .project_id;
+        // Never owned here: a lock holder must be foreign (no wait).
+        assert!(!r.predecessor_holds(&a, "d_new").unwrap());
+        let epoch = r.begin_ownership(&a, "d_old").unwrap();
+        assert!(r.predecessor_holds(&a, "d_new").unwrap());
+        assert!(!r.predecessor_holds(&a, "d_old").unwrap(), "not our own");
+        r.record_release(&a, epoch, "d_old").unwrap();
+        assert!(!r.predecessor_holds(&a, "d_new").unwrap(), "released");
     }
 
     #[test]

@@ -280,6 +280,10 @@ pub fn release(h: Arc<ProjectHandle>, registry: &Mutex<Registry>, instance_id: &
     crate::info!("store_released", {"projectId": id, "reason": why});
 }
 
+/// Longest wait for a predecessor daemon to release a store's owner lock:
+/// the default drain window (15 s) plus release time.
+const PREDECESSOR_RELEASE_WAIT: std::time::Duration = std::time::Duration::from_secs(20);
+
 fn missing_store(path: &Path) -> ErrorBody {
     ErrorBody::new(
         ErrorCode::StoreUnavailable,
@@ -319,16 +323,33 @@ fn open_handle(
         }
         Admission::ReadWrite => {
             let epoch_next = info.owner_epoch + 1;
-            let guard = OwnerGuard::acquire(&store_path, epoch_next, instance_id).map_err(|e| {
-                if e.kind() == std::io::ErrorKind::NotFound {
-                    missing_store(&store_path)
-                } else {
-                    ErrorBody::new(
-                        ErrorCode::OwnerConflict,
-                        format!("cannot acquire store ownership: {e}"),
-                    )
+            // A restart can elect this daemon while its predecessor (same
+            // data root) is still draining and holds the owner lock. Wait,
+            // bounded, for that release; any other holder fails at once.
+            let deadline = std::time::Instant::now() + PREDECESSOR_RELEASE_WAIT;
+            let guard = loop {
+                match OwnerGuard::acquire(&store_path, epoch_next, instance_id) {
+                    Ok(g) => break g,
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                        return Err(missing_store(&store_path));
+                    }
+                    Err(e) => {
+                        let predecessor = e.kind() == std::io::ErrorKind::WouldBlock
+                            && registry
+                                .lock()
+                                .map_err(internal)?
+                                .predecessor_holds(&info.project_id, instance_id)
+                                .unwrap_or(false);
+                        if !predecessor || std::time::Instant::now() >= deadline {
+                            return Err(ErrorBody::new(
+                                ErrorCode::OwnerConflict,
+                                format!("cannot acquire store ownership: {e}"),
+                            ));
+                        }
+                        std::thread::sleep(std::time::Duration::from_millis(50));
+                    }
                 }
-            })?;
+            };
             let (store, _) = SageStore::open(&store_path, true, Some(root), &now_iso())?;
             let epoch = registry
                 .lock()

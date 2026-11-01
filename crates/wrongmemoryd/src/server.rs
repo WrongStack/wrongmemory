@@ -290,6 +290,7 @@ pub async fn run(cfg: Config) -> Result<(), StartError> {
     //    (releasing owner guards), retract only our own discovery metadata.
     shared.draining.store(true, Ordering::SeqCst);
     let _ = shared.shutdown.send(true);
+    crate::fault::release_pause().await;
     let deadline = tokio::time::Instant::now() + cfg.drain;
     while shared.inflight.load(Ordering::SeqCst) > 0 && tokio::time::Instant::now() < deadline {
         tokio::time::sleep(Duration::from_millis(20)).await;

@@ -161,6 +161,7 @@ These failures are not caused by the adapter. The main checkout was not modified
   - Fix: only a missing grant secret or a remote authentication error is final. Transport and Protocol errors during the handshake also go through start-and-wait, which re-spawns every second until a daemon answers.
   - The new debug fault `slow_lifecycle` (1.5 s before publish and before retract) makes the window deterministic. `bridge_waits_out_a_stale_discovery_during_restart` fails without the fix (bridge exits, broken pipe) and passes with it, and the bridge suite passed 10 of 10 runs with no leftover daemon. An interim variant of that test leaked one daemon once; it was not seen again.
   - **Open (intermittent):** after the fix the test failed once more on hosted CI (run 41322866680, `122c275`, docs-only commit, again about 10 s into the test), then passed on `782a2a2` and three reruns of it. It has not failed locally in 10 sequential and 24 parallel runs. Since `782a2a2` a dying bridge reports its stderr and the daemon log in the test failure, so the next hosted failure will carry the cause. The WrongStack side (no SAGE server in `wrongmemory` mode) is covered by the adapter's port tests, not certified in a full host run. |
+  - **Root cause found and fixed (2026-11-01):** the diagnostics caught the next hosted failure (run 41341572541, `30ce001`): `OWNER_CONFLICT … is owned by another WrongMemory instance`. A stopping daemon leaves its accept loop before it drains and releases its stores' owner locks, so a newly elected daemon could open a store while its predecessor still held the lock, and failed at once. The daemon now waits, bounded by 20 s (default drain 15 s plus release), when the registry shows the holder is a predecessor of this data root (latest ownership record: an unreleased activation by another instance). A holder from another data root has no such record and still fails at once (`predecessor_holds_only_after_an_unreleased_activation_by_another_instance`). The new debug fault `slow_release` pauses a stopping daemon before it releases its stores. `restart_waits_for_the_predecessor_to_release_its_stores` reproduced the exact CI error 3 of 3 times with the wait disabled and passes with it; the daemon and CLI suites then passed 5 of 5 runs (53/53). Hosted CI on the fix: see the runs after `30ce001`.
 
 **WM-603 isolation review.** Four leaks were found and fixed, each with a test that failed first:
 
@@ -233,8 +234,8 @@ Findings from the M run:
 |---|---|
 | `cargo fmt --all -- --check` | PASS |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo test --workspace --locked` | PASS 157/157 |
-| `cargo test -p wrongmemoryd -p wrongmemory-cli --tests` ×5 (new IPC methods) | PASS 52/52 on each run; no leftover daemon processes |
+| `cargo test --workspace --locked` | PASS 159/159 |
+| `cargo test -p wrongmemoryd -p wrongmemory-cli --tests` ×5 (IPC methods, restart ownership) | PASS 53/53 on each run; no leftover daemon processes |
 | `bun run certification:surface` (with `--adapter`) | PASS: 46 COVERED, 0 UNSUPPORTED |
 | `bun run test:client` (TS client 10/10, contract parity: 54 methods, 23 error codes) | PASS |
 | Adapter: sage port unit + real-daemon integration 43/43 against the debug daemon (adapter `b982b6c16`) | PASS |
