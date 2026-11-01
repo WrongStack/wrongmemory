@@ -135,7 +135,7 @@ These failures are not caused by the adapter. The main checkout was not modified
 | ID | State | Evidence / gap |
 |---|---|---|
 | WM-600 | Partial | Online backup API (`wrongmemory backup`) on copies. Adopting, transferring or releasing a real store is **NOT RUN**, as required. |
-| WM-601 | Partial | A conflict between a managed and an adopted store for one root is refused. Export is not implemented. |
+| WM-601 | Done (local) | A conflict between a managed and an adopted store for one root is refused. `project.export` / `wrongmemory project export <id>` (host only) hands a managed project back to in-process SAGE:<ul><li>Under the project's writer lane it snapshots the store into `<root>/.wrongstack/memories/sage.db`, checks `integrity_check` and the read-only inspector verdict, then retires the handle (a request already waiting for the lane gets `PROJECT_NOT_FOUND`) and detaches the registration.</li><li>No write can reach the managed copy after the snapshot, and the managed files are kept.</li><li>An existing `sage.db`, `-wal`, `-shm` or `-journal` is refused with `STORE_IDENTITY_CONFLICT`, with nothing written or detached. Adopted stores are refused.</li></ul>`managed_store_exports_to_the_legacy_location_and_detaches` checks the copy (Compatible, 2 rows, adoptable and searchable), the detach, the conflict, the adopted refusal and the curator `FORBIDDEN`. Not exercised: a real WrongStack opening the exported copy. |
 | WM-602 | Done | Fault points (debug builds only) `after_commit_before_reply` and `before_commit`. Retry replays the receipt, rollback leaves nothing behind, a crash during accept recovers, and a kill while idle restarts over a stale endpoint. Crash cases were repeated 5×. |
 | WM-603 | Done (with gaps) | See the review results below. |
 | WM-604 | Done (local) | `wrongmemory-bench --soak-secs N` runs mixed search, forPath, propose, remember and listPage traffic with 8 clients across 40 projects. That is more than the cap of 32 open stores, so stores are evicted and reopened under load. Result: `benchmarks/results/2026-11-01-soak.json`.<ul><li>**Found and fixed:** concurrent requests for a closed project raced on its owner lock. 9% of requests (48,868 of 523,202) failed with `OWNER_CONFLICT` against the daemon's own lock. Store opens are now serialized behind one opening lock (cache hits are unaffected), and a regression test fails without the fix.</li><li>**After the fix (5 min):**<ul><li>260,142 operations, 0 errors.</li><li>Median latency is 0.5–3.5 ms per operation. p95 is about 40 ms, from the deliberate eviction churn.</li><li>Handles 285 → 293 (no leak); RSS 34 → 86 MB with 32 stores open.</li></ul></li></ul>WAL tuning and multi-hour soaks have not been run. |
@@ -217,7 +217,7 @@ Findings from the M run:
 |---|---|
 | `cargo fmt --all -- --check` | PASS |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo test --workspace --locked` ×5 | PASS 139/139 on each run; no leftover daemon processes |
+| `cargo test --workspace --locked` ×5 | PASS 140/140 on each run; no leftover daemon processes |
 | `bun run test:client` (TS client 10/10, contract parity) | PASS |
 | Adapter: wrongmemory-client 6/6, sage port 20/20 against the release daemon | PASS |
 | Hosted CI (`32f0e8b`) | PASS |

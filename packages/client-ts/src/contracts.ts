@@ -55,6 +55,7 @@ export const METHODS = {
   PROJECT_LIST: 'project.list',
   PROJECT_GET: 'project.get',
   PROJECT_DETACH: 'project.detach',
+  PROJECT_EXPORT: 'project.export',
   GRANT_CREATE: 'grant.create',
   GRANT_LIST: 'grant.list',
   GRANT_REVOKE: 'grant.revoke',

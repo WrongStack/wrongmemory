@@ -164,6 +164,11 @@ enum ProjectCmd {
     Detach {
         project: String,
     },
+    /// Hand a managed project back to in-process SAGE: copy its store to
+    /// `<root>/.wrongstack/memories/sage.db` and detach it.
+    Export {
+        project: String,
+    },
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -417,6 +422,25 @@ async fn run(cli: Cli, root: DataRoot) -> i32 {
                 );
                 print(j, &v, |v| {
                     format!("detached: {} (store files are kept)", v["detached"])
+                });
+            }
+            ProjectCmd::Export { project } => {
+                let mut c = connect!(false);
+                let v = call!(
+                    c,
+                    method::PROJECT_EXPORT,
+                    None,
+                    json!({"projectId": project})
+                );
+                print(j, &v, |v| {
+                    format!(
+                        "exported to {} ({} memories, integrity {}); project detached: {}\n  The managed store {} is kept; delete it yourself once SAGE runs on the exported copy.",
+                        v["legacyStorePath"].as_str().unwrap_or_default(),
+                        v["backup"]["memoryRows"],
+                        v["backup"]["integrity"].as_str().unwrap_or_default(),
+                        v["detached"],
+                        v["managedStorePath"].as_str().unwrap_or_default()
+                    )
                 });
             }
         },

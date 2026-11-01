@@ -124,10 +124,10 @@ Read-only commands used throughout:
 
 ## Service release (hand a store back to WrongStack)
 
-1. Diagnose: `wrongmemory project show <id>` shows the owner epoch.
-2. **MUTATES** `wrongmemory project detach <id>`. It releases the owner guard (recorded in the registry) and keeps the store.
-3. Start WrongStack in its local mode.
-4. Managed stores (`<data-root>\projects\…`) have no WrongStack location. Export them with `wrongmemory backup` first.
+1. Diagnose: `wrongmemory project show <id>` shows the store kind and the owner epoch.
+2. Adopted store: **MUTATES** `wrongmemory project detach <id>`. It releases the owner guard (recorded in the registry) and keeps the store in place.
+3. Managed store (`<data-root>\projects\…`): **MUTATES** `wrongmemory project export <id>`. Under the project's writer lane it copies the store to `<root>\.wrongstack\memories\sage.db` (online backup, `integrity_check`, read-only inspection), then detaches the project, so no later write reaches the managed copy. It refuses if any `sage.db*` file already exists there, and never overwrites or merges. The managed files are kept; delete them yourself once SAGE runs on the exported copy.
+4. Start WrongStack in its local mode.
 
 ## Disconnect a client
 

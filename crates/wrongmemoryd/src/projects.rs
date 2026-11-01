@@ -14,7 +14,7 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use wrongmemory_contracts::{
@@ -35,6 +35,9 @@ pub struct ProjectHandle {
     /// Requests currently waiting for or holding this project's lane.
     waiting: AtomicUsize,
     last_used_ms: AtomicI64,
+    /// Set once the project was exported and detached: a request that was
+    /// already waiting for the lane must not write to the retired store.
+    retired: AtomicBool,
 }
 
 /// Holds the project lane; decrements the waiter count on drop.
@@ -69,6 +72,13 @@ impl ProjectHandle {
         self.waiting.fetch_add(1, Ordering::SeqCst);
         self.last_used_ms.store(now_ms(), Ordering::Relaxed);
         match self.store.lock() {
+            Ok(_) if self.retired.load(Ordering::SeqCst) => {
+                self.waiting.fetch_sub(1, Ordering::SeqCst);
+                Err(ErrorBody::new(
+                    ErrorCode::ProjectNotFound,
+                    "project not found",
+                ))
+            }
             Ok(guard) => Ok(Lane {
                 guard,
                 waiting: &self.waiting,
@@ -78,6 +88,11 @@ impl ProjectHandle {
                 Err(internal("store lock poisoned"))
             }
         }
+    }
+
+    /// Refuse every later acquisition of this handle's lane.
+    pub fn retire(&self) {
+        self.retired.store(true, Ordering::SeqCst);
     }
 
     /// Requests waiting for or holding the lane.
@@ -284,6 +299,7 @@ fn open_handle(
         _guard: guard,
         waiting: AtomicUsize::new(0),
         last_used_ms: AtomicI64::new(now_ms()),
+        retired: AtomicBool::new(false),
     };
     match info.admission {
         Admission::Refused => Err(ErrorBody::new(

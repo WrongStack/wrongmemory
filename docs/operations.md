@@ -49,6 +49,7 @@ The installed runtime needs no Bun, Node, or source checkout.
 | `wrongmemory project add <root> --write` | Requests write ownership. It stays read-only while `server.json` shows a possibly running WrongStack SAGE daemon; stop that daemon and add `--force-owner` |
 | `wrongmemory project list` / `project show <id>` | Shows the store path, kind, admission, and owner epoch |
 | `wrongmemory project detach <id>` | Releases ownership and disables the registration. The store file is kept |
+| `wrongmemory project export <id>` | Managed stores only: copies the store to `<root>\.wrongstack\memories\sage.db` and detaches the project (rollback to in-process SAGE). Refuses an occupied location |
 
 Run `wrongmemory migrate inspect <store>` before adopting. It is read-only and prints what admission would do.
 

@@ -581,3 +581,150 @@ async fn concurrent_opens_under_eviction_never_conflict() {
     drop(h);
     daemon.stop(&root).await;
 }
+
+/// WM-601: `project.export` hands a managed project back to in-process
+/// SAGE. The copy lands in `<root>/.wrongstack/memories/sage.db`, is a
+/// compatible SAGE store with the same records, and the managed registration
+/// is detached so the two stores cannot diverge. An occupied legacy location
+/// is refused without detaching, adopted stores are not exported, and the
+/// operation is host-only.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn managed_store_exports_to_the_legacy_location_and_detaches() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let d = Daemon::start(&home, &[]).await;
+    let mut c = host(&home).await;
+
+    // Occupied legacy location: refused, nothing detached or written.
+    let busy = mkdir(tmp.path().join("busy"));
+    let (busy_id, _) = register(&mut c, &busy).await;
+    remember(&mut c, &busy_id, "Busy project keeps serving", json!({})).await;
+    let busy_legacy = mkdir(busy.join(".wrongstack").join("memories"));
+    std::fs::write(busy_legacy.join("sage.db-wal"), b"").unwrap();
+    assert_eq!(
+        call_err(
+            &mut c,
+            method::PROJECT_EXPORT,
+            None,
+            json!({"projectId": busy_id})
+        )
+        .await,
+        ErrorCode::StoreIdentityConflict
+    );
+    assert!(!busy_legacy.join("sage.db").exists());
+    let still = call(
+        &mut c,
+        method::MEMORY_SEARCH,
+        Some(&busy_id),
+        json!({"query": "busy project"}),
+    )
+    .await;
+    assert_eq!(still["hits"].as_array().unwrap().len(), 1);
+
+    // Admin only: a curator grant cannot export.
+    let g = call(
+        &mut c,
+        method::GRANT_CREATE,
+        None,
+        json!({"label": "cur", "profile": "curator", "projects": [busy_id]}),
+    )
+    .await;
+    let grant_id = g["grant"]["grantId"].as_str().unwrap().to_string();
+    let mut cur = Client::connect_grant(&dr(&home), &grant_id, "cur")
+        .await
+        .unwrap();
+    assert_eq!(
+        call_err(
+            &mut cur,
+            method::PROJECT_EXPORT,
+            None,
+            json!({"projectId": busy_id})
+        )
+        .await,
+        ErrorCode::Forbidden
+    );
+
+    // The happy path.
+    let proj = mkdir(tmp.path().join("proj"));
+    let (pid, managed_store) = register(&mut c, &proj).await;
+    remember(&mut c, &pid, "Exported fact about release tags", json!({})).await;
+    remember(&mut c, &pid, "Second exported fact about lint", json!({})).await;
+    let v = call(
+        &mut c,
+        method::PROJECT_EXPORT,
+        None,
+        json!({"projectId": pid}),
+    )
+    .await;
+    let legacy = proj.join(".wrongstack").join("memories").join("sage.db");
+    assert_eq!(v["detached"], true, "{v}");
+    assert_eq!(v["backup"]["integrity"], "ok", "{v}");
+    assert_eq!(v["backup"]["memoryRows"], 2, "{v}");
+    assert!(legacy.exists());
+    assert!(managed_store.exists(), "the managed store is kept");
+    let insp = wrongmemory_storage::inspect::inspect(&legacy);
+    assert_eq!(
+        insp.verdict,
+        wrongmemory_storage::inspect::Verdict::Compatible,
+        "{}",
+        insp.detail
+    );
+    assert_eq!(insp.memory_rows, Some(2));
+
+    // The managed registration is gone: hidden like any unknown project.
+    assert_eq!(
+        call_err(
+            &mut c,
+            method::MEMORY_SEARCH,
+            Some(&pid),
+            json!({"query": "release tags"})
+        )
+        .await,
+        ErrorCode::ProjectNotFound
+    );
+    assert_eq!(
+        call_err(
+            &mut c,
+            method::PROJECT_EXPORT,
+            None,
+            json!({"projectId": pid})
+        )
+        .await,
+        ErrorCode::ProjectNotFound
+    );
+
+    // The exported copy is an ordinary adoptable SAGE store, and an adopted
+    // store is never exported again.
+    let adopted = call(
+        &mut c,
+        method::PROJECT_REGISTER,
+        None,
+        json!({"root": proj.display().to_string(), "storeKind": "adopted", "write": false}),
+    )
+    .await;
+    let aid = adopted["project"]["projectId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let found = call(
+        &mut c,
+        method::MEMORY_SEARCH,
+        Some(&aid),
+        json!({"query": "release tags"}),
+    )
+    .await;
+    assert_eq!(found["hits"].as_array().unwrap().len(), 1, "{found}");
+    assert_eq!(
+        call_err(
+            &mut c,
+            method::PROJECT_EXPORT,
+            None,
+            json!({"projectId": aid})
+        )
+        .await,
+        ErrorCode::InvalidRequest
+    );
+    drop(cur);
+    drop(c);
+    d.stop(&home).await;
+}

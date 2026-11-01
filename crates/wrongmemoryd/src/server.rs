@@ -22,7 +22,7 @@ use wrongmemory_contracts::{
     STORAGE_PROFILE_ID, SearchParams, SessionAcquireParams, SessionInfo, method,
 };
 use wrongmemory_contracts::{
-    Admission, EventsSinceParams, EventsSinceResult, JobInfo, MaintenanceConfigureParams,
+    Admission, EventsSinceParams, EventsSinceResult, JobInfo, MaintenanceConfigureParams, StoreKind,
 };
 use wrongmemory_ipc::endpoint::{generate_token, token_eq};
 use wrongmemory_ipc::frame::{FrameError, read_frame, write_frame};
@@ -602,11 +602,72 @@ fn required_action(m: &str) -> Option<Action> {
         method::DAEMON_SHUTDOWN
         | method::PROJECT_REGISTER
         | method::PROJECT_DETACH
+        | method::PROJECT_EXPORT
         | method::GRANT_CREATE
         | method::GRANT_LIST
         | method::GRANT_REVOKE => Action::Admin,
         _ => return None,
     })
+}
+
+/// WM-601: hand a managed project back to in-process SAGE. Under the
+/// project's writer lane, snapshot the managed store into the project's
+/// legacy location (`<root>/.wrongstack/memories/sage.db`), verify the copy,
+/// then retire the handle and detach the registration, so no write can land
+/// in the managed store after the snapshot and two live stores never
+/// diverge. The managed store files are kept. An occupied legacy location
+/// is refused: export never overwrites or merges into an existing store.
+fn export_project(s: &Shared, id: &str, instance: &str) -> Result<Value, ErrorBody> {
+    let h = s.stores.handle(&s.registry, instance, id)?;
+    if h.info.store_kind != StoreKind::Managed {
+        return Err(err(
+            ErrorCode::InvalidRequest,
+            "only a managed store can be exported; an adopted store already lives in the project",
+        ));
+    }
+    let target = std::path::Path::new(&h.info.root)
+        .join(".wrongstack")
+        .join("memories")
+        .join("sage.db");
+    for suffix in ["", "-wal", "-shm", "-journal"] {
+        let p = std::path::PathBuf::from(format!("{}{suffix}", target.display()));
+        if p.exists() {
+            return Err(err(
+                ErrorCode::StoreIdentityConflict,
+                format!(
+                    "{} already exists; export never overwrites or merges into an existing store",
+                    p.display()
+                ),
+            ));
+        }
+    }
+    let lane = h.lock()?;
+    let report = wrongmemory_storage::backup::backup_store(
+        std::path::Path::new(&h.info.store_path),
+        &target,
+    )?;
+    let verdict = wrongmemory_storage::inspect::inspect(&target).verdict;
+    if !verdict.readable() {
+        let _ = std::fs::remove_file(&target);
+        return Err(err(
+            ErrorCode::ProfileUnsupported,
+            format!(
+                "exported copy is not a readable SAGE store ({verdict:?}); nothing was detached"
+            ),
+        ));
+    }
+    h.retire();
+    let detached = s.reg(|r| r.detach_project(id))?;
+    drop(lane);
+    s.stores.invalidate(id, &s.registry, instance, "exported");
+    Ok(json!({
+        "projectId": id,
+        "legacyStorePath": target.display().to_string(),
+        "managedStorePath": h.info.store_path,
+        "verdict": format!("{verdict:?}"),
+        "backup": serde_json::to_value(&report).unwrap_or(Value::Null),
+        "detached": detached,
+    }))
 }
 
 fn mutation_ctx(state: &Conn, idempotency_key: Option<String>) -> MutationCtx {
@@ -814,6 +875,19 @@ async fn dispatch_inner(
                 })
                 .await?;
             to_value(json!({ "detached": detached }))
+        }
+        method::PROJECT_EXPORT => {
+            let id: String = parse::<Value>(req.params)?
+                .get("projectId")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+                .or(req.project_id)
+                .ok_or_else(|| err(ErrorCode::InvalidRequest, "projectId is required"))?;
+            let instance = shared.instance_id.clone();
+            let v = shared
+                .blocking(move |s| export_project(s, &id, &instance))
+                .await?;
+            to_value(v)
         }
         method::GRANT_CREATE => {
             let p: GrantCreateParams = parse(req.params)?;

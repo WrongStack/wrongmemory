@@ -352,6 +352,7 @@ pub mod method {
     pub const PROJECT_LIST: &str = "project.list";
     pub const PROJECT_GET: &str = "project.get";
     pub const PROJECT_DETACH: &str = "project.detach";
+    pub const PROJECT_EXPORT: &str = "project.export";
     pub const GRANT_CREATE: &str = "grant.create";
     pub const GRANT_LIST: &str = "grant.list";
     pub const GRANT_REVOKE: &str = "grant.revoke";
@@ -402,6 +403,7 @@ pub mod method {
         PROJECT_LIST,
         PROJECT_GET,
         PROJECT_DETACH,
+        PROJECT_EXPORT,
         GRANT_CREATE,
         GRANT_LIST,
         GRANT_REVOKE,
