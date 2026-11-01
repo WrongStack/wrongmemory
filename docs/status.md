@@ -79,7 +79,7 @@ Legend: **Done**, meaning implemented and covered by an automated test or record
 | WM-303 | Done | `memory_candidates` and `memory_feedback`. |
 | WM-304 | Done | Writer and curator tools, listed only for grants that allow them; the daemon enforces every action anyway. |
 | WM-305 | Done | Planner for JSON and TOML client configs, with owned-entry markers; tests write only to temp prefixes. |
-| WM-306 | **NOT RUN** | Presets for Claude Code, Codex, Cursor and Antigravity are implemented and tested on temp configs. No installed client has been connected. |
+| WM-306 | Partial | Presets for Claude Code, Codex, Cursor and Antigravity are implemented and tested on temp configs. Real clients, run 2026-11-01 on Windows against a disposable data root, with temporary configs only (no installed client configuration was edited):<ul><li>**MCP Inspector CLI 2.10.1** (protocol-level client): PASS. The writer grant listed 11 tools and the read-only grant listed 7. `memory_search`, `remember`, `memory_get` and `memory_update` worked. A stale `expectedRevision` returned `REVISION_CONFLICT` and an unknown id returned `NOT_FOUND`, both as `isError` tool results. The read-only grant could not call `remember` (client-side `tool_not_found`; the daemon's refusal is covered by the adversarial suite) and wrote nothing.</li><li>The Inspector's schema-portability check found one issue, now fixed: `memory_update.validity` used `"type": ["object","null"]`, which single-`type` dialects such as Gemini function declarations (Antigravity) may reject. It is now `anyOf` with single-typed branches. `tool_schemas_use_single_types` walks every tool of every profile and fails on the old schema. The Inspector's `--strict` run is clean.</li><li>**Claude Code 2.1.316**, headless (`claude -p --mcp-config <temp> --strict-mcp-config`): PASS. The server connected with all 11 tools, and `memory_search` plus `remember` ran (the record landed as requested; client label `claude-code`).</li><li>**Codex CLI 0.165.0**, headless (`codex exec` with `-c mcp_servers…` overrides): PASS. It cold-started the daemon through the bridge and read the record Claude Code had written (client label `codex`).</li><li>No grant secret appeared in the configs, results or daemon log, and no memory text appeared in the log.</li><li>NOT RUN: Cursor and Antigravity; the presets writing a real installed configuration (`wrongmemory connect`); interactive (non-headless) sessions; macOS/Linux.</li></ul> |
 | WM-307 | Done | `connect print`, `client doctor`, `disconnect` (with grant revocation). |
 | WM-308 | Not started (deferred) | Loopback HTTP transport. |
 | WM-309 | **NOT RUN** | Evaluating an external agent workflow. |
@@ -234,10 +234,11 @@ Findings from the M run:
 |---|---|
 | `cargo fmt --all -- --check` | PASS |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo test --workspace --locked` | PASS 159/159 |
+| `cargo test --workspace --locked` | PASS 160/160 |
 | `cargo test -p wrongmemoryd -p wrongmemory-cli --tests` ×5 (IPC methods, restart ownership) | PASS 53/53 on each run; no leftover daemon processes |
 | `bun run certification:surface` (with `--adapter`) | PASS: 46 COVERED, 0 UNSUPPORTED |
 | `bun run test:client` (TS client 10/10, contract parity: 54 methods, 23 error codes) | PASS |
 | Adapter: sage port unit + real-daemon integration 43/43 against the debug daemon (adapter `b982b6c16`) | PASS |
 | Hosted CI (`32f0e8b`) | PASS |
-| Real MCP clients, live store adoption, signed release | NOT RUN |
+| Real MCP clients: MCP Inspector CLI 2.10.1, Claude Code 2.1.316 (headless), Codex CLI 0.165.0 (headless), temp configs | PASS (see WM-306) |
+| Cursor, Antigravity, live store adoption, signed release | NOT RUN |

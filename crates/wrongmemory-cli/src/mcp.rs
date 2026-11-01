@@ -301,7 +301,10 @@ fn update_tool() -> Tool {
             "confidence": {"type": "number", "minimum": 0, "maximum": 1},
             "status": {"type": "string", "enum": ["active", "stale", "archived", "superseded", "contradicted"]},
             "supersededBy": {"type": "string"},
-            "validity": {"type": ["object", "null"]}
+            // `anyOf` keeps every branch single-typed: clients that map tool
+            // schemas onto a one-`type` dialect (Gemini function declarations)
+            // reject `"type": [...]`. `null` clears the validity.
+            "validity": {"anyOf": [{"type": "object"}, {"type": "null"}]}
         }), &["id", "expectedRevision"]),
     )
     .with_annotations(ToolAnnotations::new().read_only(false).destructive(false))
@@ -705,4 +708,49 @@ pub async fn serve(
         .map_err(|e| anyhow::anyhow!("MCP initialization failed: {e}"))?;
     let _ = service.waiting().await;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn array_types(v: &Value, path: &str, out: &mut Vec<String>) {
+        match v {
+            Value::Object(m) => {
+                for (k, x) in m {
+                    if k == "type" && x.is_array() {
+                        out.push(path.to_string());
+                    }
+                    array_types(x, &format!("{path}.{k}"), out);
+                }
+            }
+            Value::Array(a) => {
+                for (i, x) in a.iter().enumerate() {
+                    array_types(x, &format!("{path}[{i}]"), out);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Every tool schema stays portable to single-`type` dialects (found by
+    /// the MCP Inspector's schema-portability check, WM-306).
+    #[test]
+    fn tool_schemas_use_single_types() {
+        let profiles = [
+            None,
+            Some(PolicyProfile::ReadOnly),
+            Some(PolicyProfile::ReadPropose),
+            Some(PolicyProfile::Writer),
+            Some(PolicyProfile::Curator),
+        ];
+        let mut found = Vec::new();
+        for p in profiles {
+            for t in tools_for(p) {
+                let schema = Value::Object((*t.input_schema).clone());
+                array_types(&schema, &t.name, &mut found);
+            }
+        }
+        assert!(found.is_empty(), "array-valued `type` in {found:?}");
+    }
 }
