@@ -28,6 +28,31 @@ fn invalid(msg: impl Into<String>) -> ErrorBody {
     ErrorBody::new(ErrorCode::InvalidRequest, msg)
 }
 
+/// Count of memory-owned edges whose both memory ends the viewer can see.
+///
+/// `m.id = substr(node, 5)`, not `node = 'mem:' || m.id`: the expression
+/// form cannot use the memories primary key, so it scanned every memory per
+/// edge and took minutes on a real 16.5k-memory / 20.5k-edge store
+/// (`stats_edge_count_looks_memories_up_by_key` checks the query plan).
+fn visible_edges_sql(viewer: &Viewer) -> (String, Vec<rusqlite::types::Value>) {
+    let mut args = Vec::new();
+    let from_visible = session_sql("m.", viewer, &mut args);
+    let to_visible = session_sql("m.", viewer, &mut args);
+    (
+        format!(
+            "SELECT COUNT(*) FROM edges e
+              WHERE e.from_node GLOB 'mem:*'
+                AND NOT EXISTS (SELECT 1 FROM memories m
+                      WHERE m.id = substr(e.from_node, 5)
+                        AND NOT COALESCE({from_visible}, 0))
+                AND NOT EXISTS (SELECT 1 FROM memories m
+                      WHERE e.to_node GLOB 'mem:*' AND m.id = substr(e.to_node, 5)
+                        AND NOT COALESCE({to_visible}, 0))"
+        ),
+        args,
+    )
+}
+
 fn session_sql(prefix: &str, viewer: &Viewer, args: &mut Vec<rusqlite::types::Value>) -> String {
     args.push(viewer.session_id.clone().into());
     let n = args.len();
@@ -662,7 +687,7 @@ impl SageStore {
              refs AS (
                SELECT COALESCE({visible}, 0) AS ok FROM edges e
                  JOIN sub ON e.to_node = sub.node
-                 JOIN memories m ON e.from_node = 'mem:' || m.id
+                 JOIN memories m ON e.from_node GLOB 'mem:*' AND m.id = substr(e.from_node, 5)
              )
              SELECT EXISTS(SELECT 1 FROM refs WHERE ok = 0)
                 AND NOT EXISTS(SELECT 1 FROM refs WHERE ok = 1)"
@@ -1133,23 +1158,10 @@ impl SageStore {
                 |r| r.get(0),
             )
             .map_err(sql_err)?;
-        let mut args = Vec::new();
-        let from_visible = session_sql("m.", viewer, &mut args);
-        let to_visible = session_sql("m.", viewer, &mut args);
+        let (sql, args) = visible_edges_sql(viewer);
         let edges: i64 = self
             .conn
-            .query_row(
-                &format!(
-                    "SELECT COUNT(*) FROM edges e
-                      WHERE e.from_node GLOB 'mem:*'
-                        AND NOT EXISTS (SELECT 1 FROM memories m
-                              WHERE e.from_node = 'mem:' || m.id AND NOT COALESCE({from_visible}, 0))
-                        AND NOT EXISTS (SELECT 1 FROM memories m
-                              WHERE e.to_node = 'mem:' || m.id AND NOT COALESCE({to_visible}, 0))"
-                ),
-                params_from_iter(args),
-                |r| r.get(0),
-            )
+            .query_row(&sql, params_from_iter(args), |r| r.get(0))
             .map_err(sql_err)?;
         Ok(
             json!({"byStatus": counts, "byKind": by_kind, "pendingCandidates": pending, "edges": edges}),
@@ -1160,6 +1172,41 @@ impl SageStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The stats edge count must look memories up by primary key, never scan
+    /// them per edge (it took minutes on a real store before).
+    #[test]
+    fn stats_edge_count_looks_memories_up_by_key() {
+        let tmp = tempfile::tempdir().unwrap();
+        let db = tmp.path().join("sage.db");
+        SageStore::create_managed(&db, "2026-11-01T00:00:00.000Z").unwrap();
+        let (store, _) = SageStore::open(&db, true, None, "2026-11-01T00:00:00.000Z").unwrap();
+        for viewer in [
+            Viewer::default(),
+            Viewer {
+                session_id: Some("s1".into()),
+            },
+        ] {
+            let (sql, args) = visible_edges_sql(&viewer);
+            let mut stmt = store
+                .conn
+                .prepare(&format!("EXPLAIN QUERY PLAN {sql}"))
+                .unwrap();
+            let plan: Vec<String> = stmt
+                .query_map(params_from_iter(args), |r| r.get::<_, String>(3))
+                .unwrap()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            assert!(
+                !plan.iter().any(|d| d.starts_with("SCAN m")),
+                "memories scanned per edge: {plan:?}"
+            );
+            assert!(
+                plan.iter().filter(|d| d.starts_with("SEARCH m")).count() >= 2,
+                "memories not looked up by key: {plan:?}"
+            );
+        }
+    }
 
     #[test]
     fn base64url_round_trip_and_cursor() {
