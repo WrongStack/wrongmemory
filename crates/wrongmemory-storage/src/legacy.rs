@@ -300,7 +300,19 @@ impl SageStore {
                 let Ok(Value::Object(raw)) = serde_json::from_str::<Value>(&data) else {
                     continue;
                 };
-                let key = normalize_text_key(&m.text);
+                // Baseline groups by normalized text alone. Session rows are
+                // grouped only with rows of the same owning session, so a
+                // merge never moves private content into a shared row or
+                // makes a shared row point at a private one.
+                let key = if m.scope == "session" {
+                    format!(
+                        "session {} {}",
+                        m.owner_session_id.as_deref().unwrap_or(""),
+                        normalize_text_key(&m.text)
+                    )
+                } else {
+                    normalize_text_key(&m.text)
+                };
                 if !groups.contains_key(&key) {
                     keys.push(key.clone());
                 }
@@ -495,6 +507,57 @@ mod tests {
         assert_eq!(out.record["deleted"], 1);
         assert_eq!(status(&store, &private), "deleted");
 
+        let err = store.legacy_clear(Some("bogus"), &ctx(None)).unwrap_err();
+        assert_eq!(err.code, ErrorCode::InvalidRequest);
+    }
+
+    /// Consolidation never merges a session row with a shared row: neither
+    /// direction may move private content or ids into shared records.
+    #[test]
+    fn consolidate_keeps_session_rows_apart_from_shared_rows() {
+        let tmp = tempfile::tempdir().unwrap();
+        let db = tmp.path().join("sage.db");
+        SageStore::create_managed(&db, "2026-11-01T00:00:00.000Z").unwrap();
+        let (mut store, _) = SageStore::open(&db, true, None, "2026-11-01T00:00:00.000Z").unwrap();
+        let text = "Cache keys include the tenant id.";
+        let shared = remember(&mut store, text, None);
+        let p = RememberParams {
+            text: text.into(),
+            scope: Some("session".into()),
+            importance: Some(0.95),
+            tags: vec!["privatetag".into()],
+            sources: vec![MemorySource {
+                kind: "user".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let private = store.remember(&p, &ctx(Some("s1"))).unwrap().id;
+        assert_ne!(shared, private);
+        let out = store
+            .legacy_consolidate("project-memory", &ctx(Some("s1")))
+            .unwrap();
+        assert_eq!(out.record["removed"], 0);
+        let data: String = store
+            .conn
+            .query_row("SELECT data FROM memories WHERE id = ?1", [&shared], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert!(
+            !data.contains(&private) && !data.contains("privatetag"),
+            "{data}"
+        );
+        assert_eq!(status(&store, &shared), "active");
+        assert_eq!(status(&store, &private), "active");
+    }
+
+    #[test]
+    fn invalid_scope_is_rejected() {
+        let tmp = tempfile::tempdir().unwrap();
+        let db = tmp.path().join("sage.db");
+        SageStore::create_managed(&db, "2026-11-01T00:00:00.000Z").unwrap();
+        let (mut store, _) = SageStore::open(&db, true, None, "2026-11-01T00:00:00.000Z").unwrap();
         let err = store.legacy_clear(Some("bogus"), &ctx(None)).unwrap_err();
         assert_eq!(err.code, ErrorCode::InvalidRequest);
     }

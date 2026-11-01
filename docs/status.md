@@ -122,7 +122,7 @@ These failures are not caused by the adapter. The main checkout was not modified
 | WM-506 | Partial | Validity rules have no shell or regex evaluation. Verification of checkout evidence is not implemented. |
 | WM-507 | Done | Hygiene with protections for critical memories (oracle replay). Expiry is scheduled through jobs. |
 | WM-508 / 509 | Not started (optional L4) | Semantic provider and vector mirror. |
-| WM-510 | Partial | Corrupt rows read as absent. Legacy `MemoryStore` bulk mutations are curator-only, and the replay of the oracle's `legacy-bulk` scenario matches state, merged anchors and sources, counts and audit details:<ul><li>`memory.legacyForget`</li><li>`memory.legacyConsolidate`</li><li>`memory.legacyClear` (with no scope it needs `all=true`)</li></ul>Deliberate deviation: these only touch rows the caller's session can see, so one session cannot erase another session's private memories. Older and JSONL stores are refused: open them with SAGE first. There is no conversion. |
+| WM-510 | Partial | Corrupt rows read as absent. Legacy `MemoryStore` bulk mutations are curator-only, and the replay of the oracle's `legacy-bulk` scenario matches state, merged anchors and sources, counts and audit details:<ul><li>`memory.legacyForget`</li><li>`memory.legacyConsolidate`</li><li>`memory.legacyClear` (with no scope it needs `all=true`)</li></ul>Deliberate deviation: these only touch rows the caller's session can see, so one session cannot erase another session's private memories. `consolidate` also groups session rows only with rows of the same owning session, so a merge cannot copy private content or ids into shared rows. Older and JSONL stores are refused: open them with SAGE first. There is no conversion. |
 | WM-511 | Not started | Full native differential certification. |
 
 ## M6 — hardening
@@ -208,7 +208,7 @@ Findings from the M run:
 |---|---|
 | `cargo fmt --all -- --check` | PASS |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo test --workspace --locked` ×5 | PASS 115/115 on each run; no leftover daemon processes |
+| `cargo test --workspace --locked` ×5 | PASS 117/117 on each run; no leftover daemon processes |
 | `bun run test:client` (TS client 10/10, contract parity) | PASS |
 | Adapter: wrongmemory-client 6/6, sage port 20/20 against the release daemon | PASS |
 | Hosted CI (`32f0e8b`) | PASS |
