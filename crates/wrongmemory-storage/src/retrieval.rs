@@ -51,6 +51,33 @@ fn placeholders(args: &mut Vec<rusqlite::types::Value>, values: &[String]) -> St
         .join(",")
 }
 
+/// Insertion-ordered set (the baseline's JS `Set` iteration order).
+#[derive(Default)]
+struct OrderedSet {
+    items: Vec<String>,
+    seen: HashSet<String>,
+}
+
+impl OrderedSet {
+    fn push(&mut self, v: String) {
+        if self.seen.insert(v.clone()) {
+            self.items.push(v);
+        }
+    }
+}
+
+/// `escapeLikeLiteral`: escape `\`, `%` and `_` for a LIKE prefix pattern.
+fn escape_like_literal(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        if matches!(c, '\\' | '%' | '_') {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out
+}
+
 fn escape_glob(s: &str) -> String {
     let mut out = String::new();
     for c in s.chars() {
@@ -322,10 +349,16 @@ impl SageStore {
         let audience_ok = opts.include_audience_scoped != Some(false);
         let mut args: Vec<rusqlite::types::Value> = Vec::new();
         let target_ph = placeholders(&mut args, &targets);
-        // `to_node GLOB 'symbol:<escaped p>#*'` is exactly the BINARY prefix
-        // range ['symbol:p#', 'symbol:p$'). As separate UNION ALL arms each
-        // part is an `idx_edge_to` lookup; OR-ing a GLOB into the IN forced a
-        // full edges scan (WM-604: 42 ms p50 at 25k memories).
+        // Same rows as the baseline `m.id IN (edges: to_node IN targets OR
+        // to_node GLOB 'symbol:<p>#*')`, planned so the work is bounded by the
+        // matching edges (WM-604; the IN form walked every memory, 45 ms p50
+        // at 25k):
+        // * the GLOB is exactly the BINARY prefix range ['symbol:p#',
+        //   'symbol:p$'), one UNION ALL arm per path;
+        // * every arm is pinned to `idx_edge_to` (the planner otherwise picks
+        //   the `from_node` range implied by `GLOB 'mem:*'`);
+        // * the hit ids are materialized and joined to memories by primary
+        //   key; `DISTINCT m.data` absorbs duplicate hits as before.
         let symbol_arms: String = symbol_prefixes
             .iter()
             .map(|p| {
@@ -333,7 +366,7 @@ impl SageStore {
                 let lo = args.len();
                 args.push(format!("{p}$").into());
                 format!(
-                    " UNION ALL SELECT SUBSTR(e.from_node, 5) FROM edges e
+                    " UNION ALL SELECT SUBSTR(e.from_node, 5) FROM edges e INDEXED BY idx_edge_to
                        WHERE e.to_node >= ?{lo} AND e.to_node < ?{} AND e.from_node GLOB 'mem:*'",
                     lo + 1
                 )
@@ -342,11 +375,11 @@ impl SageStore {
         let status_ph = placeholders(&mut args, &statuses);
         let session = session_sql("m.", viewer, &mut args);
         let sql = format!(
-            "SELECT DISTINCT m.data FROM memories m
-              WHERE m.id IN (
-                SELECT SUBSTR(e.from_node, 5) FROM edges e
+            "WITH hit(id) AS MATERIALIZED (
+                SELECT SUBSTR(e.from_node, 5) FROM edges e INDEXED BY idx_edge_to
                  WHERE e.to_node IN ({target_ph}) AND e.from_node GLOB 'mem:*'{})
-                AND m.status IN ({status_ph}) AND {session}{}
+             SELECT DISTINCT m.data FROM hit CROSS JOIN memories m ON m.id = hit.id
+              WHERE m.status IN ({status_ph}) AND {session}{}
               ORDER BY m.importance DESC, m.updated_at DESC LIMIT {}",
             symbol_arms,
             if audience_ok {
@@ -804,9 +837,23 @@ impl SageStore {
         }
         for h in self.search(q, 20, None, None, viewer)?.hits {
             add(format!("mem:{}", h.memory.id));
-            for a in &h.memory.anchors {
-                if let Some(n) = crate::store::anchor_node(a) {
-                    add(n);
+        }
+        // Baseline: the anchors of every memory start (direct id or search
+        // hit) are added after all other starts. Reading through `get`
+        // keeps hidden memories from contributing their anchors.
+        let mem_ids: Vec<String> = starts
+            .iter()
+            .filter_map(|s| s.strip_prefix("mem:"))
+            .map(str::to_string)
+            .collect();
+        for id in mem_ids {
+            if let Some(m) = self.get(&id, viewer)? {
+                for a in &m.anchors {
+                    if let Some(n) = crate::store::anchor_node(a)
+                        && !starts.contains(&n)
+                    {
+                        starts.push(n);
+                    }
                 }
             }
         }
@@ -832,9 +879,17 @@ impl SageStore {
         })
     }
 
-    /// `findRelatedSage`: graph neighbours plus anchor/tag overlap, scored
-    /// with `scoreMemoryRelationship`. Candidate collection is a bounded
-    /// approximation of `collectRelatedSqliteCandidateIds`.
+    /// `findRelatedSqliteSage` + `collectRelatedSqliteCandidateIds`
+    /// (baseline `sqlite-store-find-related.ts` /
+    /// `sqlite-store-related-candidates.ts`), visibility-safe: seeds and
+    /// candidates are read through the session rule, and the traversal never
+    /// passes through hidden memories.
+    ///
+    /// Candidates: graph neighbours (BFS budget `max(100, limit*20)`),
+    /// memories sharing an `about_*` target, anchor node or anchor-path
+    /// ancestor with a seed, co-tagged memories (importance-ordered, capped
+    /// at the budget) and memories in the same command family. Ranked by
+    /// `scoreMemoryRelationship`, then importance, then confidence.
     pub fn find_related(
         &self,
         ids: &[String],
@@ -842,10 +897,13 @@ impl SageStore {
         max_depth: usize,
         viewer: &Viewer,
     ) -> StoreResult<Vec<SearchHit>> {
+        let statuses = ["active".to_string()];
         let limit = limit.clamp(1, wrongmemory_contracts::MAX_PAGE_SIZE);
-        let mut seeds = Vec::new();
+        let mut seeds: Vec<SageRecord> = Vec::new();
         for id in ids {
-            if let Some(m) = self.get(id, viewer)? {
+            if let Some(m) = self.get(id, viewer)?
+                && !seeds.iter().any(|s| s.id == m.id)
+            {
                 seeds.push(m);
             }
         }
@@ -853,67 +911,186 @@ impl SageStore {
             return Ok(vec![]);
         }
         let budget = (limit * 20).max(100);
+        let result_cap = limit.min(budget).max(1);
         let starts: Vec<String> = seeds.iter().map(|s| format!("mem:{}", s.id)).collect();
         let (edges, _) = self.traverse(&starts, max_depth.max(1), budget, viewer)?;
-        let graph: HashSet<String> = edges
-            .iter()
-            .flat_map(|e| [&e.from, &e.to])
-            .filter_map(|n| n.strip_prefix("mem:"))
-            .map(str::to_string)
-            .collect();
-        let mut cand: Vec<String> = graph.iter().cloned().collect();
-        let mut targets: Vec<String> = Vec::new();
+
+        // Insertion-ordered candidate id set, as the baseline's `Set`.
+        let mut cand = OrderedSet::default();
+        let mut graph: HashSet<String> = HashSet::new();
+        for e in &edges {
+            for n in [&e.from, &e.to] {
+                if let Some(id) = n.strip_prefix("mem:") {
+                    graph.insert(id.to_string());
+                    cand.push(id.to_string());
+                }
+            }
+        }
+
+        // Anchor-overlap targets: the seeds' `about_*` edge targets, their
+        // anchor nodes, and every ancestor of an anchor path.
+        let mut targets = OrderedSet::default();
+        {
+            let mut args = Vec::new();
+            let ph = placeholders(&mut args, &starts);
+            for n in self.query_data(
+                &format!(
+                    "SELECT DISTINCT to_node FROM edges
+                      WHERE from_node IN ({ph}) AND relation GLOB 'about_*'"
+                ),
+                args,
+            )? {
+                targets.push(n);
+            }
+        }
         for s in &seeds {
             for a in &s.anchors {
                 if let Some(n) = crate::store::anchor_node(a) {
                     targets.push(n);
                 }
+                if let Some(p) = a.path.as_deref() {
+                    let normalized = normalize_slashes(p);
+                    let parts: Vec<&str> =
+                        normalized.split('/').filter(|x| !x.is_empty()).collect();
+                    for i in 1..parts.len() {
+                        let anc = parts[..i].join("/");
+                        targets.push(format!("file:{anc}"));
+                        targets.push(format!("dir:{anc}"));
+                    }
+                }
             }
         }
-        if !targets.is_empty() {
+        for chunk in targets.items.chunks(400) {
             let mut args = Vec::new();
-            let ph = placeholders(&mut args, &targets);
+            let ph = placeholders(&mut args, chunk);
+            for n in self.query_data(
+                &format!(
+                    "SELECT DISTINCT from_node FROM edges INDEXED BY idx_edge_to
+                      WHERE to_node IN ({ph}) AND from_node GLOB 'mem:*'
+                        AND relation GLOB 'about_*'"
+                ),
+                args,
+            )? {
+                cand.push(n["mem:".len()..].to_string());
+            }
+        }
+
+        // Co-tagged memories, importance-ordered and capped at the budget.
+        let mut tags = OrderedSet::default();
+        for s in &seeds {
+            for t in &s.tags {
+                tags.push(t.clone());
+            }
+        }
+        for t in &tags.items {
+            let mut args: Vec<rusqlite::types::Value> = Vec::new();
+            let status_ph = placeholders(&mut args, &statuses);
+            args.push(t.clone().into());
+            let tag_n = args.len();
+            let session = session_sql("m.", viewer, &mut args);
             for id in self.query_data(
-                &format!("SELECT DISTINCT SUBSTR(from_node, 5) FROM edges WHERE from_node GLOB 'mem:*' AND to_node IN ({ph}) LIMIT {budget}"),
+                &format!(
+                    "SELECT m.id FROM memories m
+                      WHERE m.status IN ({status_ph}) AND json_valid(m.tags)
+                        AND EXISTS (SELECT 1 FROM json_each(m.tags) je WHERE je.value = ?{tag_n})
+                        AND {session}
+                      ORDER BY m.importance DESC, m.updated_at DESC LIMIT {budget}"
+                ),
                 args,
             )? {
                 cand.push(id);
             }
         }
-        let tags: Vec<String> = seeds.iter().flat_map(|s| s.tags.clone()).collect();
-        for t in tags.iter().take(16) {
-            for id in self.query_data(
-                &format!("SELECT m.id FROM memories m, json_each(m.tags) t WHERE json_valid(m.tags) AND t.value = ?1 LIMIT {budget}"),
-                vec![t.clone().into()],
-            )? {
-                cand.push(id);
-            }
-        }
-        cand.sort();
-        cand.dedup();
-        let seed_refs: Vec<&SageRecord> = seeds.iter().collect();
-        let mut hits = Vec::new();
-        for id in cand {
-            if let Some(m) = self.get(&id, viewer)?
-                && m.status == "active"
-            {
-                let score = crate::similarity::score_relationship(&m, &seed_refs, &graph);
-                if score > 0.0 {
-                    hits.push(SearchHit {
-                        memory: m,
-                        channel: "related".into(),
-                        score,
-                        reasons: vec![],
-                    });
+
+        // Same command family: LIKE prefilter, exact family comparison.
+        let family_of =
+            |c: &str| crate::similarity::command_family(&crate::similarity::normalize_command(c));
+        let mut families = OrderedSet::default();
+        for s in &seeds {
+            for a in &s.anchors {
+                if let Some(c) = a.command.as_deref() {
+                    families.push(family_of(c));
                 }
             }
         }
+        for chunk in families.items.chunks(64) {
+            let mut args: Vec<rusqlite::types::Value> = Vec::new();
+            let clauses: Vec<String> = chunk
+                .iter()
+                .map(|f| {
+                    args.push(format!("command:{}%", escape_like_literal(f)).into());
+                    format!("to_node LIKE ?{} ESCAPE '\\'", args.len())
+                })
+                .collect();
+            let mut stmt = self
+                .conn
+                .prepare(&format!(
+                    "SELECT DISTINCT from_node, to_node FROM edges
+                      WHERE relation = 'about_command' AND from_node GLOB 'mem:*'
+                        AND ({} OR to_node GLOB '*[^ -~]*')",
+                    clauses.join(" OR ")
+                ))
+                .map_err(sql_err)?;
+            let rows: Vec<(String, String)> = stmt
+                .query_map(params_from_iter(args), |r| Ok((r.get(0)?, r.get(1)?)))
+                .map_err(sql_err)?
+                .collect::<rusqlite::Result<_>>()
+                .map_err(sql_err)?;
+            for (from, to) in rows {
+                let cmd = to.strip_prefix("command:").unwrap_or("");
+                if !cmd.is_empty() && families.items.contains(&family_of(cmd)) {
+                    cand.push(from["mem:".len()..].to_string());
+                }
+            }
+        }
+        let seed_ids: HashSet<&str> = seeds.iter().map(|s| s.id.as_str()).collect();
+        cand.items.retain(|id| !seed_ids.contains(id.as_str()));
+        if cand.items.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Final fetch with statuses and the session rule, chunked like the
+        // baseline (rows of one chunk come back in primary-key order).
+        let mut candidates: Vec<SageRecord> = Vec::new();
+        for chunk in cand.items.chunks(400) {
+            let mut args: Vec<rusqlite::types::Value> = Vec::new();
+            let id_ph = placeholders(&mut args, chunk);
+            let status_ph = placeholders(&mut args, &statuses);
+            let session = session_sql("", viewer, &mut args);
+            for d in self.query_data(
+                &format!(
+                    "SELECT data FROM memories
+                      WHERE id IN ({id_ph}) AND status IN ({status_ph}) AND {session}"
+                ),
+                args,
+            )? {
+                if let Some(m) = decode_memory(&d) {
+                    candidates.push(m);
+                }
+            }
+        }
+        let seed_refs: Vec<&SageRecord> = seeds.iter().collect();
+        let mut hits: Vec<SearchHit> = candidates
+            .into_iter()
+            .filter(|m| !seed_ids.contains(m.id.as_str()))
+            .filter(|m| m.context_policy.as_deref() != Some("never"))
+            .filter_map(|m| {
+                let score = crate::similarity::score_relationship(&m, &seed_refs, &graph);
+                (score > 0.0).then_some(SearchHit {
+                    memory: m,
+                    channel: "related".into(),
+                    score,
+                    reasons: vec![],
+                })
+            })
+            .collect();
         hits.sort_by(|a, b| {
             b.score
-                .partial_cmp(&a.score)
-                .unwrap_or(std::cmp::Ordering::Equal)
+                .total_cmp(&a.score)
+                .then(b.memory.importance.total_cmp(&a.memory.importance))
+                .then(b.memory.confidence.total_cmp(&a.memory.confidence))
         });
-        hits.truncate(limit);
+        hits.truncate(result_cap);
         Ok(hits)
     }
 
@@ -1007,5 +1184,129 @@ mod tests {
         let n: f64 = v.iter().map(|x| (*x as f64).powi(2)).sum();
         assert!((n - 1.0).abs() < 1e-5);
         assert_eq!(hashing_embed(""), [0f32; DIMENSIONS]);
+    }
+}
+
+/// Result of [`SageStore::retrieve_for_audience`].
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AudienceResult {
+    pub memories: Vec<SageRecord>,
+    /// Set when the scan stopped before the corpus ran out and the page may
+    /// be incomplete (the baseline `onTruncated` signal).
+    pub truncated: Option<AudienceTruncation>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AudienceTruncation {
+    pub sql_rows_examined: usize,
+    pub returned: usize,
+}
+
+const AUDIENCE_OVERFETCH_FACTOR: usize = 5;
+const AUDIENCE_MAX_SCAN: usize = 10_000;
+
+impl SageStore {
+    /// `retrieveSqliteSageForAudience` + `retrieveSageAudienceWithAudit`
+    /// (baseline `sqlite-store-audience.ts` / `sqlite-store-recall.ts`):
+    /// importance-ordered windows of audience-carrying rows (×5 then ×3,
+    /// at most 10,000 rows scanned), matched case-insensitively on role,
+    /// task type and mode. A truncated scan writes `memory.audience_truncated`
+    /// on writable stores, as the baseline audits it.
+    ///
+    /// `context` is echoed into the audit record as given; only its string
+    /// `role`, `taskType` and `mode` fields drive matching.
+    pub fn retrieve_for_audience(
+        &self,
+        context: &Value,
+        limit: Option<i64>,
+        viewer: &Viewer,
+        now_iso: &str,
+    ) -> StoreResult<AudienceResult> {
+        // boundedLimit(limit, 20, AUDIENCE_MAX_SCAN)
+        let limit = match limit {
+            None => 20,
+            Some(l) => l.clamp(0, AUDIENCE_MAX_SCAN as i64) as usize,
+        };
+        let field = |k: &str| {
+            context
+                .get(k)
+                .and_then(Value::as_str)
+                .map(str::to_lowercase)
+                .unwrap_or_default()
+        };
+        let (role, task_type, mode) = (field("role"), field("taskType"), field("mode"));
+        let matches = |m: &SageRecord| -> bool {
+            let Some(a) = &m.audience else { return false };
+            let ok = |list: &Option<Vec<String>>, want: &str| match list {
+                Some(l) if !l.is_empty() => l.iter().any(|x| x.to_lowercase() == want),
+                _ => true,
+            };
+            ok(&a.roles, &role) && ok(&a.task_types, &task_type) && ok(&a.modes, &mode)
+        };
+
+        let mut offset = 0usize;
+        let mut window = limit * AUDIENCE_OVERFETCH_FACTOR;
+        let mut matched: Vec<SageRecord> = Vec::new();
+        let mut exhausted = false;
+        let mut scanned = 0usize;
+        while matched.len() < limit && offset < AUDIENCE_MAX_SCAN {
+            window = window.min(AUDIENCE_MAX_SCAN - offset);
+            if window == 0 {
+                break;
+            }
+            let mut args: Vec<rusqlite::types::Value> = Vec::new();
+            let session = session_sql("", viewer, &mut args);
+            args.push((window as i64).into());
+            args.push((offset as i64).into());
+            let n = args.len();
+            let rows = self.query_data(
+                &format!(
+                    "SELECT data FROM memories
+                      WHERE status IN ('active','stale') AND audience IS NOT NULL AND {session}
+                      ORDER BY importance DESC
+                      LIMIT ?{} OFFSET ?{n}",
+                    n - 1
+                ),
+                args,
+            )?;
+            scanned += rows.len();
+            if rows.len() < window {
+                exhausted = true;
+            }
+            matched.extend(
+                rows.iter()
+                    .filter_map(|d| decode_memory(d))
+                    .filter(|m| matches(m)),
+            );
+            if exhausted {
+                break;
+            }
+            offset += window;
+            window *= 3;
+        }
+        let total = matched.len();
+        matched.truncate(limit);
+        let truncated = (!exhausted && scanned > 0 && (total < limit || total > matched.len()))
+            .then_some(AudienceTruncation {
+                sql_rows_examined: scanned,
+                returned: matched.len(),
+            });
+        if let Some(t) = truncated
+            && self.writable()
+        {
+            crate::store::audit(
+                &self.conn,
+                "memory.audience_truncated",
+                now_iso,
+                json!({"context": context, "sqlRowsExamined": t.sql_rows_examined, "returned": t.returned}),
+            )
+            .map_err(sql_err)?;
+        }
+        Ok(AudienceResult {
+            memories: matched,
+            truncated,
+        })
     }
 }

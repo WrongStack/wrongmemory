@@ -653,6 +653,66 @@ const idOf = (v: unknown) => (v as { id?: string } | undefined)?.id;
   await s.run('getStats', 'getStats', {}, () => s.store.getStats(), { state: false });
 }
 
+// ─── audience retrieval ─────────────────────────────────────────────────────
+{
+  const s = new Scenario(
+    'audience',
+    'retrieveForAudience: role/taskType/mode matching, case folding, limits, session clause, truncation audit',
+  );
+  scenarios.push(s);
+  const rem = async (label: string, input: Row) =>
+    s.label(idOf(await s.run(`remember-${label}`, 'rememberSage', input, () => s.store.rememberSage(input), { state: false })), label)!;
+  await rem('reviewer', { text: 'Reviewers verify error handling on every server path.', kind: 'role_operational', importance: 0.9, audience: { roles: ['reviewer'] } });
+  await rem('reviewerTask', { text: 'During review tasks, reviewers compare migrations against the schema.', kind: 'role_operational', importance: 0.8, audience: { roles: ['Reviewer'], taskTypes: ['Review'] } });
+  await rem('planMode', { text: 'In plan mode, list the files to touch before editing anything.', kind: 'workflow', importance: 0.7, audience: { modes: ['plan'] } });
+  await rem('coder', { text: 'Coders run the formatter before committing generated files.', kind: 'convention', importance: 0.6, audience: { roles: ['coder'] } });
+  await rem('multiRole', { text: 'Coders and reviewers both keep public API docs in sync.', kind: 'convention', importance: 0.5, audience: { roles: ['coder', 'reviewer'] } });
+  await rem('plain', { text: 'The service listens on port 8080 by default.', importance: 0.95 });
+  await rem('sessionReviewer', {
+    text: 'Session note for reviewers: the flaky retry test is being investigated.',
+    kind: 'role_operational',
+    scope: 'session',
+    ownerSessionId: 'sess-A',
+    importance: 0.85,
+    audience: { roles: ['reviewer'] },
+  });
+  // Lexically distinct so the near-duplicate merge keeps them apart.
+  const bulkTexts = [
+    'Invoices are archived to cold storage after ninety days.',
+    'Thumbnail generation skips animated images entirely.',
+    'Webhook signatures use the shared secret rotation calendar.',
+    'Locale fallback resolves regional variants before English.',
+    'Payroll exports must close before the fifth business day.',
+    'Search reindexing pauses while snapshots are restored.',
+    'Mobile push tokens expire when devices stay idle a month.',
+    'Feature flags default off for enterprise tenants.',
+    'Geocoding requests are cached per postal code.',
+    'Audit trails retain actor addresses for compliance reviews.',
+    'Uploads larger than one gigabyte go through multipart.',
+    'Dark mode palettes derive from the brand primary hue.',
+  ];
+  for (let i = 0; i < bulkTexts.length; i++) {
+    await rem(`bulk${i}`, { text: bulkTexts[i], importance: 0.2 + i * 0.01, audience: { roles: ['bulk'] } });
+  }
+  await s.run('state', 'dump', {}, () => undefined);
+  const aud = (step: string, context: Row, limit?: number, sessionId?: string) =>
+    s.run(step, 'retrieveForAudience', { context, limit, sessionId }, () =>
+      s.store.retrieveForAudience(context as never, limit, undefined, sessionId),
+    );
+  await aud('role-reviewer', { role: 'reviewer' });
+  await aud('role-REVIEWER-task-review', { role: 'REVIEWER', taskType: 'review' });
+  await aud('role-reviewer-task-other', { role: 'reviewer', taskType: 'other' });
+  await aud('mode-plan', { mode: 'plan' });
+  await aud('mode-plan-role-coder', { role: 'coder', mode: 'plan' });
+  await aud('empty-context', {});
+  await aud('role-coder-limit-1', { role: 'coder' }, 1);
+  await aud('role-reviewer-session-A', { role: 'reviewer' }, undefined, 'sess-A');
+  await aud('role-reviewer-session-B', { role: 'reviewer' }, undefined, 'sess-B');
+  await aud('role-bulk-limit-2-truncated', { role: 'bulk' }, 2);
+  await aud('role-bulk-limit-20', { role: 'bulk' }, 20);
+  await aud('role-nobody', { role: 'nobody' }, 3);
+}
+
 // ─── Write ──────────────────────────────────────────────────────────────────
 mkdirSync(outDir, { recursive: true });
 const index: Array<{ scenario: string; description: string; steps: number; errors: number }> = [];

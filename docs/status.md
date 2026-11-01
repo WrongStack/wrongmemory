@@ -31,7 +31,7 @@ Legend: **Done**, meaning implemented and covered by an automated test or record
 | WM-001 | Done | Full DDL, triggers, FTS and HQ tables. Test: `managed_store_ddl_matches_oracle_fingerprint`. |
 | WM-002 | Done | `contracts/fixtures/record-shape.json`, with known answers from the real normalizers. |
 | WM-003 | Done (review list) | `contracts/inventory/writers.json`. It matches by name, so the suspected collisions are not individually confirmed. |
-| WM-004 | Done | Search with one or more terms, path retrieval, exact ID, cursors and graph, recorded in the oracle fixtures. Audience retrieval is not captured; see WM-501. |
+| WM-004 | Done | Search with one or more terms, path retrieval, exact ID, cursors, graph, related and audience retrieval, recorded in the oracle fixtures (`oracle-mutations/graph-retrieval.json`, `audience.json`). |
 | WM-005 | Done | Mutation fixtures: remember/merge, update/revision, feedback, delete/recover, candidates, hygiene. |
 | WM-006 | Done | `contracts/inventory/mcp-tools.json` (`sage-mcp` tool and policy inventory). |
 | WM-007 | Partial | Synthetic corpora: multilingual (`unicode`), worktree (temp git repos), session (adversarial tests). No real-task corpus. |
@@ -111,7 +111,7 @@ These failures are not caused by the adapter. The main checkout was not modified
 | ID | State | Evidence / gap |
 |---|---|---|
 | WM-500 | Done | Search order is identical to the oracle for every query with one or more terms, including the hybrid rerank (`tests/oracle_parity.rs`). `\p{L}` is approximated by `char::is_alphabetic`. |
-| WM-501 | Partial | Path and graph traversal, with hub damping, match the oracle. Audience retrieval is not implemented. |
+| WM-501 | Done | `tests/oracle_retrieval_replay.rs` replays the oracle's graph-retrieval and audience scenarios and compares results. Path, related, graph, traverse, audience (including the truncation audit), search, list paging and stats `byStatus`/`byKind` all match. This replay found and fixed three gaps: `graphFor` now adds the anchors of every memory start, and `findRelated` is a full port of the baseline candidate collection (anchor-path ancestors, about_* targets, importance-ordered tags, command families, final ranking). `memory.forAudience` is exposed over IPC. |
 | WM-502 | Done | Remember, exact and near-duplicate merge, supersedes and contradicts, raw-JSON patch on update, revision guard (lifecycle oracle replay). |
 | WM-503 | Done | Feedback (up to 8 entries; session and principal set by the server), usage counters. |
 | WM-504 | Done | Candidates: propose with dedupe; accept, reject and resolve in one transaction; reverted resolution writes an audit record. Consolidation is not implemented. |
@@ -185,8 +185,13 @@ The recall figure comes from a synthetic corpus of code tokens. It is not a qual
 Findings from the M run:
 
 - **Fixed: the near-duplicate importance window sorted the whole scope.** That made each `remember` O(n), at 6 writes/s at 10k. It is now one ordered index walk per status, merged on the same key, with the same rows and order.
-- **Fixed: path lookup did a full edges scan.** `to_node IN (...) OR to_node GLOB ...` prevented use of `idx_edge_to`, giving 42 ms p50 at 25k. It is now indexed `IN` plus BINARY prefix-range arms. The path oracle passes, including symbol anchors.
-  - The M row above was measured before this fix.
+- **Fixed: path lookup was O(n).** There were two causes:
+  - The plan walked every memory in importance order and probed `id IN (edges…)` for each row.
+  - The symbol arm used the `from_node` range implied by `GLOB 'mem:*'`.
+
+  Now the hit ids are materialized with `idx_edge_to` pinned on every arm (an exact BINARY prefix range replaces the GLOB) and joined to `memories` by primary key. The result is the same rows; the path oracle passes, including symbol anchors.
+  - Reproduction on a 25k-row copy: 9.2 ms → 0.013 ms.
+  - A first attempt that only split the GLOB did not help (45 ms in the second M run).
   - Re-measuring M is pending.
 - **Inherited baseline cost, kept for parity: the lexical near-duplicate window.** It is `bm25` over an OR of every prefix term with `LIMIT 32`, as in `sqlite-store-remember.ts` at `222d23a`.
   - It scores every row that shares any term, so `remember` slows as lexically overlapping rows grow.
@@ -199,8 +204,8 @@ Findings from the M run:
 |---|---|
 | `cargo fmt --all -- --check` | PASS |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo test --workspace --locked` ×5 | PASS 108/108 on each run; no leftover daemon processes |
+| `cargo test --workspace --locked` ×5 | PASS 110/110 on each run; no leftover daemon processes |
 | `bun run test:client` (TS client 10/10, contract parity) | PASS |
 | Adapter: wrongmemory-client 6/6, sage port 20/20 against the release daemon | PASS |
-| Hosted CI on this commit | not checked yet |
+| Hosted CI (`32f0e8b`) | PASS |
 | Real MCP clients, live store adoption, signed release | NOT RUN |

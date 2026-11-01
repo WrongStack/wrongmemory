@@ -43,6 +43,12 @@
       "description": "findRelatedSage, graphFor, traverseGraph, retrieveForPath expansion, listSagePage cursor walk, multi-term search rerank, getStats",
       "steps": 43,
       "errors": 0
+    },
+    {
+      "scenario": "audience",
+      "description": "retrieveForAudience: role/taskType/mode matching, case folding, limits, session clause, truncation audit",
+      "steps": 32,
+      "errors": 0
     }
   ],
   "warnings": 1

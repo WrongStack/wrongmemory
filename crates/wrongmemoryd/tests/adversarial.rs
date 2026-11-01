@@ -174,7 +174,7 @@ async fn add_private(h: &mut Client, w: &mut World) {
         Some(&w.a),
         json!({"text": format!("Session scratch gateway token {PRIV_MARK}"), "scope": "session",
                "anchors": [{"type": "file", "path": "src/a.rs"}, {"type": "symbol", "path": "src/a.rs", "symbol": "gateway_private"}],
-               "relatedMemoryIds": [w.public]}),
+               "relatedMemoryIds": [w.public], "audience": {"roles": ["reviewer"]}}),
     )
     .await["id"]);
     w.private_cand = s(&call(
@@ -250,6 +250,7 @@ async fn grants_cannot_cross_projects_or_sessions() {
         method::MEMORY_RECORD_USAGE,
         method::MEMORY_LIST_PAGE,
         method::MEMORY_RELATED,
+        method::MEMORY_FOR_AUDIENCE,
         method::MEMORY_GRAPH,
         method::MEMORY_STATS,
         method::MEMORY_RECOVER,
@@ -428,6 +429,14 @@ async fn grants_cannot_cross_projects_or_sessions() {
             json!({"query": "src/a.rs", "maxDepth": 4}),
         ),
         (method::MEMORY_GRAPH, json!({"query": w.private})),
+        (
+            method::MEMORY_FOR_AUDIENCE,
+            json!({"context": {"role": "reviewer"}}),
+        ),
+        (
+            method::MEMORY_FOR_AUDIENCE,
+            json!({"context": {"role": "REVIEWER"}, "limit": 1}),
+        ),
         (method::MEMORY_STATS, json!({})),
         (method::EVENTS_SINCE, json!({"generation": 0})),
         (method::CANDIDATE_LIST, json!({})),
@@ -447,6 +456,14 @@ async fn grants_cannot_cross_projects_or_sessions() {
     )
     .await;
     assert_eq!(own["id"], w.private.as_str());
+    let own_aud = call(
+        &mut h,
+        method::MEMORY_FOR_AUDIENCE,
+        Some(&w.a),
+        json!({"context": {"role": "reviewer"}}),
+    )
+    .await;
+    assert_eq!(own_aud["memories"][0]["id"], w.private.as_str());
 
     // ── Cursor reuse across projects ──
     for i in 0..3 {

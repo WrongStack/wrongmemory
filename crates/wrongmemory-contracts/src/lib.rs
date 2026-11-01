@@ -372,6 +372,7 @@ pub mod method {
     pub const MEMORY_RECORD_USAGE: &str = "memory.recordUsage";
     pub const MEMORY_LIST_PAGE: &str = "memory.listPage";
     pub const MEMORY_RELATED: &str = "memory.related";
+    pub const MEMORY_FOR_AUDIENCE: &str = "memory.forAudience";
     pub const MEMORY_GRAPH: &str = "memory.graph";
     pub const MEMORY_STATS: &str = "memory.stats";
     pub const MEMORY_RECOVER: &str = "memory.recover";
@@ -413,6 +414,7 @@ pub mod method {
         MEMORY_RECORD_USAGE,
         MEMORY_LIST_PAGE,
         MEMORY_RELATED,
+        MEMORY_FOR_AUDIENCE,
         MEMORY_GRAPH,
         MEMORY_STATS,
         MEMORY_RECOVER,

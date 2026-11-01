@@ -151,11 +151,11 @@ fn normalize_anchor_path(p: Option<&str>) -> String {
     if n.is_empty() { ".".into() } else { n }
 }
 
-fn normalize_command(c: &str) -> String {
+pub(crate) fn normalize_command(c: &str) -> String {
     crate::text::collapse_js_space(&unicode_fold(c.trim()))
 }
 
-fn command_family(c: &str) -> String {
+pub(crate) fn command_family(c: &str) -> String {
     c.split(crate::text::is_js_space)
         .take(2)
         .collect::<Vec<_>>()

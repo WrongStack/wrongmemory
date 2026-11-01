@@ -568,6 +568,7 @@ fn required_action(m: &str) -> Option<Action> {
         | method::MEMORY_FOR_PATH
         | method::MEMORY_LIST_PAGE
         | method::MEMORY_RELATED
+        | method::MEMORY_FOR_AUDIENCE
         | method::MEMORY_GRAPH
         | method::MEMORY_STATS
         | method::MAINTENANCE_STATUS
@@ -1143,6 +1144,7 @@ async fn dispatch_inner(
         }
         method::MEMORY_LIST_PAGE
         | method::MEMORY_RELATED
+        | method::MEMORY_FOR_AUDIENCE
         | method::MEMORY_GRAPH
         | method::MEMORY_STATS => {
             let viewer = Viewer {
@@ -1188,6 +1190,33 @@ async fn dispatch_inner(
                             &viewer,
                         )?;
                         Ok(json!({ "hits": hits }))
+                    }
+                    method::MEMORY_FOR_AUDIENCE => {
+                        let context = params.get("context").cloned().unwrap_or(json!({}));
+                        if !context.is_object() {
+                            return Err(err(
+                                ErrorCode::InvalidRequest,
+                                "context must be an object",
+                            ));
+                        }
+                        for k in ["role", "taskType", "mode"] {
+                            if context
+                                .get(k)
+                                .is_some_and(|v| !v.is_string() && !v.is_null())
+                            {
+                                return Err(err(
+                                    ErrorCode::InvalidRequest,
+                                    format!("context.{k} must be a string"),
+                                ));
+                            }
+                        }
+                        let limit = params.get("limit").and_then(Value::as_i64);
+                        to_value(store.retrieve_for_audience(
+                            &context,
+                            limit,
+                            &viewer,
+                            &now_iso(),
+                        )?)
                     }
                     method::MEMORY_GRAPH => to_value(store.graph_for(
                         &s("query").unwrap_or_default(),
