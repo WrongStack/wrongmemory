@@ -791,6 +791,73 @@ const idOf = (v: unknown) => (v as { id?: string } | undefined)?.id;
   await s.run('verify-unknown-id', 'verify', { id: 'mem_doesnotexist' }, () => s.store.verify('mem_doesnotexist'));
 }
 
+// ─── unified search ─────────────────────────────────────────────────────────
+{
+  const s = new Scenario(
+    'unified-search',
+    'unifiedSearchService: filters, audience/anchor post-filters, rankings, scores, suggestions, keyset cursor walks, session rules, invalid cursors',
+  );
+  scenarios.push(s);
+  s.file('src/server/http.ts', 'export function startServer() {}\n');
+  s.file('src/server/routes.ts', 'export const routes = [];\n');
+  const rem = async (label: string, input: Row, seconds = 1) => {
+    tick(seconds);
+    return s.label(idOf(await s.run(`remember-${label}`, 'rememberSage', input, () => s.store.rememberSage(input), { state: false })), label)!;
+  };
+  await rem('portBind', { text: 'The server binds the port before plugins load.', kind: 'fact', importance: 0.8, tags: ['server'], anchors: [{ type: 'symbol', path: 'src/server/http.ts', symbol: 'startServer' }] });
+  await rem('portEnv', { text: 'The server port comes from the PORT environment variable.', kind: 'convention', importance: 0.6, anchors: [{ type: 'file', path: 'src/server/http.ts' }] }, 600);
+  await rem('routes', { text: 'Routes register in declaration order on the server.', kind: 'convention', importance: 0.6, anchors: [{ type: 'file', path: 'src/server/routes.ts' }] }, 600);
+  await rem('dirNote', { text: 'Everything under src/server is owned by the platform team.', kind: 'decision', importance: 0.4, anchors: [{ type: 'directory', path: 'src/server' }] }, 86_400);
+  await rem('reviewer', { text: 'Reviewers check error handling on server paths.', kind: 'role_operational', importance: 0.7, audience: { roles: ['Reviewer'] } }, 60);
+  await rem('userPref', { text: 'The user prefers small focused pull requests.', kind: 'preference', scope: 'user', importance: 0.9 }, 60);
+  await rem('sessionNote', { text: 'Session scratch: server port flake under investigation.', scope: 'session', ownerSessionId: 'sess-A', importance: 0.5 }, 60);
+  const staleId = await rem('staleNote', { text: 'The server used to listen on port 3000.', importance: 0.3 }, 60);
+  await s.run('make-stale', 'updateSage', { id: staleId, status: 'stale' }, () => s.store.updateSage(staleId, { status: 'stale' }), { state: false });
+  for (let i = 0; i < 4; i++) await rem(`filler${i}`, { text: `Deployment checklist item ${['alpha', 'bravo', 'charlie', 'delta'][i]} for release trains.`, importance: 0.5 }, 30);
+  await s.run('state', 'dump', {}, () => undefined);
+  const us = (step: string, query: Row, options?: Row) =>
+    s.run(step, 'unifiedSearchService', { query, options }, () => s.store.unifiedSearchService(query as never, options as never), { state: false });
+  await us('text-two-terms', { text: 'server port' });
+  await us('text-one-term', { text: 'routes' });
+  await us('text-no-hit-suggest-default', { text: 'server zebra' });
+  await us('text-suggest-always', { text: 'server port', }, { suggest: 'always' });
+  await us('text-suggest-never', { text: 'server zebra' }, { suggest: 'never' });
+  await us('kinds', { kinds: ['convention'] });
+  await us('scopes-user', { scopes: ['user'] });
+  await us('importance-at-least', { importanceAtLeast: 0.65 });
+  await us('freshness-created-after', { freshness: { createdAfter: new Date(EPOCH + 86_000_000).toISOString() } });
+  await us('paths', { paths: ['src/server/http.ts'] });
+  await us('paths-outside-root', { paths: ['../elsewhere.ts'] });
+  await us('audience', { audience: { roles: ['reviewer'] } });
+  await us('anchor-symbol', { anchor: { type: 'symbol', path: 'src/server/http.ts', symbol: 'startServer' } });
+  for (const ranking of ['recency', 'importance', 'relevance', 'hybrid']) {
+    await us(`ranking-${ranking}-plain`, {}, { ranking, limit: 5 });
+    await us(`ranking-${ranking}-text`, { text: 'server' }, { ranking, limit: 5 });
+  }
+  await us('statuses-active-stale', { text: 'server port' }, { includeStatuses: ['active', 'stale'] });
+  await us('statuses-empty', { text: 'server' }, { includeStatuses: [] });
+  await us('session-A', { text: 'server port' }, { sessionId: 'sess-A' });
+  await us('session-A-exclude-session-scoped', { text: 'server port' }, { sessionId: 'sess-A', excludeSessionScoped: true });
+  // Cursor walks: plain recency (limit 2) and hybrid text (limit 1).
+  for (const [name, query, options] of [
+    ['walk-recency', {}, { ranking: 'recency', limit: 2 }],
+    ['walk-hybrid-text', { text: 'server' }, { ranking: 'hybrid', limit: 1 }],
+    ['walk-audience', { audience: { roles: ['reviewer'] } }, { ranking: 'importance', limit: 1 }],
+  ] as Array<[string, Row, Row]>) {
+    let cursor: string | undefined;
+    for (let page = 0; page < 12; page++) {
+      const q = cursor === undefined ? query : { ...query, cursor };
+      const res = (await us(`${name}-page${page}`, q, options)) as { nextCursor: string | null } | undefined;
+      cursor = res?.nextCursor ?? undefined;
+      if (!cursor) break;
+    }
+  }
+  const first = (await s.store.unifiedSearchService({} as never, { ranking: 'recency', limit: 2 } as never)) as { nextCursor: string };
+  await us('cursor-ranking-mismatch', { cursor: first.nextCursor }, { ranking: 'importance', limit: 2 });
+  await us('cursor-filter-mismatch', { kinds: ['fact'], cursor: first.nextCursor }, { ranking: 'recency', limit: 2 });
+  await us('cursor-malformed', { cursor: 'not-a-cursor' });
+}
+
 // ─── Write ──────────────────────────────────────────────────────────────────
 mkdirSync(outDir, { recursive: true });
 const index: Array<{ scenario: string; description: string; steps: number; errors: number }> = [];

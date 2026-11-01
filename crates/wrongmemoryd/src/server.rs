@@ -570,6 +570,7 @@ fn required_action(m: &str) -> Option<Action> {
         | method::MEMORY_RELATED
         | method::MEMORY_FOR_AUDIENCE
         | method::MEMORY_FOR_FILE
+        | method::MEMORY_UNIFIED_SEARCH
         | method::MEMORY_GRAPH
         | method::MEMORY_STATS
         | method::MAINTENANCE_STATUS
@@ -1211,6 +1212,7 @@ async fn dispatch_inner(
         | method::MEMORY_RELATED
         | method::MEMORY_FOR_AUDIENCE
         | method::MEMORY_FOR_FILE
+        | method::MEMORY_UNIFIED_SEARCH
         | method::MEMORY_GRAPH
         | method::MEMORY_STATS => {
             let viewer = Viewer {
@@ -1315,6 +1317,18 @@ async fn dispatch_inner(
                             line_end: int("lineEnd"),
                         };
                         store.find_memories_for_file(&path, &q, &viewer, &now_iso())
+                    }
+                    method::MEMORY_UNIFIED_SEARCH => {
+                        // Session context comes from the connection; any
+                        // client-supplied sessionId/includeAllSessions is
+                        // ignored (dropped before parsing).
+                        let query = params.get("query").cloned().unwrap_or(json!({}));
+                        let mut options = params.get("options").cloned().unwrap_or(json!({}));
+                        if let Some(o) = options.as_object_mut() {
+                            o.remove("sessionId");
+                            o.remove("includeAllSessions");
+                        }
+                        store.unified_search(&query, &options, &viewer, &now_iso())
                     }
                     method::MEMORY_GRAPH => to_value(store.graph_for(
                         &s("query").unwrap_or_default(),

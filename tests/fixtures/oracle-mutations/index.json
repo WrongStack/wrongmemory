@@ -61,6 +61,12 @@
       "description": "verify / verifyForPaths: file, symbol, directory, command and agent anchors; stale and reactivation reconciliation; manual stale kept",
       "steps": 21,
       "errors": 0
+    },
+    {
+      "scenario": "unified-search",
+      "description": "unifiedSearchService: filters, audience/anchor post-filters, rankings, scores, suggestions, keyset cursor walks, session rules, invalid cursors",
+      "steps": 54,
+      "errors": 3
     }
   ],
   "warnings": 1

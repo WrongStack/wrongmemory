@@ -22,6 +22,7 @@ pub mod schema;
 pub mod similarity;
 pub mod store;
 pub mod text;
+pub mod unified_search;
 pub mod verify;
 pub mod wrongstack_paths;
 

@@ -117,6 +117,7 @@ These failures are not caused by the adapter. The main checkout was not modified
 |---|---|---|
 | WM-500 | Done | Search order is identical to the oracle for every query with one or more terms, including the hybrid rerank (`tests/oracle_parity.rs`). `\p{L}` is approximated by `char::is_alphabetic`. |
 | WM-501 | Done | `tests/oracle_retrieval_replay.rs` replays the oracle's graph-retrieval and audience scenarios and compares results. Path, related, graph, traverse, audience (including the truncation audit), search, list paging and stats `byStatus`/`byKind` all match. This replay found and fixed three gaps: `graphFor` now adds the anchors of every memory start, and `findRelated` is a full port of the baseline candidate collection (anchor-path ancestors, about_* targets, importance-ordered tags, command families, final ranking). `memory.forAudience` is exposed over IPC. `findMemoriesForFile` is `memory.forFile` plus the MCP tool `memory_for_file`. It matches the oracle bucket by bucket and uses a ported `normalizeProjectPath` with realpath containment. Supersession heads and review hints are resolved among visible records only. |
+| WM-501b | Done | `unifiedSearchService` is `memory.unifiedSearch`. It covers filters, audience and anchor post-filters, four rankings, absolute scores, lexical suggestions and strict keyset cursors bound to the query, filters, ranking and session. The replay of the oracle's `unified-search` scenario (54 steps) matches order, scores, bm25, cursor payloads including the binding hash, totals, echo and refusals. The session comes from the connection, and client `sessionId` and `includeAllSessions` are dropped. |
 | WM-502 | Done | Remember, exact and near-duplicate merge, supersedes and contradicts, raw-JSON patch on update, revision guard (lifecycle oracle replay). |
 | WM-503 | Done | Feedback (up to 8 entries; session and principal set by the server), usage counters. |
 | WM-504 | Done | Candidates: propose with dedupe; accept, reject and resolve in one transaction; reverted resolution writes an audit record. Accepting a consolidation proposal supersedes its members. Legacy `consolidate(scope)` is `memory.legacyConsolidate` (see WM-510). |
@@ -210,7 +211,7 @@ Findings from the M run:
 |---|---|
 | `cargo fmt --all -- --check` | PASS |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo test --workspace --locked` ×5 | PASS 125/125 on each run (127 after the path-guard fix, one run); no leftover daemon processes |
+| `cargo test --workspace --locked` ×5 | PASS 130/130 on each run; no leftover daemon processes |
 | `bun run test:client` (TS client 10/10, contract parity) | PASS |
 | Adapter: wrongmemory-client 6/6, sage port 20/20 against the release daemon | PASS |
 | Hosted CI (`32f0e8b`) | PASS |

@@ -455,3 +455,191 @@ fn graph_retrieval_reads_match_oracle() {
 fn audience_retrieval_matches_oracle() {
     assert_clean(replay("audience", &[]));
 }
+
+/// `unifiedSearchService` against the oracle (`unified-search.json`): per
+/// call the hit and suggestion ids in order with score, bm25 and match
+/// reason; `totalCandidates`, `rankingApplied`, `queryEcho`,
+/// `matchChannel`; the decoded `nextCursor` (binding hash, ranking, channel
+/// and anchor tuple); and refusals. Recorded cursors are re-encoded with the
+/// replay's ids, so a walk follows exactly the oracle's positions.
+#[test]
+fn unified_search_matches_oracle() {
+    let f = fixture("unified-search");
+    let mut r = Replay::new(&["src/server/http.ts", "src/server/routes.ts"]);
+    let mut diffs = Vec::new();
+    let mut now = String::new();
+    let close = |a: &Value, b: &Value| match (a.as_f64(), b.as_f64()) {
+        (Some(x), Some(y)) => (x - y).abs() <= 1e-9 * x.abs().max(1.0),
+        _ => a == b,
+    };
+    for st in f["steps"].as_array().unwrap() {
+        let step = st["step"].as_str().unwrap_or("");
+        let Some(method) = st["call"]["method"].as_str() else {
+            continue;
+        };
+        let input = &st["call"]["input"];
+        match method {
+            "rememberSage" => {
+                now = st["result"]["createdAt"].as_str().unwrap().to_string();
+                r.remember(st, &now);
+                continue;
+            }
+            "updateSage" => {
+                now = bump(&now);
+                let id = r.real(input["id"].as_str().unwrap());
+                let mut patch = input.as_object().unwrap().clone();
+                patch.remove("id");
+                let ctx = wrongmemory_storage::MutationCtx {
+                    principal_id: "host".into(),
+                    client_label: "oracle-replay".into(),
+                    session_id: None,
+                    idempotency_key: None,
+                    now_iso: now.clone(),
+                };
+                r.store.update(&id, &patch, &ctx, false).unwrap();
+                continue;
+            }
+            "dump" => {
+                now = bump(&now);
+                continue;
+            }
+            "unifiedSearchService" => now = bump(&now),
+            other => panic!("unhandled oracle method {other}"),
+        }
+        let mut query = input["query"].clone();
+        if let Some(c) = query["cursor"].as_str() {
+            query["cursor"] = json!(reencode_cursor(&r, c));
+        }
+        let options = input.get("options").cloned().unwrap_or(json!({}));
+        let v = viewer(options["sessionId"].as_str());
+        let got = r.store.unified_search(&query, &options, &v, &now);
+        let want = &st["result"];
+        match (st.get("error"), got) {
+            (Some(_), Err(_)) => continue,
+            (Some(e), Ok(g)) => {
+                diffs.push(format!(
+                    "{step}: oracle refused ({}), ours returned {g}",
+                    e["message"]
+                ));
+                continue;
+            }
+            (None, Err(e)) => {
+                diffs.push(format!("{step}: ours refused: {}", e.message));
+                continue;
+            }
+            (None, Ok(got)) => {
+                for list in ["hits", "suggestions"] {
+                    let w = want[list].as_array().unwrap();
+                    let g = got[list].as_array().unwrap();
+                    let wid: Vec<String> = w
+                        .iter()
+                        .map(|h| Replay::label(h["id"].as_str().unwrap()))
+                        .collect();
+                    let gid: Vec<String> = g
+                        .iter()
+                        .map(|h| r.label_of(h["id"].as_str().unwrap()))
+                        .collect();
+                    if wid != gid {
+                        diffs.push(format!("{step}: {list} oracle={wid:?} ours={gid:?}"));
+                        continue;
+                    }
+                    for (a, b) in w.iter().zip(g) {
+                        for k in [
+                            "score",
+                            "bm25",
+                            "matchReason",
+                            "kind",
+                            "scope",
+                            "status",
+                            "importance",
+                        ] {
+                            if !close(&a[k], &b[k]) {
+                                diffs.push(format!(
+                                    "{step}: {list} {} {k} oracle={} ours={}",
+                                    Replay::label(a["id"].as_str().unwrap()),
+                                    a[k],
+                                    b[k]
+                                ));
+                            }
+                        }
+                    }
+                }
+                for k in [
+                    "totalCandidates",
+                    "rankingApplied",
+                    "queryEcho",
+                    "matchChannel",
+                ] {
+                    if want[k] != got[k] {
+                        diffs.push(format!("{step}: {k} oracle={} ours={}", want[k], got[k]));
+                    }
+                }
+                let wc = want["nextCursor"].as_str().map(fixture_cursor);
+                let gc = got["nextCursor"].as_str().map(|c| our_cursor(&r, c));
+                let same = match (&wc, &gc) {
+                    (Some(a), Some(b)) => {
+                        a.as_object().unwrap().iter().all(|(k, v)| close(v, &b[k]))
+                            && a.as_object().unwrap().len() == b.as_object().unwrap().len()
+                    }
+                    (None, None) => true,
+                    _ => false,
+                };
+                if !same {
+                    diffs.push(format!("{step}: nextCursor oracle={wc:?} ours={gc:?}"));
+                }
+            }
+        }
+    }
+    assert_clean(diffs);
+}
+
+fn bump(iso: &str) -> String {
+    let ms = wrongmemory_storage::text::parse_iso_ms(iso).unwrap() + 1000;
+    let secs = ms.div_euclid(1000);
+    let millis = ms.rem_euclid(1000);
+    let days = secs.div_euclid(86_400);
+    let tod = secs.rem_euclid(86_400);
+    // Civil-from-days (Howard Hinnant).
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + if m <= 2 { 1 } else { 0 };
+    format!(
+        "{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}.{millis:03}Z",
+        tod / 3600,
+        (tod % 3600) / 60,
+        tod % 60
+    )
+}
+
+/// `<cursor:{...}>` from the fixture: the decoded payload with labels.
+fn fixture_cursor(c: &str) -> Value {
+    let inner = c
+        .strip_prefix("<cursor:")
+        .and_then(|s| s.strip_suffix('>'))
+        .unwrap();
+    let mut v: Value = serde_json::from_str(inner).unwrap();
+    v["i"] = json!(Replay::label(v["i"].as_str().unwrap()));
+    v
+}
+
+fn our_cursor(r: &Replay, token: &str) -> Value {
+    let bytes = wrongmemory_storage::retrieval::base64url_decode(token).unwrap();
+    let mut v: Value = serde_json::from_slice(&bytes).unwrap();
+    v["i"] = json!(r.label_of(v["i"].as_str().unwrap()));
+    v
+}
+
+fn reencode_cursor(r: &Replay, c: &str) -> String {
+    let Some(inner) = c.strip_prefix("<cursor:").and_then(|s| s.strip_suffix('>')) else {
+        return c.to_string(); // a deliberately malformed token
+    };
+    let mut v: Value = serde_json::from_str(inner).unwrap();
+    v["i"] = json!(r.real(v["i"].as_str().unwrap()));
+    wrongmemory_storage::retrieval::base64url_encode(v.to_string().as_bytes())
+}

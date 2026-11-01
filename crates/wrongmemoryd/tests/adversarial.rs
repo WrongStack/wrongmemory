@@ -252,6 +252,7 @@ async fn grants_cannot_cross_projects_or_sessions() {
         method::MEMORY_RELATED,
         method::MEMORY_FOR_AUDIENCE,
         method::MEMORY_FOR_FILE,
+        method::MEMORY_UNIFIED_SEARCH,
         method::MEMORY_GRAPH,
         method::MEMORY_STATS,
         method::MEMORY_RECOVER,
@@ -443,6 +444,19 @@ async fn grants_cannot_cross_projects_or_sessions() {
         ),
         (method::MEMORY_FOR_FILE, json!({"path": "src/a.rs"})),
         (
+            method::MEMORY_UNIFIED_SEARCH,
+            json!({"query": {"text": "session scratch"}, "options": {"sessionId": "host-s1", "includeAllSessions": true,
+                    "includeStatuses": ["active", "stale", "superseded", "contradicted", "archived", "deleted"]}}),
+        ),
+        (
+            method::MEMORY_UNIFIED_SEARCH,
+            json!({"query": {"text": "gateway token", "paths": ["src/a.rs"]}, "options": {"suggest": "always", "limit": 200}}),
+        ),
+        (
+            method::MEMORY_UNIFIED_SEARCH,
+            json!({"query": {"anchor": {"type": "symbol", "path": "src/a.rs", "symbol": "gateway_private"}}}),
+        ),
+        (
             method::MEMORY_FOR_FILE,
             json!({"path": "src/a.rs", "includeDeleted": true, "lineStart": 1, "lineEnd": 99}),
         ),
@@ -453,7 +467,11 @@ async fn grants_cannot_cross_projects_or_sessions() {
         (method::PROJECT_GET, json!({})),
     ];
     for (m, params) in reads {
-        let v = call(&mut rp, m, Some(&w.a), params.clone()).await;
+        let mut v = call(&mut rp, m, Some(&w.a), params.clone()).await;
+        // `queryEcho` repeats the caller's own input, not stored data.
+        if let Some(o) = v.as_object_mut() {
+            o.remove("queryEcho");
+        }
         assert_clean(&format!("{m} {params}"), &v, &secrets);
     }
     // The host session itself still sees its private row (sanity).

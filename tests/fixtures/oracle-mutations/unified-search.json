@@ -1,0 +1,4113 @@
+{
+  "scenario": "unified-search",
+  "description": "unifiedSearchService: filters, audience/anchor post-filters, rankings, scores, suggestions, keyset cursor walks, session rules, invalid cursors",
+  "baseline": "222d23a90ae9c67c2433d7734c6966be7ee4e696",
+  "clockEpoch": "2026-11-01T00:00:00.000Z",
+  "steps": [
+    {
+      "step": "remember-portBind",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "The server binds the port before plugins load.",
+          "kind": "fact",
+          "importance": 0.8,
+          "tags": [
+            "server"
+          ],
+          "anchors": [
+            {
+              "type": "symbol",
+              "path": "src/server/http.ts",
+              "symbol": "startServer"
+            }
+          ]
+        }
+      },
+      "result": {
+        "id": "<id:portBind>",
+        "revision": 1,
+        "text": "The server binds the port before plugins load.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [
+          "server"
+        ],
+        "anchors": [
+          {
+            "type": "symbol",
+            "path": "src/server/http.ts",
+            "symbol": "startServer"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.8,
+        "confidence": 0.8,
+        "freshness": 1,
+        "createdAt": "2026-12-10T00:04:20.000Z",
+        "updatedAt": "2026-12-10T00:04:20.000Z"
+      }
+    },
+    {
+      "step": "remember-portEnv",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "The server port comes from the PORT environment variable.",
+          "kind": "convention",
+          "importance": 0.6,
+          "anchors": [
+            {
+              "type": "file",
+              "path": "src/server/http.ts"
+            }
+          ]
+        }
+      },
+      "result": {
+        "id": "<id:portEnv>",
+        "revision": 1,
+        "text": "The server port comes from the PORT environment variable.",
+        "kind": "convention",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [
+          {
+            "type": "file",
+            "path": "src/server/http.ts"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "createdAt": "2026-12-10T00:14:21.000Z",
+        "updatedAt": "2026-12-10T00:14:21.000Z"
+      }
+    },
+    {
+      "step": "remember-routes",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Routes register in declaration order on the server.",
+          "kind": "convention",
+          "importance": 0.6,
+          "anchors": [
+            {
+              "type": "file",
+              "path": "src/server/routes.ts"
+            }
+          ]
+        }
+      },
+      "result": {
+        "id": "<id:routes>",
+        "revision": 1,
+        "text": "Routes register in declaration order on the server.",
+        "kind": "convention",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [
+          {
+            "type": "file",
+            "path": "src/server/routes.ts"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "createdAt": "2026-12-10T00:24:22.000Z",
+        "updatedAt": "2026-12-10T00:24:22.000Z"
+      }
+    },
+    {
+      "step": "remember-dirNote",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Everything under src/server is owned by the platform team.",
+          "kind": "decision",
+          "importance": 0.4,
+          "anchors": [
+            {
+              "type": "directory",
+              "path": "src/server"
+            }
+          ]
+        }
+      },
+      "result": {
+        "id": "<id:dirNote>",
+        "revision": 1,
+        "text": "Everything under src/server is owned by the platform team.",
+        "kind": "decision",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [
+          {
+            "type": "directory",
+            "path": "src/server"
+          }
+        ],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.4,
+        "confidence": 0.8,
+        "freshness": 1,
+        "createdAt": "2026-12-11T00:24:23.000Z",
+        "updatedAt": "2026-12-11T00:24:23.000Z"
+      }
+    },
+    {
+      "step": "remember-reviewer",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Reviewers check error handling on server paths.",
+          "kind": "role_operational",
+          "importance": 0.7,
+          "audience": {
+            "roles": [
+              "Reviewer"
+            ]
+          }
+        }
+      },
+      "result": {
+        "id": "<id:reviewer>",
+        "revision": 1,
+        "text": "Reviewers check error handling on server paths.",
+        "kind": "role_operational",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "audience": {
+          "roles": [
+            "reviewer"
+          ]
+        },
+        "importance": 0.7,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-12-11T00:25:24.000Z",
+        "updatedAt": "2026-12-11T00:25:24.000Z"
+      }
+    },
+    {
+      "step": "remember-userPref",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "The user prefers small focused pull requests.",
+          "kind": "preference",
+          "scope": "user",
+          "importance": 0.9
+        }
+      },
+      "result": {
+        "id": "<id:userPref>",
+        "revision": 1,
+        "text": "The user prefers small focused pull requests.",
+        "kind": "preference",
+        "scope": "user",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.9,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-12-11T00:26:25.000Z",
+        "updatedAt": "2026-12-11T00:26:25.000Z"
+      }
+    },
+    {
+      "step": "remember-sessionNote",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Session scratch: server port flake under investigation.",
+          "scope": "session",
+          "ownerSessionId": "sess-A",
+          "importance": 0.5
+        }
+      },
+      "result": {
+        "id": "<id:sessionNote>",
+        "revision": 1,
+        "text": "Session scratch: server port flake under investigation.",
+        "kind": "fact",
+        "scope": "session",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.5,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-12-11T00:27:26.000Z",
+        "updatedAt": "2026-12-11T00:27:26.000Z",
+        "ownerSessionId": "sess-A"
+      }
+    },
+    {
+      "step": "remember-staleNote",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "The server used to listen on port 3000.",
+          "importance": 0.3
+        }
+      },
+      "result": {
+        "id": "<id:staleNote>",
+        "revision": 1,
+        "text": "The server used to listen on port 3000.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.3,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-12-11T00:28:27.000Z",
+        "updatedAt": "2026-12-11T00:28:27.000Z"
+      }
+    },
+    {
+      "step": "make-stale",
+      "call": {
+        "method": "updateSage",
+        "input": {
+          "id": "<id:staleNote>",
+          "status": "stale"
+        }
+      },
+      "result": {
+        "id": "<id:staleNote>",
+        "revision": 2,
+        "text": "The server used to listen on port 3000.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "stale",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.3,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-12-11T00:28:27.000Z",
+        "updatedAt": "2026-12-11T00:28:28.000Z",
+        "staleReason": "manual"
+      }
+    },
+    {
+      "step": "remember-filler0",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Deployment checklist item alpha for release trains.",
+          "importance": 0.5
+        }
+      },
+      "result": {
+        "id": "<id:filler0>",
+        "revision": 1,
+        "text": "Deployment checklist item alpha for release trains.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.5,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-12-11T00:28:59.000Z",
+        "updatedAt": "2026-12-11T00:28:59.000Z"
+      }
+    },
+    {
+      "step": "remember-filler1",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Deployment checklist item bravo for release trains.",
+          "importance": 0.5
+        }
+      },
+      "result": {
+        "id": "<id:filler1>",
+        "revision": 1,
+        "text": "Deployment checklist item bravo for release trains.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.5,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-12-11T00:29:30.000Z",
+        "updatedAt": "2026-12-11T00:29:30.000Z"
+      }
+    },
+    {
+      "step": "remember-filler2",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Deployment checklist item charlie for release trains.",
+          "importance": 0.5
+        }
+      },
+      "result": {
+        "id": "<id:filler2>",
+        "revision": 1,
+        "text": "Deployment checklist item charlie for release trains.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.5,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-12-11T00:30:01.000Z",
+        "updatedAt": "2026-12-11T00:30:01.000Z"
+      }
+    },
+    {
+      "step": "remember-filler3",
+      "call": {
+        "method": "rememberSage",
+        "input": {
+          "text": "Deployment checklist item delta for release trains.",
+          "importance": 0.5
+        }
+      },
+      "result": {
+        "id": "<id:filler3>",
+        "revision": 1,
+        "text": "Deployment checklist item delta for release trains.",
+        "kind": "fact",
+        "scope": "project",
+        "status": "active",
+        "tags": [],
+        "anchors": [],
+        "sources": [
+          {
+            "type": "user"
+          }
+        ],
+        "importance": 0.5,
+        "confidence": 0.75,
+        "freshness": 1,
+        "createdAt": "2026-12-11T00:30:32.000Z",
+        "updatedAt": "2026-12-11T00:30:32.000Z"
+      }
+    },
+    {
+      "step": "state",
+      "call": {
+        "method": "dump",
+        "input": {}
+      },
+      "result": "<undefined>",
+      "state": {
+        "memories": [
+          {
+            "id": "<id:portBind>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the server binds the port before plugins load.",
+            "audience": null,
+            "tags": "[\"server\"]",
+            "updated_at": "2026-12-10T00:04:20.000Z",
+            "created_at": "2026-12-10T00:04:20.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:portBind>",
+              "revision": 1,
+              "text": "The server binds the port before plugins load.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "server"
+              ],
+              "anchors": [
+                {
+                  "type": "symbol",
+                  "path": "src/server/http.ts",
+                  "symbol": "startServer"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.8,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-12-10T00:04:20.000Z",
+              "updatedAt": "2026-12-10T00:04:20.000Z"
+            }
+          },
+          {
+            "id": "<id:portEnv>",
+            "status": "active",
+            "kind": "convention",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the server port comes from the port environment variable.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-10T00:14:21.000Z",
+            "created_at": "2026-12-10T00:14:21.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:portEnv>",
+              "revision": 1,
+              "text": "The server port comes from the PORT environment variable.",
+              "kind": "convention",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/server/http.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-12-10T00:14:21.000Z",
+              "updatedAt": "2026-12-10T00:14:21.000Z"
+            }
+          },
+          {
+            "id": "<id:routes>",
+            "status": "active",
+            "kind": "convention",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "routes register in declaration order on the server.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-10T00:24:22.000Z",
+            "created_at": "2026-12-10T00:24:22.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:routes>",
+              "revision": 1,
+              "text": "Routes register in declaration order on the server.",
+              "kind": "convention",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/server/routes.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-12-10T00:24:22.000Z",
+              "updatedAt": "2026-12-10T00:24:22.000Z"
+            }
+          },
+          {
+            "id": "<id:dirNote>",
+            "status": "active",
+            "kind": "decision",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.4,
+            "confidence": 0.8,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "everything under src/server is owned by the platform team.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:24:23.000Z",
+            "created_at": "2026-12-11T00:24:23.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:dirNote>",
+              "revision": 1,
+              "text": "Everything under src/server is owned by the platform team.",
+              "kind": "decision",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "directory",
+                  "path": "src/server"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.4,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:24:23.000Z",
+              "updatedAt": "2026-12-11T00:24:23.000Z"
+            }
+          },
+          {
+            "id": "<id:reviewer>",
+            "status": "active",
+            "kind": "role_operational",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "reviewers check error handling on server paths.",
+            "audience": "{\"roles\":[\"reviewer\"]}",
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:25:24.000Z",
+            "created_at": "2026-12-11T00:25:24.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:reviewer>",
+              "revision": 1,
+              "text": "Reviewers check error handling on server paths.",
+              "kind": "role_operational",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "audience": {
+                "roles": [
+                  "reviewer"
+                ]
+              },
+              "importance": 0.7,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:25:24.000Z",
+              "updatedAt": "2026-12-11T00:25:24.000Z"
+            }
+          },
+          {
+            "id": "<id:userPref>",
+            "status": "active",
+            "kind": "preference",
+            "scope": "user",
+            "legacy_scope": "user-memory",
+            "importance": 0.9,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the user prefers small focused pull requests.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:26:25.000Z",
+            "created_at": "2026-12-11T00:26:25.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:userPref>",
+              "revision": 1,
+              "text": "The user prefers small focused pull requests.",
+              "kind": "preference",
+              "scope": "user",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.9,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:26:25.000Z",
+              "updatedAt": "2026-12-11T00:26:25.000Z"
+            }
+          },
+          {
+            "id": "<id:sessionNote>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "session",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": "sess-A",
+            "canonical_text": "session scratch: server port flake under investigation.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:27:26.000Z",
+            "created_at": "2026-12-11T00:27:26.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:sessionNote>",
+              "revision": 1,
+              "text": "Session scratch: server port flake under investigation.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:27:26.000Z",
+              "updatedAt": "2026-12-11T00:27:26.000Z",
+              "ownerSessionId": "sess-A"
+            }
+          },
+          {
+            "id": "<id:staleNote>",
+            "status": "stale",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.3,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "the server used to listen on port 3000.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:28:28.000Z",
+            "created_at": "2026-12-11T00:28:27.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:staleNote>",
+              "revision": 2,
+              "text": "The server used to listen on port 3000.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "stale",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.3,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:28:27.000Z",
+              "updatedAt": "2026-12-11T00:28:28.000Z",
+              "staleReason": "manual"
+            }
+          },
+          {
+            "id": "<id:filler0>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "deployment checklist item alpha for release trains.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:28:59.000Z",
+            "created_at": "2026-12-11T00:28:59.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:filler0>",
+              "revision": 1,
+              "text": "Deployment checklist item alpha for release trains.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:28:59.000Z",
+              "updatedAt": "2026-12-11T00:28:59.000Z"
+            }
+          },
+          {
+            "id": "<id:filler1>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "deployment checklist item bravo for release trains.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:29:30.000Z",
+            "created_at": "2026-12-11T00:29:30.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:filler1>",
+              "revision": 1,
+              "text": "Deployment checklist item bravo for release trains.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:29:30.000Z",
+              "updatedAt": "2026-12-11T00:29:30.000Z"
+            }
+          },
+          {
+            "id": "<id:filler2>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "deployment checklist item charlie for release trains.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:30:01.000Z",
+            "created_at": "2026-12-11T00:30:01.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:filler2>",
+              "revision": 1,
+              "text": "Deployment checklist item charlie for release trains.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:30:01.000Z",
+              "updatedAt": "2026-12-11T00:30:01.000Z"
+            }
+          },
+          {
+            "id": "<id:filler3>",
+            "status": "active",
+            "kind": "fact",
+            "scope": "project",
+            "legacy_scope": "project-memory",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "freshness": 1,
+            "owner_session_id": null,
+            "canonical_text": "deployment checklist item delta for release trains.",
+            "audience": null,
+            "tags": "[]",
+            "updated_at": "2026-12-11T00:30:32.000Z",
+            "created_at": "2026-12-11T00:30:32.000Z",
+            "unicode_text_pending": 1,
+            "data": {
+              "id": "<id:filler3>",
+              "revision": 1,
+              "text": "Deployment checklist item delta for release trains.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-12-11T00:30:32.000Z",
+              "updatedAt": "2026-12-11T00:30:32.000Z"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_node": "dir:src/server",
+            "to_node": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:04:20.000Z"
+          },
+          {
+            "from_node": "file:src/server/http.ts",
+            "to_node": "dir:src/server",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:04:20.000Z"
+          },
+          {
+            "from_node": "file:src/server/routes.ts",
+            "to_node": "dir:src/server",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:24:22.000Z"
+          },
+          {
+            "from_node": "mem:<id:dirNote>",
+            "to_node": "dir:src/server",
+            "relation": "about_directory",
+            "weight": 0.8,
+            "created_at": "2026-12-11T00:24:23.000Z"
+          },
+          {
+            "from_node": "mem:<id:portBind>",
+            "to_node": "symbol:src/server/http.ts#startServer",
+            "relation": "about_symbol",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:04:20.000Z"
+          },
+          {
+            "from_node": "mem:<id:portEnv>",
+            "to_node": "file:src/server/http.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:14:21.000Z"
+          },
+          {
+            "from_node": "mem:<id:routes>",
+            "to_node": "file:src/server/routes.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:24:22.000Z"
+          },
+          {
+            "from_node": "symbol:src/server/http.ts#startServer",
+            "to_node": "file:src/server/http.ts",
+            "relation": "related_to",
+            "weight": 0.8,
+            "created_at": "2026-12-10T00:04:20.000Z"
+          }
+        ],
+        "candidates": [],
+        "auditEvents": [],
+        "hq": [
+          {
+            "id": "<id:dirNote>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:filler0>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:filler1>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:filler2>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:filler3>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:portBind>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:portEnv>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:reviewer>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:routes>",
+            "revision": 1,
+            "tombstone": 0
+          },
+          {
+            "id": "<id:staleNote>",
+            "revision": 2,
+            "tombstone": 0
+          }
+        ],
+        "hqClockRevision": 11,
+        "schemaMeta": {
+          "fts_index_initialized": 1,
+          "hq_memory_sync_schema": 3,
+          "version": 5
+        },
+        "textIndexRevisions": {}
+      }
+    },
+    {
+      "step": "text-two-terms",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "server port"
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.6534737491602484,
+            "bm25": -0.8420766659889464,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.6203294057985096,
+            "bm25": -0.6022743292274907,
+            "matchReason": "lexical"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 2,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "text": "server port"
+        },
+        "nextCursor": null,
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "text-one-term",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "routes"
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:routes>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/routes.ts"
+              }
+            ],
+            "text": "Routes register in declaration order on the server.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:24:22.000Z",
+            "updatedAt": "2026-12-10T00:24:22.000Z",
+            "score": 0.8262790723723795,
+            "bm25": -2.0281482744047516,
+            "matchReason": "lexical"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 1,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "text": "routes"
+        },
+        "nextCursor": null,
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "text-no-hit-suggest-default",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "server zebra"
+          }
+        }
+      },
+      "result": {
+        "hits": [],
+        "suggestions": [
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.4800003177700348,
+            "bm25": -0.00000132404181184669,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:routes>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/routes.ts"
+              }
+            ],
+            "text": "Routes register in declaration order on the server.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:24:22.000Z",
+            "updatedAt": "2026-12-10T00:24:22.000Z",
+            "score": 0.467500232747737,
+            "bm25": -9.957122439256788e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:reviewer>",
+            "kind": "role_operational",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "text": "Reviewers check error handling on server paths.",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:25:24.000Z",
+            "updatedAt": "2026-12-11T00:25:24.000Z",
+            "score": 0.4718752234297123,
+            "bm25": -9.46986859990938e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.46750022135817854,
+            "bm25": -9.46986859990938e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:dirNote>",
+            "kind": "decision",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/server"
+              }
+            ],
+            "text": "Everything under src/server is owned by the platform team.",
+            "importance": 0.4,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-11T00:24:23.000Z",
+            "updatedAt": "2026-12-11T00:24:23.000Z",
+            "score": 0.45500020538876895,
+            "bm25": -9.028077753779698e-7,
+            "matchReason": "lexical"
+          }
+        ],
+        "totalCandidates": 0,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "text": "server zebra"
+        },
+        "nextCursor": null,
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "text-suggest-always",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "server port"
+          },
+          "options": {
+            "suggest": "always"
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.6534737491602484,
+            "bm25": -0.8420766659889464,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.6203294057985096,
+            "bm25": -0.6022743292274907,
+            "matchReason": "lexical"
+          }
+        ],
+        "suggestions": [
+          {
+            "id": "<id:routes>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/routes.ts"
+              }
+            ],
+            "text": "Routes register in declaration order on the server.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:24:22.000Z",
+            "updatedAt": "2026-12-10T00:24:22.000Z",
+            "score": 0.467500232747737,
+            "bm25": -9.957122439256788e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:reviewer>",
+            "kind": "role_operational",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "text": "Reviewers check error handling on server paths.",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:25:24.000Z",
+            "updatedAt": "2026-12-11T00:25:24.000Z",
+            "score": 0.4718752234297123,
+            "bm25": -9.46986859990938e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:dirNote>",
+            "kind": "decision",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/server"
+              }
+            ],
+            "text": "Everything under src/server is owned by the platform team.",
+            "importance": 0.4,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-11T00:24:23.000Z",
+            "updatedAt": "2026-12-11T00:24:23.000Z",
+            "score": 0.45500020538876895,
+            "bm25": -9.028077753779698e-7,
+            "matchReason": "lexical"
+          }
+        ],
+        "totalCandidates": 2,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "text": "server port"
+        },
+        "nextCursor": null,
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "text-suggest-never",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "server zebra"
+          },
+          "options": {
+            "suggest": "never"
+          }
+        }
+      },
+      "result": {
+        "hits": [],
+        "suggestions": [],
+        "totalCandidates": 0,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "text": "server zebra"
+        },
+        "nextCursor": null,
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "kinds",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "kinds": [
+              "convention"
+            ]
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:routes>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/routes.ts"
+              }
+            ],
+            "text": "Routes register in declaration order on the server.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:24:22.000Z",
+            "updatedAt": "2026-12-10T00:24:22.000Z",
+            "score": 0.8893042438271606,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.8892578703703704,
+            "bm25": null,
+            "matchReason": "recency"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 2,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "kinds": [
+            "convention"
+          ]
+        },
+        "nextCursor": null,
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "scopes-user",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "scopes": [
+              "user"
+            ]
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:userPref>",
+            "kind": "preference",
+            "scope": "user",
+            "tags": [],
+            "anchors": [],
+            "text": "The user prefers small focused pull requests.",
+            "importance": 0.9,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:26:25.000Z",
+            "updatedAt": "2026-12-11T00:26:25.000Z",
+            "score": 0.9499803240740741,
+            "bm25": null,
+            "matchReason": "recency"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 1,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "scopes": [
+            "user"
+          ]
+        },
+        "nextCursor": null,
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "importance-at-least",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "importanceAtLeast": 0.65
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:userPref>",
+            "kind": "preference",
+            "scope": "user",
+            "tags": [],
+            "anchors": [],
+            "text": "The user prefers small focused pull requests.",
+            "importance": 0.9,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:26:25.000Z",
+            "updatedAt": "2026-12-11T00:26:25.000Z",
+            "score": 0.9499802469135803,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.9292113425925926,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:reviewer>",
+            "kind": "role_operational",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "text": "Reviewers check error handling on server paths.",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:25:24.000Z",
+            "updatedAt": "2026-12-11T00:25:24.000Z",
+            "score": 0.9099755401234568,
+            "bm25": null,
+            "matchReason": "recency"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 3,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "importanceAtLeast": 0.65
+        },
+        "nextCursor": null,
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "freshness-created-after",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "freshness": {
+              "createdAfter": "2026-11-01T23:53:20.000Z"
+            }
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:userPref>",
+            "kind": "preference",
+            "scope": "user",
+            "tags": [],
+            "anchors": [],
+            "text": "The user prefers small focused pull requests.",
+            "importance": 0.9,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:26:25.000Z",
+            "updatedAt": "2026-12-11T00:26:25.000Z",
+            "score": 0.9499801697530863,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.9292112654320989,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:reviewer>",
+            "kind": "role_operational",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "text": "Reviewers check error handling on server paths.",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:25:24.000Z",
+            "updatedAt": "2026-12-11T00:25:24.000Z",
+            "score": 0.9099754629629628,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:routes>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/routes.ts"
+              }
+            ],
+            "text": "Routes register in declaration order on the server.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:24:22.000Z",
+            "updatedAt": "2026-12-10T00:24:22.000Z",
+            "score": 0.889304012345679,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.8892576388888889,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:filler3>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "text": "Deployment checklist item delta for release trains.",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:30:32.000Z",
+            "updatedAt": "2026-12-11T00:30:32.000Z",
+            "score": 0.8699992283950617,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:filler2>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "text": "Deployment checklist item charlie for release trains.",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:30:01.000Z",
+            "updatedAt": "2026-12-11T00:30:01.000Z",
+            "score": 0.8699968364197531,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:filler1>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "text": "Deployment checklist item bravo for release trains.",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:29:30.000Z",
+            "updatedAt": "2026-12-11T00:29:30.000Z",
+            "score": 0.8699944444444445,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:filler0>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "text": "Deployment checklist item alpha for release trains.",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:28:59.000Z",
+            "updatedAt": "2026-12-11T00:28:59.000Z",
+            "score": 0.8699920524691358,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:dirNote>",
+            "kind": "decision",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/server"
+              }
+            ],
+            "text": "Everything under src/server is owned by the platform team.",
+            "importance": 0.4,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-11T00:24:23.000Z",
+            "updatedAt": "2026-12-11T00:24:23.000Z",
+            "score": 0.8559707561728395,
+            "bm25": null,
+            "matchReason": "recency"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 10,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "freshness": {
+            "createdAfter": "2026-11-01T23:53:20.000Z"
+          }
+        },
+        "nextCursor": null,
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "paths",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "paths": [
+              "src/server/http.ts"
+            ]
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.929211188271605,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.8892575617283951,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:dirNote>",
+            "kind": "decision",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/server"
+              }
+            ],
+            "text": "Everything under src/server is owned by the platform team.",
+            "importance": 0.4,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-11T00:24:23.000Z",
+            "updatedAt": "2026-12-11T00:24:23.000Z",
+            "score": 0.8559706790123457,
+            "bm25": null,
+            "matchReason": "recency"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 3,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "paths": [
+            "src/server/http.ts"
+          ]
+        },
+        "nextCursor": null,
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "paths-outside-root",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "paths": [
+              "../elsewhere.ts"
+            ]
+          }
+        }
+      },
+      "result": {
+        "hits": [],
+        "suggestions": [],
+        "totalCandidates": 0,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "paths": [
+            "../elsewhere.ts"
+          ]
+        },
+        "nextCursor": null,
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "audience",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            }
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:reviewer>",
+            "kind": "role_operational",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "text": "Reviewers check error handling on server paths.",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:25:24.000Z",
+            "updatedAt": "2026-12-11T00:25:24.000Z",
+            "score": 0.9099752314814815,
+            "bm25": null,
+            "matchReason": "recency"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 10,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "audience": {
+            "roles": [
+              "reviewer"
+            ]
+          }
+        },
+        "nextCursor": null,
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "anchor-symbol",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "anchor": {
+              "type": "symbol",
+              "path": "src/server/http.ts",
+              "symbol": "startServer"
+            }
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.9292109567901236,
+            "bm25": null,
+            "matchReason": "recency"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 10,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "anchor": {
+            "type": "symbol",
+            "path": "src/server/http.ts",
+            "symbol": "startServer"
+          }
+        },
+        "nextCursor": null,
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "ranking-recency-plain",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {},
+          "options": {
+            "ranking": "recency",
+            "limit": 5
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:filler3>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "text": "Deployment checklist item delta for release trains.",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:30:32.000Z",
+            "updatedAt": "2026-12-11T00:30:32.000Z",
+            "score": 0.8699988425925926,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:filler2>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "text": "Deployment checklist item charlie for release trains.",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:30:01.000Z",
+            "updatedAt": "2026-12-11T00:30:01.000Z",
+            "score": 0.8699964506172839,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:filler1>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "text": "Deployment checklist item bravo for release trains.",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:29:30.000Z",
+            "updatedAt": "2026-12-11T00:29:30.000Z",
+            "score": 0.8699940586419753,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:filler0>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "text": "Deployment checklist item alpha for release trains.",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:28:59.000Z",
+            "updatedAt": "2026-12-11T00:28:59.000Z",
+            "score": 0.8699916666666667,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:userPref>",
+            "kind": "preference",
+            "scope": "user",
+            "tags": [],
+            "anchors": [],
+            "text": "The user prefers small focused pull requests.",
+            "importance": 0.9,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:26:25.000Z",
+            "updatedAt": "2026-12-11T00:26:25.000Z",
+            "score": 0.9499797839506172,
+            "bm25": null,
+            "matchReason": "recency"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 10,
+        "rankingApplied": "recency",
+        "queryEcho": {},
+        "nextCursor": "<cursor:{\"v\":1,\"h\":\"ekQ1-naPdua2xb0vjk29c7\",\"r\":\"recency\",\"c\":\"plain\",\"p\":0.9,\"u\":\"2026-12-11T00:26:25.000Z\",\"i\":\"<id:userPref>\"}>",
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "ranking-recency-text",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "server"
+          },
+          "options": {
+            "ranking": "recency",
+            "limit": 5
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:reviewer>",
+            "kind": "role_operational",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "text": "Reviewers check error handling on server paths.",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:25:24.000Z",
+            "updatedAt": "2026-12-11T00:25:24.000Z",
+            "score": 0.4718752234297123,
+            "bm25": -9.46986859990938e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:dirNote>",
+            "kind": "decision",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/server"
+              }
+            ],
+            "text": "Everything under src/server is owned by the platform team.",
+            "importance": 0.4,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-11T00:24:23.000Z",
+            "updatedAt": "2026-12-11T00:24:23.000Z",
+            "score": 0.45500020538876895,
+            "bm25": -9.028077753779698e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:routes>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/routes.ts"
+              }
+            ],
+            "text": "Routes register in declaration order on the server.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:24:22.000Z",
+            "updatedAt": "2026-12-10T00:24:22.000Z",
+            "score": 0.467500232747737,
+            "bm25": -9.957122439256788e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.46750022135817854,
+            "bm25": -9.46986859990938e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.4800003177700348,
+            "bm25": -0.00000132404181184669,
+            "matchReason": "lexical"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 5,
+        "rankingApplied": "recency",
+        "queryEcho": {
+          "text": "server"
+        },
+        "nextCursor": null,
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "ranking-importance-plain",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {},
+          "options": {
+            "ranking": "importance",
+            "limit": 5
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:userPref>",
+            "kind": "preference",
+            "scope": "user",
+            "tags": [],
+            "anchors": [],
+            "text": "The user prefers small focused pull requests.",
+            "importance": 0.9,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:26:25.000Z",
+            "updatedAt": "2026-12-11T00:26:25.000Z",
+            "score": 0.9499796296296297,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.929210725308642,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:reviewer>",
+            "kind": "role_operational",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "text": "Reviewers check error handling on server paths.",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:25:24.000Z",
+            "updatedAt": "2026-12-11T00:25:24.000Z",
+            "score": 0.9099749228395062,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:routes>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/routes.ts"
+              }
+            ],
+            "text": "Routes register in declaration order on the server.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:24:22.000Z",
+            "updatedAt": "2026-12-10T00:24:22.000Z",
+            "score": 0.8893034722222222,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.889257098765432,
+            "bm25": null,
+            "matchReason": "recency"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 10,
+        "rankingApplied": "importance",
+        "queryEcho": {},
+        "nextCursor": "<cursor:{\"v\":1,\"h\":\"ZbYKz6GxXz9Q1t8bvESf4r\",\"r\":\"importance\",\"c\":\"plain\",\"p\":0.6,\"u\":\"2026-12-10T00:14:21.000Z\",\"i\":\"<id:portEnv>\"}>",
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "ranking-importance-text",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "server"
+          },
+          "options": {
+            "ranking": "importance",
+            "limit": 5
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.4800003177700348,
+            "bm25": -0.00000132404181184669,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:reviewer>",
+            "kind": "role_operational",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "text": "Reviewers check error handling on server paths.",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:25:24.000Z",
+            "updatedAt": "2026-12-11T00:25:24.000Z",
+            "score": 0.4718752234297123,
+            "bm25": -9.46986859990938e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:routes>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/routes.ts"
+              }
+            ],
+            "text": "Routes register in declaration order on the server.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:24:22.000Z",
+            "updatedAt": "2026-12-10T00:24:22.000Z",
+            "score": 0.467500232747737,
+            "bm25": -9.957122439256788e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.46750022135817854,
+            "bm25": -9.46986859990938e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:dirNote>",
+            "kind": "decision",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/server"
+              }
+            ],
+            "text": "Everything under src/server is owned by the platform team.",
+            "importance": 0.4,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-11T00:24:23.000Z",
+            "updatedAt": "2026-12-11T00:24:23.000Z",
+            "score": 0.45500020538876895,
+            "bm25": -9.028077753779698e-7,
+            "matchReason": "lexical"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 5,
+        "rankingApplied": "importance",
+        "queryEcho": {
+          "text": "server"
+        },
+        "nextCursor": null,
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "ranking-relevance-plain",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {},
+          "options": {
+            "ranking": "relevance",
+            "limit": 5
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:userPref>",
+            "kind": "preference",
+            "scope": "user",
+            "tags": [],
+            "anchors": [],
+            "text": "The user prefers small focused pull requests.",
+            "importance": 0.9,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:26:25.000Z",
+            "updatedAt": "2026-12-11T00:26:25.000Z",
+            "score": 0.9499794753086419,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.9292105709876544,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:reviewer>",
+            "kind": "role_operational",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "text": "Reviewers check error handling on server paths.",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:25:24.000Z",
+            "updatedAt": "2026-12-11T00:25:24.000Z",
+            "score": 0.9099747685185184,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:routes>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/routes.ts"
+              }
+            ],
+            "text": "Routes register in declaration order on the server.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:24:22.000Z",
+            "updatedAt": "2026-12-10T00:24:22.000Z",
+            "score": 0.8893033179012346,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.8892569444444445,
+            "bm25": null,
+            "matchReason": "recency"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 10,
+        "rankingApplied": "relevance",
+        "queryEcho": {},
+        "nextCursor": "<cursor:{\"v\":1,\"h\":\"r3W4BF90PtdwBOxUqxTYUE\",\"r\":\"relevance\",\"c\":\"plain\",\"p\":0.6,\"u\":\"2026-12-10T00:14:21.000Z\",\"i\":\"<id:portEnv>\"}>",
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "ranking-relevance-text",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "server"
+          },
+          "options": {
+            "ranking": "relevance",
+            "limit": 5
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.4800003177700348,
+            "bm25": -0.00000132404181184669,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:routes>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/routes.ts"
+              }
+            ],
+            "text": "Routes register in declaration order on the server.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:24:22.000Z",
+            "updatedAt": "2026-12-10T00:24:22.000Z",
+            "score": 0.467500232747737,
+            "bm25": -9.957122439256788e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:reviewer>",
+            "kind": "role_operational",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "text": "Reviewers check error handling on server paths.",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:25:24.000Z",
+            "updatedAt": "2026-12-11T00:25:24.000Z",
+            "score": 0.4718752234297123,
+            "bm25": -9.46986859990938e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.46750022135817854,
+            "bm25": -9.46986859990938e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:dirNote>",
+            "kind": "decision",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/server"
+              }
+            ],
+            "text": "Everything under src/server is owned by the platform team.",
+            "importance": 0.4,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-11T00:24:23.000Z",
+            "updatedAt": "2026-12-11T00:24:23.000Z",
+            "score": 0.45500020538876895,
+            "bm25": -9.028077753779698e-7,
+            "matchReason": "lexical"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 5,
+        "rankingApplied": "relevance",
+        "queryEcho": {
+          "text": "server"
+        },
+        "nextCursor": null,
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "ranking-hybrid-plain",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {},
+          "options": {
+            "ranking": "hybrid",
+            "limit": 5
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:userPref>",
+            "kind": "preference",
+            "scope": "user",
+            "tags": [],
+            "anchors": [],
+            "text": "The user prefers small focused pull requests.",
+            "importance": 0.9,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:26:25.000Z",
+            "updatedAt": "2026-12-11T00:26:25.000Z",
+            "score": 0.9499793209876544,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.9292104166666667,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:reviewer>",
+            "kind": "role_operational",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "text": "Reviewers check error handling on server paths.",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:25:24.000Z",
+            "updatedAt": "2026-12-11T00:25:24.000Z",
+            "score": 0.9099746141975309,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:routes>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/routes.ts"
+              }
+            ],
+            "text": "Routes register in declaration order on the server.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:24:22.000Z",
+            "updatedAt": "2026-12-10T00:24:22.000Z",
+            "score": 0.8893031635802469,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.8892567901234567,
+            "bm25": null,
+            "matchReason": "recency"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 10,
+        "rankingApplied": "hybrid",
+        "queryEcho": {},
+        "nextCursor": "<cursor:{\"v\":1,\"h\":\"arqxJWTX9AejD5aoPlZUBy\",\"r\":\"hybrid\",\"c\":\"plain\",\"p\":0.6,\"u\":\"2026-12-10T00:14:21.000Z\",\"i\":\"<id:portEnv>\"}>",
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "ranking-hybrid-text",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "server"
+          },
+          "options": {
+            "ranking": "hybrid",
+            "limit": 5
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.4800003177700348,
+            "bm25": -0.00000132404181184669,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:routes>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/routes.ts"
+              }
+            ],
+            "text": "Routes register in declaration order on the server.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:24:22.000Z",
+            "updatedAt": "2026-12-10T00:24:22.000Z",
+            "score": 0.467500232747737,
+            "bm25": -9.957122439256788e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:reviewer>",
+            "kind": "role_operational",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "text": "Reviewers check error handling on server paths.",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:25:24.000Z",
+            "updatedAt": "2026-12-11T00:25:24.000Z",
+            "score": 0.4718752234297123,
+            "bm25": -9.46986859990938e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.46750022135817854,
+            "bm25": -9.46986859990938e-7,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:dirNote>",
+            "kind": "decision",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/server"
+              }
+            ],
+            "text": "Everything under src/server is owned by the platform team.",
+            "importance": 0.4,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-11T00:24:23.000Z",
+            "updatedAt": "2026-12-11T00:24:23.000Z",
+            "score": 0.45500020538876895,
+            "bm25": -9.028077753779698e-7,
+            "matchReason": "lexical"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 5,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "text": "server"
+        },
+        "nextCursor": null,
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "statuses-active-stale",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "server port"
+          },
+          "options": {
+            "includeStatuses": [
+              "active",
+              "stale"
+            ]
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.6534737491602484,
+            "bm25": -0.8420766659889464,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:staleNote>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "text": "The server used to listen on port 3000.",
+            "importance": 0.3,
+            "confidence": 0.75,
+            "status": "stale",
+            "createdAt": "2026-12-11T00:28:27.000Z",
+            "updatedAt": "2026-12-11T00:28:28.000Z",
+            "score": 0.583823350024074,
+            "bm25": -0.633262797734537,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.6203294057985096,
+            "bm25": -0.6022743292274907,
+            "matchReason": "lexical"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 3,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "text": "server port"
+        },
+        "nextCursor": null,
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "statuses-empty",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "server"
+          },
+          "options": {
+            "includeStatuses": []
+          }
+        }
+      },
+      "result": {
+        "hits": [],
+        "suggestions": [],
+        "totalCandidates": 0,
+        "rankingApplied": "hybrid",
+        "queryEcho": {},
+        "nextCursor": null,
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "session-A",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "server port"
+          },
+          "options": {
+            "sessionId": "sess-A"
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.6534737491602484,
+            "bm25": -0.8420766659889464,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:sessionNote>",
+            "kind": "fact",
+            "scope": "session",
+            "tags": [],
+            "anchors": [],
+            "text": "Session scratch: server port flake under investigation.",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:27:26.000Z",
+            "updatedAt": "2026-12-11T00:27:26.000Z",
+            "score": 0.607264893178124,
+            "bm25": -0.6676135672751348,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.6203294057985096,
+            "bm25": -0.6022743292274907,
+            "matchReason": "lexical"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 3,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "text": "server port"
+        },
+        "nextCursor": null,
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "session-A-exclude-session-scoped",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "server port"
+          },
+          "options": {
+            "sessionId": "sess-A",
+            "excludeSessionScoped": true
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.6534737491602484,
+            "bm25": -0.8420766659889464,
+            "matchReason": "lexical"
+          },
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.6203294057985096,
+            "bm25": -0.6022743292274907,
+            "matchReason": "lexical"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 2,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "text": "server port"
+        },
+        "nextCursor": null,
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "walk-recency-page0",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {},
+          "options": {
+            "ranking": "recency",
+            "limit": 2
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:filler3>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "text": "Deployment checklist item delta for release trains.",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:30:32.000Z",
+            "updatedAt": "2026-12-11T00:30:32.000Z",
+            "score": 0.8699979166666667,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:filler2>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "text": "Deployment checklist item charlie for release trains.",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:30:01.000Z",
+            "updatedAt": "2026-12-11T00:30:01.000Z",
+            "score": 0.869995524691358,
+            "bm25": null,
+            "matchReason": "recency"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 10,
+        "rankingApplied": "recency",
+        "queryEcho": {},
+        "nextCursor": "<cursor:{\"v\":1,\"h\":\"ekQ1-naPdua2xb0vjk29c7\",\"r\":\"recency\",\"c\":\"plain\",\"p\":0.5,\"u\":\"2026-12-11T00:30:01.000Z\",\"i\":\"<id:filler2>\"}>",
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "walk-recency-page1",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "cursor": "<cursor:{\"v\":1,\"h\":\"ekQ1-naPdua2xb0vjk29c7\",\"r\":\"recency\",\"c\":\"plain\",\"p\":0.5,\"u\":\"2026-12-11T00:30:01.000Z\",\"i\":\"<id:filler2>\"}>"
+          },
+          "options": {
+            "ranking": "recency",
+            "limit": 2
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:filler1>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "text": "Deployment checklist item bravo for release trains.",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:29:30.000Z",
+            "updatedAt": "2026-12-11T00:29:30.000Z",
+            "score": 0.8699930555555556,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:filler0>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "text": "Deployment checklist item alpha for release trains.",
+            "importance": 0.5,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:28:59.000Z",
+            "updatedAt": "2026-12-11T00:28:59.000Z",
+            "score": 0.8699906635802469,
+            "bm25": null,
+            "matchReason": "recency"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 10,
+        "rankingApplied": "recency",
+        "queryEcho": {},
+        "nextCursor": "<cursor:{\"v\":1,\"h\":\"ekQ1-naPdua2xb0vjk29c7\",\"r\":\"recency\",\"c\":\"plain\",\"p\":0.5,\"u\":\"2026-12-11T00:28:59.000Z\",\"i\":\"<id:filler0>\"}>",
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "walk-recency-page2",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "cursor": "<cursor:{\"v\":1,\"h\":\"ekQ1-naPdua2xb0vjk29c7\",\"r\":\"recency\",\"c\":\"plain\",\"p\":0.5,\"u\":\"2026-12-11T00:28:59.000Z\",\"i\":\"<id:filler0>\"}>"
+          },
+          "options": {
+            "ranking": "recency",
+            "limit": 2
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:userPref>",
+            "kind": "preference",
+            "scope": "user",
+            "tags": [],
+            "anchors": [],
+            "text": "The user prefers small focused pull requests.",
+            "importance": 0.9,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:26:25.000Z",
+            "updatedAt": "2026-12-11T00:26:25.000Z",
+            "score": 0.9499787037037037,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:reviewer>",
+            "kind": "role_operational",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "text": "Reviewers check error handling on server paths.",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:25:24.000Z",
+            "updatedAt": "2026-12-11T00:25:24.000Z",
+            "score": 0.9099739969135803,
+            "bm25": null,
+            "matchReason": "recency"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 10,
+        "rankingApplied": "recency",
+        "queryEcho": {},
+        "nextCursor": "<cursor:{\"v\":1,\"h\":\"ekQ1-naPdua2xb0vjk29c7\",\"r\":\"recency\",\"c\":\"plain\",\"p\":0.7,\"u\":\"2026-12-11T00:25:24.000Z\",\"i\":\"<id:reviewer>\"}>",
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "walk-recency-page3",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "cursor": "<cursor:{\"v\":1,\"h\":\"ekQ1-naPdua2xb0vjk29c7\",\"r\":\"recency\",\"c\":\"plain\",\"p\":0.7,\"u\":\"2026-12-11T00:25:24.000Z\",\"i\":\"<id:reviewer>\"}>"
+          },
+          "options": {
+            "ranking": "recency",
+            "limit": 2
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:dirNote>",
+            "kind": "decision",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/server"
+              }
+            ],
+            "text": "Everything under src/server is owned by the platform team.",
+            "importance": 0.4,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-11T00:24:23.000Z",
+            "updatedAt": "2026-12-11T00:24:23.000Z",
+            "score": 0.855969212962963,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:routes>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/routes.ts"
+              }
+            ],
+            "text": "Routes register in declaration order on the server.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:24:22.000Z",
+            "updatedAt": "2026-12-10T00:24:22.000Z",
+            "score": 0.8893024691358025,
+            "bm25": null,
+            "matchReason": "recency"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 10,
+        "rankingApplied": "recency",
+        "queryEcho": {},
+        "nextCursor": "<cursor:{\"v\":1,\"h\":\"ekQ1-naPdua2xb0vjk29c7\",\"r\":\"recency\",\"c\":\"plain\",\"p\":0.6,\"u\":\"2026-12-10T00:24:22.000Z\",\"i\":\"<id:routes>\"}>",
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "walk-recency-page4",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "cursor": "<cursor:{\"v\":1,\"h\":\"ekQ1-naPdua2xb0vjk29c7\",\"r\":\"recency\",\"c\":\"plain\",\"p\":0.6,\"u\":\"2026-12-10T00:24:22.000Z\",\"i\":\"<id:routes>\"}>"
+          },
+          "options": {
+            "ranking": "recency",
+            "limit": 2
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.8892560185185185,
+            "bm25": null,
+            "matchReason": "recency"
+          },
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.9292096450617284,
+            "bm25": null,
+            "matchReason": "recency"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 10,
+        "rankingApplied": "recency",
+        "queryEcho": {},
+        "nextCursor": null,
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "walk-hybrid-text-page0",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "server"
+          },
+          "options": {
+            "ranking": "hybrid",
+            "limit": 1
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:portBind>",
+            "kind": "fact",
+            "scope": "project",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/server/http.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "text": "The server binds the port before plugins load.",
+            "importance": 0.8,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:04:20.000Z",
+            "updatedAt": "2026-12-10T00:04:20.000Z",
+            "score": 0.4800003177700348,
+            "bm25": -0.00000132404181184669,
+            "matchReason": "lexical"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 5,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "text": "server"
+        },
+        "nextCursor": "<cursor:{\"v\":1,\"h\":\"rkvDf6gNTc3CCQoZuk3E0y\",\"r\":\"hybrid\",\"c\":\"fts\",\"p\":0.8,\"u\":\"2026-12-10T00:04:20.000Z\",\"i\":\"<id:portBind>\",\"b\":-0.00000132404181184669}>",
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "walk-hybrid-text-page1",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "server",
+            "cursor": "<cursor:{\"v\":1,\"h\":\"rkvDf6gNTc3CCQoZuk3E0y\",\"r\":\"hybrid\",\"c\":\"fts\",\"p\":0.8,\"u\":\"2026-12-10T00:04:20.000Z\",\"i\":\"<id:portBind>\",\"b\":-0.00000132404181184669}>"
+          },
+          "options": {
+            "ranking": "hybrid",
+            "limit": 1
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:routes>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/routes.ts"
+              }
+            ],
+            "text": "Routes register in declaration order on the server.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:24:22.000Z",
+            "updatedAt": "2026-12-10T00:24:22.000Z",
+            "score": 0.467500232747737,
+            "bm25": -9.957122439256788e-7,
+            "matchReason": "lexical"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 5,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "text": "server"
+        },
+        "nextCursor": "<cursor:{\"v\":1,\"h\":\"rkvDf6gNTc3CCQoZuk3E0y\",\"r\":\"hybrid\",\"c\":\"fts\",\"p\":0.6,\"u\":\"2026-12-10T00:24:22.000Z\",\"i\":\"<id:routes>\",\"b\":-9.957122439256788e-7}>",
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "walk-hybrid-text-page2",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "server",
+            "cursor": "<cursor:{\"v\":1,\"h\":\"rkvDf6gNTc3CCQoZuk3E0y\",\"r\":\"hybrid\",\"c\":\"fts\",\"p\":0.6,\"u\":\"2026-12-10T00:24:22.000Z\",\"i\":\"<id:routes>\",\"b\":-9.957122439256788e-7}>"
+          },
+          "options": {
+            "ranking": "hybrid",
+            "limit": 1
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:reviewer>",
+            "kind": "role_operational",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "text": "Reviewers check error handling on server paths.",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:25:24.000Z",
+            "updatedAt": "2026-12-11T00:25:24.000Z",
+            "score": 0.4718752234297123,
+            "bm25": -9.46986859990938e-7,
+            "matchReason": "lexical"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 5,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "text": "server"
+        },
+        "nextCursor": "<cursor:{\"v\":1,\"h\":\"rkvDf6gNTc3CCQoZuk3E0y\",\"r\":\"hybrid\",\"c\":\"fts\",\"p\":0.7,\"u\":\"2026-12-11T00:25:24.000Z\",\"i\":\"<id:reviewer>\",\"b\":-9.46986859990938e-7}>",
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "walk-hybrid-text-page3",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "server",
+            "cursor": "<cursor:{\"v\":1,\"h\":\"rkvDf6gNTc3CCQoZuk3E0y\",\"r\":\"hybrid\",\"c\":\"fts\",\"p\":0.7,\"u\":\"2026-12-11T00:25:24.000Z\",\"i\":\"<id:reviewer>\",\"b\":-9.46986859990938e-7}>"
+          },
+          "options": {
+            "ranking": "hybrid",
+            "limit": 1
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:portEnv>",
+            "kind": "convention",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/server/http.ts"
+              }
+            ],
+            "text": "The server port comes from the PORT environment variable.",
+            "importance": 0.6,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-10T00:14:21.000Z",
+            "updatedAt": "2026-12-10T00:14:21.000Z",
+            "score": 0.46750022135817854,
+            "bm25": -9.46986859990938e-7,
+            "matchReason": "lexical"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 5,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "text": "server"
+        },
+        "nextCursor": "<cursor:{\"v\":1,\"h\":\"rkvDf6gNTc3CCQoZuk3E0y\",\"r\":\"hybrid\",\"c\":\"fts\",\"p\":0.6,\"u\":\"2026-12-10T00:14:21.000Z\",\"i\":\"<id:portEnv>\",\"b\":-9.46986859990938e-7}>",
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "walk-hybrid-text-page4",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "text": "server",
+            "cursor": "<cursor:{\"v\":1,\"h\":\"rkvDf6gNTc3CCQoZuk3E0y\",\"r\":\"hybrid\",\"c\":\"fts\",\"p\":0.6,\"u\":\"2026-12-10T00:14:21.000Z\",\"i\":\"<id:portEnv>\",\"b\":-9.46986859990938e-7}>"
+          },
+          "options": {
+            "ranking": "hybrid",
+            "limit": 1
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:dirNote>",
+            "kind": "decision",
+            "scope": "project",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/server"
+              }
+            ],
+            "text": "Everything under src/server is owned by the platform team.",
+            "importance": 0.4,
+            "confidence": 0.8,
+            "status": "active",
+            "createdAt": "2026-12-11T00:24:23.000Z",
+            "updatedAt": "2026-12-11T00:24:23.000Z",
+            "score": 0.45500020538876895,
+            "bm25": -9.028077753779698e-7,
+            "matchReason": "lexical"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 5,
+        "rankingApplied": "hybrid",
+        "queryEcho": {
+          "text": "server"
+        },
+        "nextCursor": null,
+        "matchChannel": "fts"
+      }
+    },
+    {
+      "step": "walk-audience-page0",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            }
+          },
+          "options": {
+            "ranking": "importance",
+            "limit": 1
+          }
+        }
+      },
+      "result": {
+        "hits": [
+          {
+            "id": "<id:reviewer>",
+            "kind": "role_operational",
+            "scope": "project",
+            "tags": [],
+            "anchors": [],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "text": "Reviewers check error handling on server paths.",
+            "importance": 0.7,
+            "confidence": 0.75,
+            "status": "active",
+            "createdAt": "2026-12-11T00:25:24.000Z",
+            "updatedAt": "2026-12-11T00:25:24.000Z",
+            "score": 0.9099733796296297,
+            "bm25": null,
+            "matchReason": "recency"
+          }
+        ],
+        "suggestions": [],
+        "totalCandidates": 10,
+        "rankingApplied": "importance",
+        "queryEcho": {
+          "audience": {
+            "roles": [
+              "reviewer"
+            ]
+          }
+        },
+        "nextCursor": "<cursor:{\"v\":1,\"h\":\"sEbKMzfEc4SDnuZrRNkVzo\",\"r\":\"importance\",\"c\":\"plain\",\"p\":0.5,\"u\":\"2026-12-11T00:30:32.000Z\",\"i\":\"<id:filler3>\"}>",
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "walk-audience-page1",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "audience": {
+              "roles": [
+                "reviewer"
+              ]
+            },
+            "cursor": "<cursor:{\"v\":1,\"h\":\"sEbKMzfEc4SDnuZrRNkVzo\",\"r\":\"importance\",\"c\":\"plain\",\"p\":0.5,\"u\":\"2026-12-11T00:30:32.000Z\",\"i\":\"<id:filler3>\"}>"
+          },
+          "options": {
+            "ranking": "importance",
+            "limit": 1
+          }
+        }
+      },
+      "result": {
+        "hits": [],
+        "suggestions": [],
+        "totalCandidates": 10,
+        "rankingApplied": "importance",
+        "queryEcho": {
+          "audience": {
+            "roles": [
+              "reviewer"
+            ]
+          }
+        },
+        "nextCursor": null,
+        "matchChannel": "plain"
+      }
+    },
+    {
+      "step": "cursor-ranking-mismatch",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "cursor": "<cursor:{\"v\":1,\"h\":\"ekQ1-naPdua2xb0vjk29c7\",\"r\":\"recency\",\"c\":\"plain\",\"p\":0.5,\"u\":\"2026-12-11T00:30:01.000Z\",\"i\":\"<id:filler2>\"}>"
+          },
+          "options": {
+            "ranking": "importance",
+            "limit": 2
+          }
+        }
+      },
+      "error": {
+        "name": "InvalidSearchCursorError",
+        "message": "Invalid search cursor (query/filter binding mismatch) — restart the search from the first page."
+      }
+    },
+    {
+      "step": "cursor-filter-mismatch",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "kinds": [
+              "fact"
+            ],
+            "cursor": "<cursor:{\"v\":1,\"h\":\"ekQ1-naPdua2xb0vjk29c7\",\"r\":\"recency\",\"c\":\"plain\",\"p\":0.5,\"u\":\"2026-12-11T00:30:01.000Z\",\"i\":\"<id:filler2>\"}>"
+          },
+          "options": {
+            "ranking": "recency",
+            "limit": 2
+          }
+        }
+      },
+      "error": {
+        "name": "InvalidSearchCursorError",
+        "message": "Invalid search cursor (query/filter binding mismatch) — restart the search from the first page."
+      }
+    },
+    {
+      "step": "cursor-malformed",
+      "call": {
+        "method": "unifiedSearchService",
+        "input": {
+          "query": {
+            "cursor": "not-a-cursor"
+          }
+        }
+      },
+      "error": {
+        "name": "InvalidSearchCursorError",
+        "message": "Invalid search cursor (malformed token) — restart the search from the first page."
+      }
+    }
+  ]
+}

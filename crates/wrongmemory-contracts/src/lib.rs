@@ -374,6 +374,7 @@ pub mod method {
     pub const MEMORY_RELATED: &str = "memory.related";
     pub const MEMORY_FOR_AUDIENCE: &str = "memory.forAudience";
     pub const MEMORY_FOR_FILE: &str = "memory.forFile";
+    pub const MEMORY_UNIFIED_SEARCH: &str = "memory.unifiedSearch";
     pub const MEMORY_GRAPH: &str = "memory.graph";
     pub const MEMORY_STATS: &str = "memory.stats";
     pub const MEMORY_RECOVER: &str = "memory.recover";
@@ -422,6 +423,7 @@ pub mod method {
         MEMORY_RELATED,
         MEMORY_FOR_AUDIENCE,
         MEMORY_FOR_FILE,
+        MEMORY_UNIFIED_SEARCH,
         MEMORY_GRAPH,
         MEMORY_STATS,
         MEMORY_RECOVER,

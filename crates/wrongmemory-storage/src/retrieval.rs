@@ -78,7 +78,7 @@ fn escape_like_literal(s: &str) -> String {
     out
 }
 
-fn escape_glob(s: &str) -> String {
+pub(crate) fn escape_glob(s: &str) -> String {
     let mut out = String::new();
     for c in s.chars() {
         match c {
