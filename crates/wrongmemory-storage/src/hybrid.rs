@@ -76,6 +76,22 @@ impl SageStore {
         Ok(out)
     }
 
+    /// Ids of the rows `f` admits (visibility, statuses, kinds, policy).
+    fn visible_ids(&self, f: &Filter<'_>) -> StoreResult<HashSet<String>> {
+        let (where_sql, args) = f.sql("", vec![]);
+        let mut stmt = self
+            .conn
+            .prepare(&format!("SELECT m.id FROM memories m WHERE {where_sql}"))
+            .map_err(sql_err)?;
+        let rows = stmt
+            .query_map(
+                rusqlite::params_from_iter(args.iter().map(crate::store::sql_value)),
+                |r| r.get::<_, String>(0),
+            )
+            .map_err(sql_err)?;
+        rows.collect::<Result<_, _>>().map_err(sql_err)
+    }
+
     /// Refresh `cache` from this store.
     pub fn sync_semantic(
         &self,
@@ -110,7 +126,22 @@ impl SageStore {
             return Ok(lexical);
         }
         let threshold = provider.profile().vector_only_threshold;
-        let vector_hits = cache.search(&q, (limit * 2).max(VECTOR_FETCH), 0.0)?;
+        let default_status = ["active".to_string()];
+        let explicit = statuses.is_some_and(|s| !s.is_empty());
+        let filter = Filter {
+            statuses: statuses
+                .filter(|s| !s.is_empty())
+                .unwrap_or(&default_status),
+            kinds,
+            exclude_never: !explicit,
+            viewer,
+        };
+        // Visibility before the bounded window and the materialization
+        // budget: a hidden row never takes a slot (hidden reads like absent).
+        let visible = self.visible_ids(&filter)?;
+        let vector_hits = cache.search_where(&q, (limit * 2).max(VECTOR_FETCH), 0.0, |id| {
+            visible.contains(id)
+        })?;
 
         let lexical_rev: HashMap<&str, i64> = lexical
             .hits
@@ -147,16 +178,7 @@ impl SageStore {
             .collect();
         let mut materialized = HashMap::new();
         if !ids.is_empty() {
-            let default_status = ["active".to_string()];
-            let explicit = statuses.is_some_and(|s| !s.is_empty());
-            let filter = Filter {
-                statuses: statuses
-                    .filter(|s| !s.is_empty())
-                    .unwrap_or(&default_status),
-                kinds,
-                exclude_never: !explicit,
-                viewer,
-            };
+            // Re-applied at materialization: the row may have changed since.
             let placeholders = vec!["?"; ids.len()].join(", ");
             let found = self.select_hits(
                 &filter,

@@ -1196,7 +1196,7 @@ fn push_in(sql: &mut String, args: &mut Vec<Value>, column: &str, values: &[Stri
     sql.push(')');
 }
 
-fn sql_value(v: &Value) -> rusqlite::types::Value {
+pub(crate) fn sql_value(v: &Value) -> rusqlite::types::Value {
     match v {
         Value::Null => rusqlite::types::Value::Null,
         Value::String(s) => rusqlite::types::Value::Text(s.clone()),
@@ -1260,7 +1260,7 @@ pub(crate) struct Filter<'a> {
 impl Filter<'_> {
     /// WHERE clause (visibility first) plus positional args. `extra` may
     /// contain one `?` placeholder per `extra_args` element, in order.
-    fn sql(&self, extra: &str, extra_args: Vec<Value>) -> (String, Vec<Value>) {
+    pub(crate) fn sql(&self, extra: &str, extra_args: Vec<Value>) -> (String, Vec<Value>) {
         let mut args: Vec<Value> = vec![json!(self.viewer.session_id)];
         let mut sql = session_clause("m.", self.viewer, 1);
         push_in(&mut sql, &mut args, "m.status", self.statuses);

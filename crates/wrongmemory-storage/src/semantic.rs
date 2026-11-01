@@ -398,6 +398,19 @@ impl SemanticCache {
         fetch: usize,
         threshold: f64,
     ) -> Result<Vec<VectorHit>, ErrorBody> {
+        self.search_where(query, fetch, threshold, |_| true)
+    }
+
+    /// As [`Self::search`], over only the ids `keep` accepts. Callers pass
+    /// the viewer's visible ids, so a hidden row never takes a slot of the
+    /// bounded window (its presence must not change a visible result).
+    pub fn search_where(
+        &self,
+        query: &[(u32, f32)],
+        fetch: usize,
+        threshold: f64,
+        keep: impl Fn(&str) -> bool,
+    ) -> Result<Vec<VectorHit>, ErrorBody> {
         let mut stmt = self
             .conn
             .prepare("SELECT memory_id, revision, vector FROM vectors WHERE profile = ?1")
@@ -414,6 +427,9 @@ impl SemanticCache {
         let mut hits = Vec::new();
         for row in rows {
             let (id, revision, blob) = row.map_err(cache_err)?;
+            if !keep(&id) {
+                continue;
+            }
             // A corrupt vector is skipped; the next sync rewrites it only if
             // its revision or text changed, so drop it here to be safe.
             let Some(v) = decode(&blob) else { continue };

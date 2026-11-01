@@ -119,3 +119,52 @@ fn vector_channel_respects_sessions_policy_and_status() {
     store.update(&shared, &patch, &ctx(None), false).unwrap();
     assert!(ids(&store, &provider, &mut cache, &Viewer::default()).is_empty());
 }
+
+/// Hidden rows must not take vector slots: twenty other-session rows closer
+/// to the query than the one visible row must not crowd it out of the
+/// materialization budget (12) or change what the caller gets.
+#[test]
+fn hidden_rows_never_take_vector_slots() {
+    let tmp = tempfile::tempdir().unwrap();
+    let db = tmp.path().join("sage.db");
+    SageStore::create_managed(&db, "2026-11-01T00:00:00.000Z").unwrap();
+    let (mut store, _) = SageStore::open(&db, true, None, "2026-11-01T00:00:00.000Z").unwrap();
+    let provider = NgramHashProvider::new();
+    let mut cache =
+        SemanticCache::open(&tmp.path().join("semantic.sqlite"), provider.profile()).unwrap();
+    let visible = remember(
+        &mut store,
+        "共有キャッシュの再構築手順は運用文書にあります。",
+        None,
+    );
+    let query = "キャッシュ 再構築";
+    let before = ids(&store, &provider, &mut cache, &Viewer::default());
+    assert_eq!(before, vec![visible.clone()]);
+    for i in 0..20 {
+        remember(
+            &mut store,
+            &format!("キャッシュ再構築{i}"),
+            Some("other-session"),
+        );
+    }
+    let after = store
+        .hybrid_search(
+            &mut cache,
+            &provider,
+            query,
+            10,
+            None,
+            None,
+            &Viewer::default(),
+        )
+        .unwrap();
+    assert_eq!(
+        after
+            .hits
+            .iter()
+            .map(|h| h.memory.id.clone())
+            .collect::<Vec<_>>(),
+        before,
+        "hidden rows changed the visible result"
+    );
+}
