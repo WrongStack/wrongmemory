@@ -51,7 +51,7 @@ Legend: **Done**, meaning implemented and covered by an automated test or record
 | WM-104 | Done | Native DDL, codec, FTS and Unicode projection. |
 | WM-105 | Done | Registry migrations v1→v2 (jobs and schedules); a newer schema is refused; private DACL. |
 | WM-106 | Done | Singleton, owner-only pipe, 4 MiB / 16 KiB frame limits, auth deadline. The daemon proves itself with HMAC before any credential is sent (Rust and TS, with a squatting test). |
-| WM-107 | Partial | `OwnerGuard` lock, epochs, journal. No cooperative transfer protocol with a running WrongStack. |
+| WM-107 | Done (local) | `OwnerGuard` lock, epochs and journal, plus a cooperative transfer protocol with WrongStack (adapter `25ab857af`):<ul><li>SAGE now honors the guard. It refuses to open a store while a live WrongMemory owner holds `wrongmemory-owner.lock` (`SageStoreOwnedByWrongMemoryError`), so a WrongStack in `local` mode cannot become a second writer. On Windows the whole-file lock refuses reads while held; elsewhere a live owner pid counts.</li><li>`wstack sage handoff [--yes]` is operator-initiated, and plan-only without `--yes`. It stops the running SAGE project server through its authenticated `shutdown`, waits until it is gone, then adopts the store with write ownership. `forceOwner` is sent only when a stale `server.json` remains after the owner was verified gone. Finally it opens the store, so the daemon holds the lock.</li><li>Real-daemon tests: local SAGE refuses an adopted store while it is held, gets it back (with the service's writes) after `project.detach`, and the handoff moves a store with a stale `server.json` to read-write ownership. The whole sage package (1629 tests) still passes with the guard.</li></ul>Not run: a handoff of a real user store, which is a deployment step. |
 | WM-108 | Done | Receipts commit in the same transaction as the mutation; replay survives a restart and a crash (WM-602). There is no outbox; HQ sync is not implemented. |
 | WM-109 | Done | CLI: daemon, project, grants, search/get/for-path/remember, candidates, inspect, doctor, connect, backup, migrate, diagnostics, install. |
 
@@ -106,6 +106,7 @@ Branch `feat/wrongmemory-adapter` in the worktree `D:/Codebox/PROJECTS/WrongStac
 - `fe546f2ab`: client re-vendored at `08acf39`; HQ SAGE sync through the daemon when WrongMemory owns the store.
 - `578ff4899`, `e507f5aa0`: the memory MCP endpoint (and ACP worker endpoint) through a scoped WrongMemory grant; `wstack sage connect` points at `wrongmemory connect`. Adapter tests: 37/37 port tests, 131 CLI and port tests in the touched suites.
 - `89f503561`: store-side vector fusion in the port (caller-owned `vectorRecall`). Adapter tests: 39/39.
+- `25ab857af`: SAGE honors the WrongMemory owner lock; `wstack sage handoff`. sage + CLI subcommand + container suites: 1736/1736.
 
 | ID | State | Evidence / gap |
 |---|---|---|
