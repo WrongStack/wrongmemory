@@ -603,6 +603,9 @@ fn required_action(m: &str) -> Option<Action> {
         | method::PROJECT_REGISTER
         | method::PROJECT_DETACH
         | method::PROJECT_EXPORT
+        // Store-wide report / audit trail across every session: host only.
+        | method::MEMORY_DOCTOR
+        | method::MEMORY_AUDIT
         | method::GRANT_CREATE
         | method::GRANT_LIST
         | method::GRANT_REVOKE => Action::Admin,
@@ -1096,6 +1099,8 @@ async fn dispatch_inner(
         | method::MEMORY_HYGIENE
         | method::MEMORY_VERIFY
         | method::MEMORY_IMPORT_LEGACY
+        | method::MEMORY_DOCTOR
+        | method::MEMORY_AUDIT
         | method::MEMORY_LEGACY_FORGET
         | method::MEMORY_LEGACY_CONSOLIDATE
         | method::MEMORY_LEGACY_CLEAR => {
@@ -1205,6 +1210,34 @@ async fn dispatch_inner(
                                 err(ErrorCode::InvalidRequest, format!("invalid options: {e}"))
                             })?;
                         to_value(store.hygiene(&opts, &ctx)?)
+                    }
+                    method::MEMORY_DOCTOR => {
+                        let fix: Vec<String> =
+                            serde_json::from_value(params.get("fix").cloned().unwrap_or(json!([])))
+                                .map_err(|_| {
+                                    err(
+                                        ErrorCode::InvalidRequest,
+                                        "fix must be an array of strings",
+                                    )
+                                })?;
+                        let opts: wrongmemory_storage::hygiene::HygieneOptions =
+                            serde_json::from_value(
+                                params.get("hygieneOptions").cloned().unwrap_or(json!({})),
+                            )
+                            .map_err(|e| {
+                                err(
+                                    ErrorCode::InvalidRequest,
+                                    format!("invalid hygieneOptions: {e}"),
+                                )
+                            })?;
+                        store.doctor(&fix, &opts, &ctx)
+                    }
+                    method::MEMORY_AUDIT => {
+                        let limit = params.get("limit").and_then(Value::as_f64);
+                        if limit.is_some_and(|l| !(1.0..=1000.0).contains(&l)) {
+                            return Err(err(ErrorCode::InvalidRequest, "limit must be 1..1000"));
+                        }
+                        to_value(json!({"records": store.read_audit(limit)?}))
                     }
                     method::MEMORY_VERIFY => {
                         let results = match params.get("paths") {

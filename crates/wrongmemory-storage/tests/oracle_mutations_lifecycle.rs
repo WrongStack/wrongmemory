@@ -1038,3 +1038,205 @@ fn verify_scenario_matches_oracle() {
     }
     assert_no_diffs(diffs);
 }
+
+/// `doctor()` / `readAudit()` against the oracle's `doctor` scenario:
+/// planted defects, the report (metrics and checks), every named fix, the
+/// repeat (idempotence), the final report, and the audit trail. File sizes
+/// (`dbBytes`, `walBytes`) are masked by the generator and skipped here.
+#[test]
+fn doctor_scenario_matches_oracle() {
+    use wrongmemory_contracts::ProposeParams;
+    let f = fixture("doctor");
+    let mut r = Replay::new();
+    let mut diffs = Vec::new();
+    let mut compared = 0;
+    let mut clock = "2026-11-01T00:00:00.000Z".to_string();
+    // Our ids -> `<id:label>` inside any string of a report.
+    let normalize = |r: &Replay, v: &Value| -> Value {
+        fn walk(v: &Value, ids: &BTreeMap<String, String>) -> Value {
+            match v {
+                Value::String(s) => {
+                    let mut s = s.clone();
+                    for (label, real) in ids {
+                        s = s.replace(real.as_str(), &format!("<id:{label}>"));
+                    }
+                    json!(s)
+                }
+                Value::Array(a) => Value::Array(a.iter().map(|x| walk(x, ids)).collect()),
+                Value::Object(o) => Value::Object(
+                    o.iter()
+                        .filter(|(k, _)| *k != "dbBytes" && *k != "walBytes")
+                        .map(|(k, x)| (k.clone(), walk(x, ids)))
+                        .collect(),
+                ),
+                other => other.clone(),
+            }
+        }
+        walk(v, &r.ids)
+    };
+    let strip_bytes = |v: &Value| -> Value {
+        let mut v = v.clone();
+        if let Some(m) = v.get_mut("metrics").and_then(Value::as_object_mut) {
+            m.remove("dbBytes");
+            m.remove("walBytes");
+        }
+        v
+    };
+    for st in f["steps"].as_array().unwrap() {
+        let step = st["step"].as_str().unwrap();
+        let input = &st["call"]["input"];
+        let method = st["call"]["method"].as_str().unwrap_or("");
+        clock = st["result"]["generatedAt"]
+            .as_str()
+            .or_else(|| st["result"]["createdAt"].as_str())
+            .map(str::to_string)
+            .unwrap_or_else(|| bump_second(&clock));
+        let c = ctx(&clock, None);
+        match method {
+            "rememberSage" => {
+                let (p, _) = remember_params(input);
+                let o = r.store.remember(&p, &c).unwrap();
+                r.ids.insert(
+                    Replay::fixture_label(st["result"]["id"].as_str().unwrap()),
+                    o.id,
+                );
+            }
+            "deleteSage" => {
+                let id = r.real(input["id"].as_str().unwrap());
+                r.store
+                    .delete(&id, "cleanup", true, false, &c, true)
+                    .unwrap();
+            }
+            "createCandidate" => {
+                let p = ProposeParams {
+                    text: input["text"].as_str().unwrap().into(),
+                    kind: Some("convention".into()),
+                    sources: vec![MemorySource {
+                        kind: "user".into(),
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                };
+                r.store.propose(&p, &c).unwrap();
+            }
+            "dump" => {
+                // The generator plants the defects right before this dump.
+                let db = r.conn();
+                let id = |l: &str| r.ids[l].clone();
+                db.execute(
+                    "UPDATE memories SET data = json_set(data, '$.expiresAt', '2026-10-01T00:00:00.000Z') WHERE id = ?1",
+                    [id("expired")],
+                )
+                .unwrap();
+                for (l, inj, uses) in [("noisy", 150, 0), ("modeRole", 40, 0), ("plain", 30, 3)] {
+                    db.execute(
+                        "UPDATE memories SET data = json_set(data, '$.injectionCount', ?2, '$.useCount', ?3) WHERE id = ?1",
+                        rusqlite::params![id(l), inj, uses],
+                    )
+                    .unwrap();
+                }
+                let edge = |from: String, to: String, rel: &str, w: f64| {
+                    db.execute(
+                        "INSERT INTO edges (from_node, to_node, relation, weight, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+                        rusqlite::params![from, to, rel, w, clock],
+                    )
+                    .unwrap();
+                };
+                let hub = format!("mem:{}", id("hub"));
+                for i in 0..66 {
+                    edge(
+                        hub.clone(),
+                        format!("tag:topic-{i:02}"),
+                        if i % 2 == 1 {
+                            "related_to"
+                        } else {
+                            "same_topic"
+                        },
+                        0.5,
+                    );
+                }
+                edge(
+                    hub.clone(),
+                    "file:src/overview.md".into(),
+                    "about_file",
+                    1.0,
+                );
+                edge(
+                    "mem:mem_doesnotexist".into(),
+                    format!("mem:{}", id("plain")),
+                    "related_to",
+                    0.5,
+                );
+                edge(
+                    format!("mem:{}", id("plain")),
+                    format!("mem:{}", id("gone")),
+                    "related_to",
+                    0.5,
+                );
+                r.new_audit_events();
+            }
+            "doctor" => {
+                let fixes: Vec<String> = input["fix"]
+                    .as_array()
+                    .map(|a| a.iter().map(|x| x.as_str().unwrap().to_string()).collect())
+                    .unwrap_or_default();
+                let got = r
+                    .store
+                    .doctor(&fixes, &HygieneOptions::default(), &c)
+                    .unwrap();
+                let got = normalize(&r, &got);
+                let want = strip_bytes(&st["result"]);
+                compared += 1;
+                for key in ["generatedAt", "metrics", "checks", "fixesApplied"] {
+                    if got[key] != want[key] {
+                        diffs.push(format!(
+                            "{step}: {key}\n  oracle={}\n  ours  ={}",
+                            want[key], got[key]
+                        ));
+                    }
+                }
+                diffs.extend(r.compare_state(step, &st["state"]));
+                let ours = r.new_audit_events();
+                let want_events: Vec<String> = st["state"]["auditEvents"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|e| e["event"].as_str().unwrap().to_string())
+                    .collect();
+                if ours != want_events {
+                    diffs.push(format!(
+                        "{step}: audit oracle={want_events:?} ours={ours:?}"
+                    ));
+                }
+                let edges: i64 = r
+                    .conn()
+                    .query_row("SELECT COUNT(*) FROM edges", [], |x| x.get(0))
+                    .unwrap();
+                let want_edges = st["state"]["edges"].as_array().unwrap().len() as i64;
+                if edges != want_edges {
+                    diffs.push(format!("{step}: edges oracle={want_edges} ours={edges}"));
+                }
+            }
+            "readAudit" => {
+                let got = r.store.read_audit(input["limit"].as_f64()).unwrap();
+                let shape = |v: &Value| {
+                    json!([
+                        v["event"],
+                        v["memoryId"],
+                        v.get("details").map(|d| d.get("fix").is_some()
+                            || d.get("edges").is_some()
+                            || d.get("memories").is_some())
+                    ])
+                };
+                let want: Vec<Value> = st["result"].as_array().unwrap().iter().map(shape).collect();
+                let got: Vec<Value> = got.iter().map(|v| shape(&normalize(&r, v))).collect();
+                if got != want {
+                    diffs.push(format!("{step}: oracle={want:?}\n  ours={got:?}"));
+                }
+            }
+            other => panic!("unhandled oracle method {other}"),
+        }
+    }
+    assert_eq!(compared, 8, "every doctor step is compared");
+    assert_no_diffs(diffs);
+}

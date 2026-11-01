@@ -383,6 +383,8 @@ pub mod method {
     pub const MEMORY_HYGIENE: &str = "memory.hygiene";
     pub const MEMORY_VERIFY: &str = "memory.verify";
     pub const MEMORY_IMPORT_LEGACY: &str = "memory.importLegacy";
+    pub const MEMORY_DOCTOR: &str = "memory.doctor";
+    pub const MEMORY_AUDIT: &str = "memory.audit";
     /// Legacy `MemoryStore` bulk mutations (curator only).
     pub const MEMORY_LEGACY_FORGET: &str = "memory.legacyForget";
     pub const MEMORY_LEGACY_CONSOLIDATE: &str = "memory.legacyConsolidate";
@@ -434,6 +436,8 @@ pub mod method {
         MEMORY_HYGIENE,
         MEMORY_VERIFY,
         MEMORY_IMPORT_LEGACY,
+        MEMORY_DOCTOR,
+        MEMORY_AUDIT,
         MEMORY_LEGACY_FORGET,
         MEMORY_LEGACY_CONSOLIDATE,
         MEMORY_LEGACY_CLEAR,

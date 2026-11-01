@@ -8,6 +8,7 @@
 
 pub mod backup;
 pub mod candidates;
+pub mod doctor;
 pub mod find_file;
 pub mod hygiene;
 pub mod inspect;

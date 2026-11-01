@@ -67,6 +67,12 @@
       "description": "unifiedSearchService: filters, audience/anchor post-filters, rankings, scores, suggestions, keyset cursor walks, session rules, invalid cursors",
       "steps": 54,
       "errors": 3
+    },
+    {
+      "scenario": "doctor",
+      "description": "doctor(): metrics and checks over planted defects (expired active, graph hub, dangling edges, runtime-mode audience, heavy never-used, pending backlog), each named fix, the post-fix report, and readAudit",
+      "steps": 20,
+      "errors": 0
     }
   ],
   "warnings": 1

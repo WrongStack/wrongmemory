@@ -262,6 +262,8 @@ async fn grants_cannot_cross_projects_or_sessions() {
         method::MEMORY_LEGACY_CONSOLIDATE,
         method::MEMORY_LEGACY_CLEAR,
         method::MEMORY_IMPORT_LEGACY,
+        method::MEMORY_DOCTOR,
+        method::MEMORY_AUDIT,
         method::MEMORY_VERIFY,
         method::CANDIDATE_LIST,
         method::CANDIDATE_PROPOSE,
@@ -1225,4 +1227,77 @@ async fn legacy_import_only_reads_project_files() {
     )
     .await;
     assert_eq!(code, ErrorCode::Forbidden);
+}
+
+/// `memory.doctor` and `memory.audit` report on every session's records, so
+/// they are host-only: even a curator grant gets `FORBIDDEN`. The host gets
+/// the SAGE doctor report (and its named repairs) and the audit trail.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn doctor_and_audit_are_host_only() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("home");
+    let _d = start(&root).await;
+    let mut h = Client::connect_host(&dr(&root), "host").await.unwrap();
+    let w = world(&root, tmp.path(), &mut h).await;
+    let curator = grant(&mut h, "curator", &w.a).await;
+    let mut cur = connect(&root, &curator).await;
+    for m in [method::MEMORY_DOCTOR, method::MEMORY_AUDIT] {
+        let (code, _) = fail(&mut cur, m, Some(&w.a), json!({})).await;
+        assert_eq!(code, ErrorCode::Forbidden, "{m}");
+    }
+
+    let report = call(&mut h, method::MEMORY_DOCTOR, Some(&w.a), json!({})).await;
+    let ids: Vec<&str> = report["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["id"].as_str().unwrap())
+        .collect();
+    assert!(
+        ids.contains(&"sqlite-integrity") && ids.contains(&"dangling-edges"),
+        "{report}"
+    );
+    assert!(report["metrics"]["total"].as_i64().unwrap() > 0);
+    assert!(report.get("fixesApplied").is_none());
+
+    let (code, _) = fail(
+        &mut h,
+        method::MEMORY_DOCTOR,
+        Some(&w.a),
+        json!({"fix": ["drop-everything"]}),
+    )
+    .await;
+    assert_eq!(code, ErrorCode::InvalidRequest);
+    let fixed = call(
+        &mut h,
+        method::MEMORY_DOCTOR,
+        Some(&w.a),
+        json!({"fix": ["dangling-edges", "fts-rebuild"]}),
+    )
+    .await;
+    assert_eq!(
+        fixed["fixesApplied"].as_array().unwrap().len(),
+        2,
+        "{fixed}"
+    );
+
+    let audit = call(
+        &mut h,
+        method::MEMORY_AUDIT,
+        Some(&w.a),
+        json!({"limit": 3}),
+    )
+    .await;
+    let records = audit["records"].as_array().unwrap();
+    assert!(!records.is_empty() && records.len() <= 3, "{audit}");
+    assert_eq!(records[0]["event"], "memory.doctor_fix");
+    assert_eq!(records[0]["schemaVersion"], 1);
+    let (code, _) = fail(
+        &mut h,
+        method::MEMORY_AUDIT,
+        Some(&w.a),
+        json!({"limit": 0}),
+    )
+    .await;
+    assert_eq!(code, ErrorCode::InvalidRequest);
 }

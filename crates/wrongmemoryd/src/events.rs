@@ -261,6 +261,21 @@ pub fn drafts_for(m: &str, result: &Value) -> Vec<Entry> {
                 owner_session: None,
             }]
         }
+        // A doctor run that applied a repair changed the store (edges,
+        // audiences, the text index, or a hygiene pass): one coarse event.
+        method::MEMORY_DOCTOR => {
+            let changed = result
+                .get("fixesApplied")
+                .and_then(Value::as_array)
+                .is_some_and(|f| f.iter().any(|x| x["changed"].as_u64().unwrap_or(0) > 0));
+            if !changed {
+                return vec![];
+            }
+            vec![Entry {
+                event: draft(m),
+                owner_session: None,
+            }]
+        }
         method::MEMORY_BACKFILL | method::MEMORY_HYGIENE => {
             if result.get("dryRun").and_then(Value::as_bool) != Some(false) {
                 return vec![];

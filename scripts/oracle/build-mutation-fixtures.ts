@@ -203,6 +203,8 @@ class Scenario {
       (k, v) => {
         if (v === undefined) return undefined;
         if (k === 'change_id' || k === 'epoch') return '<volatile>';
+        // File sizes depend on page allocation and checkpoint timing.
+        if ((k === 'dbBytes' || k === 'walBytes') && typeof v === 'number') return '<bytes>';
         // Fake credential samples exist only to exercise the secret guard; never
         // commit them verbatim (they trip secret scanners). Keep a stable tag.
         if (typeof v === 'string' && storeHelpers.looksLikeSecret(v)) {
@@ -856,6 +858,56 @@ const idOf = (v: unknown) => (v as { id?: string } | undefined)?.id;
   await us('cursor-ranking-mismatch', { cursor: first.nextCursor }, { ranking: 'importance', limit: 2 });
   await us('cursor-filter-mismatch', { kinds: ['fact'], cursor: first.nextCursor }, { ranking: 'recency', limit: 2 });
   await us('cursor-malformed', { cursor: 'not-a-cursor' });
+}
+
+// ─── doctor / audit ─────────────────────────────────────────────────────────
+{
+  const s = new Scenario(
+    'doctor',
+    'doctor(): metrics and checks over planted defects (expired active, graph hub, dangling edges, runtime-mode audience, heavy never-used, pending backlog), each named fix, the post-fix report, and readAudit',
+  );
+  scenarios.push(s);
+  const rem = async (label: string, input: Row) =>
+    s.label(idOf(await s.run(`remember-${label}`, 'rememberSage', input, () => s.store.rememberSage(input), { state: false })), label)!;
+  const expired = await rem('expired', { text: 'Session digest from last week about the flaky deploy.', anchors: [{ type: 'file', path: 'src/deploy.ts' }] });
+  const hub = await rem('hub', { text: 'Legacy overview memory that everything links to.' });
+  const modeOnly = await rem('modeOnly', { text: 'Workers should read the plan before coding.', kind: 'role_operational', audience: { modes: ['default'] } });
+  const modeRole = await rem('modeRole', { text: 'Critics challenge every assumption.', kind: 'role_operational', audience: { modes: ['default', 'review'], roles: ['critic'] } });
+  const noisy = await rem('noisy', { text: 'Prefer tabs over spaces in generated files.' });
+  const plain = await rem('plain', { text: 'The CLI entry point is src/cli.ts.', anchors: [{ type: 'file', path: 'src/cli.ts' }] });
+  const gone = await rem('gone', { text: 'Temporary note that will be deleted.' });
+  await s.run('delete-gone', 'deleteSage', { id: gone }, () => s.store.deleteSage(gone, 'cleanup', { force: true } as never), { state: false });
+  await s.run('candidate', 'createCandidate', { text: 'Release tags follow vX.Y.Z.' }, () =>
+    s.store.createCandidate({ text: 'Release tags follow vX.Y.Z.', kind: 'convention', source: { type: 'user' } } as never),
+    { state: false },
+  );
+  // Plant the defects the doctor measures, the way they appear in real stores.
+  {
+    tick();
+    const db = new DatabaseSync(s.dbFile());
+    db.prepare(`UPDATE memories SET data = json_set(data, '$.expiresAt', '2026-10-01T00:00:00.000Z') WHERE id = ?`).run(expired);
+    db.prepare(`UPDATE memories SET data = json_set(data, '$.injectionCount', 150, '$.useCount', 0) WHERE id = ?`).run(noisy);
+    db.prepare(`UPDATE memories SET data = json_set(data, '$.injectionCount', 40, '$.useCount', 0) WHERE id = ?`).run(modeRole);
+    db.prepare(`UPDATE memories SET data = json_set(data, '$.injectionCount', 30, '$.useCount', 3) WHERE id = ?`).run(plain);
+    const edge = db.prepare(`INSERT INTO edges (from_node, to_node, relation, weight, created_at) VALUES (?, ?, ?, ?, ?)`);
+    const at = new Date(clock).toISOString();
+    for (let i = 0; i < 66; i++) edge.run(`mem:${hub}`, `tag:topic-${String(i).padStart(2, '0')}`, i % 2 ? 'related_to' : 'same_topic', 0.5, at);
+    edge.run(`mem:${hub}`, 'file:src/overview.md', 'about_file', 1, at);
+    edge.run('mem:mem_doesnotexist', `mem:${plain}`, 'related_to', 0.5, at);
+    edge.run(`mem:${plain}`, `mem:${gone}`, 'related_to', 0.5, at);
+    db.close();
+  }
+  await s.run('state', 'dump', {}, () => undefined);
+  await s.run('doctor-report', 'doctor', {}, () => s.store.doctor());
+  for (const fix of ['dangling-edges', 'graph-hubs', 'audience-runtime-mode', 'fts-rebuild', 'hygiene']) {
+    await s.run(`doctor-fix-${fix}`, 'doctor', { fix: [fix] }, () => s.store.doctor({ fix: [fix] } as never));
+  }
+  await s.run('doctor-fix-repeat', 'doctor', { fix: ['dangling-edges', 'graph-hubs', 'audience-runtime-mode'] }, () =>
+    s.store.doctor({ fix: ['dangling-edges', 'graph-hubs', 'audience-runtime-mode'] } as never),
+  );
+  await s.run('doctor-final', 'doctor', {}, () => s.store.doctor());
+  await s.run('read-audit', 'readAudit', { limit: 6 }, () => s.store.readAudit(6), { state: false });
+  await s.run('read-audit-default', 'readAudit', {}, () => s.store.readAudit(), { state: false });
 }
 
 // ─── Write ──────────────────────────────────────────────────────────────────
