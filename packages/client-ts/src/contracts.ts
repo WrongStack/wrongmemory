@@ -65,6 +65,20 @@ export const METHODS = {
   MEMORY_REMEMBER: 'memory.remember',
   CANDIDATE_LIST: 'candidate.list',
   CANDIDATE_PROPOSE: 'candidate.propose',
+  CANDIDATE_ACCEPT: 'candidate.accept',
+  CANDIDATE_REJECT: 'candidate.reject',
+  CANDIDATE_RESOLVE: 'candidate.resolve',
+  MEMORY_UPDATE: 'memory.update',
+  MEMORY_FEEDBACK: 'memory.feedback',
+  MEMORY_DELETE: 'memory.delete',
+  MEMORY_RECORD_USAGE: 'memory.recordUsage',
+  MEMORY_LIST_PAGE: 'memory.listPage',
+  MEMORY_RELATED: 'memory.related',
+  MEMORY_GRAPH: 'memory.graph',
+  MEMORY_STATS: 'memory.stats',
+  MEMORY_RECOVER: 'memory.recover',
+  MEMORY_BACKFILL: 'memory.backfill',
+  MEMORY_HYGIENE: 'memory.hygiene',
 } as const;
 export type Method = (typeof METHODS)[keyof typeof METHODS];
 

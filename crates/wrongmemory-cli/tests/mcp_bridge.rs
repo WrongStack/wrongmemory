@@ -152,6 +152,10 @@ fn bridge_serves_scoped_tools_and_exits_on_eof() {
             "memory_search",
             "memory_for_path",
             "memory_get",
+            "memory_graph",
+            "memory_gather_batch",
+            "memory_related",
+            "memory_feedback",
             "memory_candidates"
         ]
     );

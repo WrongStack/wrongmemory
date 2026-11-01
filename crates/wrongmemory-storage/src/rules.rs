@@ -345,7 +345,9 @@ mod tests {
             "AWS_SECRET_ACCESS_KEY=abcdefghijklmnop1234"
         ));
         assert!(looks_like_secret("token: 'abcdefghijklmnopqrst'"));
-        assert!(looks_like_secret(&["use gh", "p_", "abcdefghijklmnopqrstuvwx"].concat()));
+        assert!(looks_like_secret(
+            &["use gh", "p_", "abcdefghijklmnopqrstuvwx"].concat()
+        ));
         assert!(looks_like_secret("-----BEGIN RSA PRIVATE KEY-----"));
         assert!(!looks_like_secret("mytoken=abcdefghijklmnopqrstuv"));
         assert!(!looks_like_secret("secretly=abcdefghijklmnopqrstuv"));

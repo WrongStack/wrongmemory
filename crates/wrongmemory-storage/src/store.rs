@@ -79,7 +79,7 @@ pub struct SageStore {
     writable: bool,
     fts: bool,
     unicode_text: bool,
-    project_root: Option<PathBuf>,
+    pub(crate) project_root: Option<PathBuf>,
 }
 
 impl SageStore {
@@ -265,10 +265,16 @@ impl SageStore {
         let terms = fts_prefix_terms(query);
         if self.fts && !terms.is_empty() {
             let first = self.select_fts(&filter, &terms.join(" "), limit)?;
-            if !first.hits.is_empty() || terms.len() < 2 {
+            if terms.len() < 2 {
                 return Ok(first);
             }
-            return self.select_fts(&filter, &terms.join(" OR "), limit);
+            let mut result = if first.hits.is_empty() {
+                self.select_fts(&filter, &terms.join(" OR "), limit)?
+            } else {
+                first
+            };
+            crate::retrieval::hybrid_rerank(query, &mut result.hits);
+            return Ok(result);
         }
         self.search_like(&filter, query, limit)
     }
@@ -447,84 +453,17 @@ impl SageStore {
     /// Memories anchored at `path`, at an ancestor directory of it, or (for a
     /// directory query) below it. Active/stale only, visibility-bound.
     pub fn for_path(&self, path: &str, limit: usize, viewer: &Viewer) -> StoreResult<SearchResult> {
-        let limit = limit.clamp(1, MAX_PAGE_SIZE);
-        let target = self.relative_path(path);
-        if target.is_empty() {
+        if path.trim().is_empty() {
             return Err(invalid("path must not be empty"));
         }
-        let mut stmt = self
-            .conn
-            .prepare(&format!(
-                "SELECT DISTINCT m.id, m.data
-                   FROM memories m, json_each(m.data, '$.anchors') a
-                  WHERE json_valid(m.data)
-                    AND m.status IN ('active', 'stale')
-                    AND {session}
-                    AND json_extract(a.value, '$.path') IS NOT NULL
-                  ORDER BY m.importance DESC, m.updated_at DESC, m.id DESC
-                  LIMIT 20000",
-                session = session_clause("m.", viewer, 1)
-            ))
-            .map_err(sql_err)?;
-        let rows = stmt
-            .query_map(params![viewer.session_id], |r| r.get::<_, String>(1))
-            .map_err(sql_err)?;
-        let ancestors = ancestor_paths(&target);
-        let mut hits = Vec::new();
-        for row in rows {
-            let data = row.map_err(sql_err)?;
-            let Some(memory) = decode_memory(&data) else {
-                continue;
-            };
-            let mut best: Option<(f64, String)> = None;
-            for anchor in &memory.anchors {
-                let Some(p) = anchor.path.as_deref() else {
-                    continue;
-                };
-                let anchored = normalize_slashes(p);
-                let (score, reason) = if anchored == target {
-                    (1.0, format!("exact {}", anchor.kind))
-                } else if ancestors.contains(&anchored) {
-                    (0.6, format!("ancestor {anchored}"))
-                } else if anchored.starts_with(&format!("{target}/")) {
-                    (0.4, format!("below {target}"))
-                } else {
-                    continue;
-                };
-                if best.as_ref().is_none_or(|(s, _)| score > *s) {
-                    best = Some((score, reason));
-                }
-            }
-            if let Some((score, reason)) = best {
-                hits.push(SearchHit {
-                    memory,
-                    channel: "path".into(),
-                    score,
-                    reasons: vec![reason],
-                });
-            }
-        }
-        hits.sort_by(|a, b| {
-            b.score
-                .partial_cmp(&a.score)
-                .unwrap_or(std::cmp::Ordering::Equal)
-                .then(
-                    b.memory
-                        .importance
-                        .partial_cmp(&a.memory.importance)
-                        .unwrap_or(std::cmp::Ordering::Equal),
-                )
-                .then(b.memory.updated_at.cmp(&a.memory.updated_at))
-                .then(b.memory.id.cmp(&a.memory.id))
-        });
-        let truncated = hits.len() > limit;
-        hits.truncate(limit);
-        Ok(SearchResult {
-            hits,
-            truncated,
-            corrupt_skipped: 0,
-            channel: "path".into(),
-        })
+        self.retrieve_for_paths(
+            &[path.to_string()],
+            &crate::retrieval::PathOptions {
+                limit: Some(limit),
+                ..Default::default()
+            },
+            viewer,
+        )
     }
 
     /// Review queue. Session-scoped proposals are visible to their session only.
@@ -595,6 +534,30 @@ impl SageStore {
         let fingerprint = fingerprint(&serde_json::to_value(p).unwrap_or(Value::Null));
         let candidate = self.build_candidate(p, ctx)?;
         self.with_receipt(ctx, "candidate.propose", &fingerprint, |conn| (|| -> rusqlite::Result<MutationOutcome> {
+            // Baseline dedupe: an identical pending proposal is returned as is.
+            let canonical = normalize_text_key(&candidate.text);
+            let pending: Vec<String> = conn
+                .prepare("SELECT data FROM candidates WHERE status = 'pending' AND canonical_text = ?1")?
+                .query_map([&canonical], |r| r.get(0))?
+                .collect::<rusqlite::Result<_>>()?;
+            let vkey = |c: &MemoryCandidate| serde_json::to_string(&c.validity).unwrap_or_default();
+            for d in pending {
+                if let Ok(existing) = serde_json::from_str::<MemoryCandidate>(&d)
+                    && existing.scope == candidate.scope
+                    && existing.owner_session_id == candidate.owner_session_id
+                    && existing.target_memory_id == candidate.target_memory_id
+                    && existing.target_revision == candidate.target_revision
+                    && vkey(&existing) == vkey(&candidate)
+                {
+                    return Ok(MutationOutcome {
+                        outcome: "candidate-pending".into(),
+                        id: existing.id.clone(),
+                        revision: None,
+                        replayed: false,
+                        record: serde_json::to_value(&existing).unwrap_or(Value::Null),
+                    });
+                }
+            }
             let data = serde_json::to_string(&candidate)
                 .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
             conn.execute(
@@ -611,9 +574,9 @@ impl SageStore {
             )?;
             audit(
                 conn,
-                "candidate.created",
+                "memory.candidate_created",
                 &ctx.now_iso,
-                json!({"candidateId": candidate.id, "source": "wrongmemory", "principal": ctx.principal_id}),
+                json!({"details": {"candidateId": candidate.id}}),
             )?;
             Ok(MutationOutcome {
                 outcome: "candidate-pending".into(),
@@ -644,7 +607,15 @@ impl SageStore {
         work: impl FnOnce(&Connection) -> StoreResult<MutationOutcome>,
     ) -> StoreResult<MutationOutcome> {
         let conn = &self.conn;
-        conn.execute_batch("BEGIN IMMEDIATE").map_err(sql_err)?;
+        // Nested use (candidate accept/resolve composing remember/update)
+        // runs inside the caller's transaction as a savepoint.
+        let nested = !conn.is_autocommit();
+        conn.execute_batch(if nested {
+            "SAVEPOINT wm_nested"
+        } else {
+            "BEGIN IMMEDIATE"
+        })
+        .map_err(sql_err)?;
         let result: Result<MutationOutcome, ErrorBody> = (|| {
             if let Some(key) = &ctx.idempotency_key {
                 let prior: Option<(String, String)> = conn
@@ -692,12 +663,41 @@ impl SageStore {
         })();
         match result {
             Ok(v) => {
-                conn.execute_batch("COMMIT").map_err(sql_err)?;
+                conn.execute_batch(if nested {
+                    "RELEASE wm_nested"
+                } else {
+                    "COMMIT"
+                })
+                .map_err(sql_err)?;
                 Ok(v)
             }
             Err(e) => {
-                if !conn.is_autocommit() {
+                if nested {
+                    let _ = conn.execute_batch("ROLLBACK TO wm_nested; RELEASE wm_nested");
+                } else if !conn.is_autocommit() {
                     let _ = conn.execute_batch("ROLLBACK");
+                }
+                Err(e)
+            }
+        }
+    }
+
+    /// Run `work` in one IMMEDIATE transaction (outermost composite ops).
+    pub(crate) fn in_transaction<T>(
+        &mut self,
+        work: impl FnOnce(&mut Self) -> StoreResult<T>,
+    ) -> StoreResult<T> {
+        self.conn
+            .execute_batch("BEGIN IMMEDIATE")
+            .map_err(sql_err)?;
+        match work(self) {
+            Ok(v) => {
+                self.conn.execute_batch("COMMIT").map_err(sql_err)?;
+                Ok(v)
+            }
+            Err(e) => {
+                if !self.conn.is_autocommit() {
+                    let _ = self.conn.execute_batch("ROLLBACK");
                 }
                 Err(e)
             }
@@ -795,6 +795,11 @@ impl SageStore {
         p: &ProposeParams,
         ctx: &MutationCtx,
     ) -> StoreResult<MemoryCandidate> {
+        crate::rules::reject_if_unsafe(&serde_json::to_value(p).unwrap_or(Value::Null))?;
+        let default_sources = [wrongmemory_contracts::MemorySource {
+            kind: "session".into(),
+            ..Default::default()
+        }];
         let kind = p.kind.clone().unwrap_or_else(|| "fact".into());
         let scope = p.scope.clone().unwrap_or_else(|| "project".into());
         self.validate_common(&CommonInput {
@@ -866,7 +871,11 @@ impl SageStore {
             tags: normalize_tags(&p.tags),
             anchors: self.normalize_anchors(&p.anchors),
             audience: p.audience.clone(),
-            sources: p.sources.clone(),
+            sources: crate::mutate::normalize_sources(if p.sources.is_empty() {
+                &default_sources
+            } else {
+                &p.sources
+            }),
             validity: p.validity.clone(),
             created_at: ctx.now_iso.clone(),
             updated_at: ctx.now_iso.clone(),

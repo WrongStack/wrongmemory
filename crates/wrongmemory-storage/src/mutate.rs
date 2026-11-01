@@ -545,7 +545,9 @@ impl SageStore {
                 )?,
             };
             if let Some(existing) = existing {
-                let (mut m, old) = read_raw(conn, &existing.id).map_err(sql_err)?.ok_or_else(not_found)?;
+                let (mut m, old) = read_raw(conn, &existing.id)
+                    .map_err(sql_err)?
+                    .ok_or_else(not_found)?;
                 let prefer_incoming = !is_exact
                     && similarity::tokenize_count(&text) > similarity::tokenize_count(&old.text)
                     && js_length(&text) > js_length(&old.text);
@@ -608,7 +610,11 @@ impl SageStore {
                         old.persistence.as_deref() == Some("permanent") && per != "permanent";
                     m.insert(
                         "persistence".into(),
-                        json!(if keep_permanent { "permanent" } else { per.as_str() }),
+                        json!(if keep_permanent {
+                            "permanent"
+                        } else {
+                            per.as_str()
+                        }),
                     );
                 }
                 if let Some(e) = &p.expires_at {
@@ -623,13 +629,6 @@ impl SageStore {
                 {
                     sync_edges(conn, &merged, &now)?;
                 }
-                audit(
-                    conn,
-                    "memory.merged",
-                    &now,
-                    json!({"memoryId": merged.id, "nearDuplicate": !is_exact, "source": "wrongmemory", "principal": ctx.principal_id}),
-                )
-                .map_err(sql_err)?;
                 return Ok(MutationOutcome {
                     outcome: "memory-merged".into(),
                     id: merged.id.clone(),
@@ -659,9 +658,13 @@ impl SageStore {
                 freshness,
                 tags: tags.clone(),
                 anchors: anchors.clone(),
-                audience: audience.as_ref().and_then(|a| serde_json::from_value(a.clone()).ok()),
+                audience: audience
+                    .as_ref()
+                    .and_then(|a| serde_json::from_value(a.clone()).ok()),
                 sources: sources.clone(),
-                validity: validity.as_ref().and_then(|v| serde_json::from_value(v.clone()).ok()),
+                validity: validity
+                    .as_ref()
+                    .and_then(|v| serde_json::from_value(v.clone()).ok()),
                 feedback: None,
                 supersedes: (!p.supersedes.is_empty()).then(|| p.supersedes.clone()),
                 superseded_by: None,
@@ -680,13 +683,6 @@ impl SageStore {
             };
             insert_memory(conn, &rec).map_err(sql_err)?;
             sync_edges(conn, &rec, &now)?;
-            audit(
-                conn,
-                "memory.accepted",
-                &now,
-                json!({"memoryId": rec.id, "kind": rec.kind, "source": "wrongmemory", "principal": ctx.principal_id}),
-            )
-            .map_err(sql_err)?;
             Ok(MutationOutcome {
                 outcome: "memory-committed".into(),
                 id: rec.id.clone(),
@@ -996,8 +992,6 @@ impl SageStore {
             {
                 sync_edges(conn, &updated, &now)?;
             }
-            audit(conn, "memory.updated", &now, json!({"memoryId": id, "revision": updated.revision, "principal": ctx.principal_id}))
-                .map_err(sql_err)?;
             if existing.status != "deleted" && updated.status == "deleted" {
                 tombstone_cleanup(conn, id, &now, force, &updated, ctx)?;
             }

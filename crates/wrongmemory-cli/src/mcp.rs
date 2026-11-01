@@ -146,7 +146,14 @@ pub fn tools_for(profile: Option<PolicyProfile>) -> Vec<Tool> {
         )
         .with_annotations(ToolAnnotations::new().read_only(true).idempotent(true)),
     ];
+    let candidate_actions: Vec<&str> = if allows(wrongmemory_contracts::Action::Curate) {
+        vec!["list", "propose", "accept", "reject", "resolve"]
+    } else {
+        vec!["list", "propose"]
+    };
+    tools.extend(read_tools());
     if allows(wrongmemory_contracts::Action::Propose) {
+        tools.push(feedback_tool());
         tools.push(
             Tool::new(
                 "memory_candidates",
@@ -154,7 +161,10 @@ pub fn tools_for(profile: Option<PolicyProfile>) -> Vec<Tool> {
                 schema(json!({
                     "type": "object",
                     "properties": {
-                        "action": {"type": "string", "enum": ["list", "propose"]},
+                        "action": {"type": "string", "enum": candidate_actions},
+                        "candidateId": {"type": "string", "description": "accept/reject/resolve: candidate id"},
+                        "decision": {"type": "string", "enum": ["keep", "archive", "delete"], "description": "resolve: outcome for the reviewed memory"},
+                        "reason": {"type": "string"},
                         "text": {"type": "string", "description": "propose: the durable fact/convention/decision (WHAT, WHERE, WHY)"},
                         "kind": {"type": "string", "enum": wrongmemory_contracts::SAGE_KINDS},
                         "tags": {"type": "array", "items": {"type": "string"}},
@@ -192,7 +202,144 @@ pub fn tools_for(profile: Option<PolicyProfile>) -> Vec<Tool> {
             .with_annotations(ToolAnnotations::new().read_only(false).destructive(false)),
         );
     }
+    if allows(wrongmemory_contracts::Action::Write) {
+        tools.push(update_tool());
+    }
+    if allows(wrongmemory_contracts::Action::Curate) {
+        tools.push(delete_tool());
+        tools.extend(curator_tools());
+    }
     tools
+}
+
+fn obj_schema(props: Value, required: &[&str]) -> Arc<JsonObject> {
+    schema(
+        json!({"type": "object", "properties": props, "required": required, "additionalProperties": false}),
+    )
+}
+
+fn read_tools() -> Vec<Tool> {
+    let ro = || ToolAnnotations::new().read_only(true).idempotent(true);
+    vec![
+        Tool::new(
+            "memory_graph",
+            "Bounded graph around a memory id, file/dir path, or query: anchor and relationship edges plus the visible memories they connect.",
+            obj_schema(json!({
+                "query": {"type": "string"},
+                "depth": {"type": "integer", "minimum": 1, "maximum": 6},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 300}
+            }), &["query"]),
+        )
+        .with_annotations(ro()),
+        Tool::new(
+            "memory_gather_batch",
+            "Page through memories by status/kind/text with a cursor (management listing, newest first).",
+            obj_schema(json!({
+                "statuses": {"type": "array", "items": {"type": "string", "enum": wrongmemory_contracts::SAGE_STATUSES}},
+                "kind": {"type": "string"},
+                "query": {"type": "string"},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+                "cursor": {"type": "string"}
+            }), &[]),
+        )
+        .with_annotations(ro()),
+        Tool::new(
+            "memory_related",
+            "Memories related to the given ids through shared anchors, tags, and graph edges, scored.",
+            obj_schema(json!({
+                "ids": {"type": "array", "items": {"type": "string"}, "maxItems": 20},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+            }), &["ids"]),
+        )
+        .with_annotations(ro()),
+    ]
+}
+
+fn feedback_tool() -> Tool {
+    Tool::new(
+        "memory_feedback",
+        "Report whether a memory you read was useful, outdated, incorrect, irrelevant, or uncertain. Requires the revision you read and concrete evidence; it never rewrites the memory.",
+        obj_schema(json!({
+            "id": {"type": "string"},
+            "observedRevision": {"type": "integer", "minimum": 1},
+            "verdict": {"type": "string", "enum": ["useful", "outdated", "incorrect", "irrelevant", "uncertain"]},
+            "evidence": {"type": "string", "maxLength": 2000}
+        }), &["id", "observedRevision", "verdict", "evidence"]),
+    )
+    .with_annotations(ToolAnnotations::new().read_only(false).destructive(false))
+}
+
+fn update_tool() -> Tool {
+    Tool::new(
+        "memory_update",
+        "Revise a memory you read (writer grant). Pass expectedRevision from your read; a concurrent change returns REVISION_CONFLICT.",
+        obj_schema(json!({
+            "id": {"type": "string"},
+            "expectedRevision": {"type": "integer", "minimum": 1},
+            "text": {"type": "string"},
+            "kind": {"type": "string", "enum": wrongmemory_contracts::SAGE_KINDS},
+            "tags": {"type": "array", "items": {"type": "string"}},
+            "importance": {"type": "number", "minimum": 0, "maximum": 1},
+            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+            "status": {"type": "string", "enum": ["active", "stale", "archived", "superseded", "contradicted"]},
+            "supersededBy": {"type": "string"},
+            "validity": {"type": ["object", "null"]}
+        }), &["id", "expectedRevision"]),
+    )
+    .with_annotations(ToolAnnotations::new().read_only(false).destructive(false))
+}
+
+fn curator_tools() -> Vec<Tool> {
+    let rw = || ToolAnnotations::new().read_only(false).destructive(false);
+    vec![
+        Tool::new(
+            "memory_recover",
+            "Recover a tombstoned memory, or follow a superseded memory to its current head (curator grant).",
+            obj_schema(
+                json!({"id": {"type": "string"}, "reason": {"type": "string"}}),
+                &["id"],
+            ),
+        )
+        .with_annotations(rw()),
+        Tool::new(
+            "memory_backfill_recoverable",
+            "Preview (default) or apply restoration of recoverable tombstones as new active successors (curator grant).",
+            obj_schema(
+                json!({"filter": {"type": "object"}, "apply": {"type": "boolean"}}),
+                &[],
+            ),
+        )
+        .with_annotations(rw()),
+        Tool::new(
+            "memory_hygiene",
+            "Run lifecycle maintenance: anchor verification, duplicate consolidation, contradiction review, session expiry (curator grant). dryRun reports without writing.",
+            obj_schema(
+                json!({
+                    "dryRun": {"type": "boolean"},
+                    "verify": {"type": "boolean"},
+                    "retentionDays": {"type": "number"},
+                    "sessionRetentionDays": {"type": "number"},
+                    "purgeDeletedAfterDays": {"type": "number"}
+                }),
+                &[],
+            ),
+        )
+        .with_annotations(rw()),
+    ]
+}
+
+fn delete_tool() -> Tool {
+    Tool::new(
+        "memory_delete",
+        "Tombstone a memory (curator grant, force=true required). The record and its history are kept; it stops being recalled.",
+        obj_schema(json!({
+            "id": {"type": "string"},
+            "reason": {"type": "string"},
+            "force": {"type": "boolean"},
+            "neverInject": {"type": "boolean"}
+        }), &["id", "reason", "force"]),
+    )
+    .with_annotations(ToolAnnotations::new().read_only(false).destructive(true))
 }
 
 fn arg_str<'a>(args: &'a JsonObject, key: &str) -> Option<&'a str> {
@@ -334,7 +481,24 @@ impl Bridge {
                     self.call_with_key(method::CANDIDATE_PROPOSE, params, &key)
                         .await
                 }
-                _ => return bad_input("action must be list or propose"),
+                Some(action @ ("accept" | "reject" | "resolve")) => {
+                    let Some(id) = arg_str(&args, "candidateId") else {
+                        return bad_input("candidateId is required");
+                    };
+                    let mut params = json!({"id": id});
+                    for k in ["decision", "reason"] {
+                        if let Some(v) = args.get(k) {
+                            params[k] = v.clone();
+                        }
+                    }
+                    let m = match action {
+                        "accept" => method::CANDIDATE_ACCEPT,
+                        "reject" => method::CANDIDATE_REJECT,
+                        _ => method::CANDIDATE_RESOLVE,
+                    };
+                    self.call(m, params).await
+                }
+                _ => return bad_input("unsupported action"),
             },
             "remember" => {
                 let Some(text) = arg_str(&args, "text") else {
@@ -353,6 +517,59 @@ impl Bridge {
                     wrongmemory_storage::store::fingerprint(&params)
                 );
                 self.call_with_key(method::MEMORY_REMEMBER, params, &key)
+                    .await
+            }
+            "memory_graph" => {
+                let mut params = json!({"query": arg_str(&args, "query").unwrap_or("")});
+                if let Some(d) = args.get("depth") {
+                    params["maxDepth"] = d.clone();
+                }
+                if let Some(l) = args.get("limit") {
+                    params["limit"] = l.clone();
+                }
+                self.call(method::MEMORY_GRAPH, params).await
+            }
+            "memory_gather_batch" => {
+                let mut params = Value::Object(args.clone());
+                if params.get("limit").is_none() {
+                    params["limit"] = json!(20);
+                }
+                self.call(method::MEMORY_LIST_PAGE, params).await
+            }
+            "memory_related" => {
+                self.call(method::MEMORY_RELATED, Value::Object(args.clone()))
+                    .await
+            }
+            "memory_feedback" => {
+                let Some(id) = arg_str(&args, "id") else {
+                    return bad_input("id is required");
+                };
+                let fb = json!({
+                    "verdict": args.get("verdict").cloned().unwrap_or(Value::Null),
+                    "observedRevision": args.get("observedRevision").cloned().unwrap_or(Value::Null),
+                    "evidence": args.get("evidence").cloned().unwrap_or(Value::Null),
+                });
+                self.call(method::MEMORY_FEEDBACK, json!({"id": id, "feedback": fb}))
+                    .await
+            }
+            "memory_update" => {
+                self.call(method::MEMORY_UPDATE, Value::Object(args.clone()))
+                    .await
+            }
+            "memory_delete" => {
+                self.call(method::MEMORY_DELETE, Value::Object(args.clone()))
+                    .await
+            }
+            "memory_recover" => {
+                self.call(method::MEMORY_RECOVER, Value::Object(args.clone()))
+                    .await
+            }
+            "memory_backfill_recoverable" => {
+                self.call(method::MEMORY_BACKFILL, Value::Object(args.clone()))
+                    .await
+            }
+            "memory_hygiene" => {
+                self.call(method::MEMORY_HYGIENE, Value::Object(args.clone()))
                     .await
             }
             other => return bad_input(&format!("unknown tool {other}")),

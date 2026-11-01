@@ -360,6 +360,20 @@ pub mod method {
     pub const MEMORY_REMEMBER: &str = "memory.remember";
     pub const CANDIDATE_LIST: &str = "candidate.list";
     pub const CANDIDATE_PROPOSE: &str = "candidate.propose";
+    pub const CANDIDATE_ACCEPT: &str = "candidate.accept";
+    pub const CANDIDATE_REJECT: &str = "candidate.reject";
+    pub const CANDIDATE_RESOLVE: &str = "candidate.resolve";
+    pub const MEMORY_UPDATE: &str = "memory.update";
+    pub const MEMORY_FEEDBACK: &str = "memory.feedback";
+    pub const MEMORY_DELETE: &str = "memory.delete";
+    pub const MEMORY_RECORD_USAGE: &str = "memory.recordUsage";
+    pub const MEMORY_LIST_PAGE: &str = "memory.listPage";
+    pub const MEMORY_RELATED: &str = "memory.related";
+    pub const MEMORY_GRAPH: &str = "memory.graph";
+    pub const MEMORY_STATS: &str = "memory.stats";
+    pub const MEMORY_RECOVER: &str = "memory.recover";
+    pub const MEMORY_BACKFILL: &str = "memory.backfill";
+    pub const MEMORY_HYGIENE: &str = "memory.hygiene";
 
     /// Every method, in a stable order.
     pub const ALL: &[&str] = &[
@@ -380,6 +394,20 @@ pub mod method {
         MEMORY_REMEMBER,
         CANDIDATE_LIST,
         CANDIDATE_PROPOSE,
+        CANDIDATE_ACCEPT,
+        CANDIDATE_REJECT,
+        CANDIDATE_RESOLVE,
+        MEMORY_UPDATE,
+        MEMORY_FEEDBACK,
+        MEMORY_DELETE,
+        MEMORY_RECORD_USAGE,
+        MEMORY_LIST_PAGE,
+        MEMORY_RELATED,
+        MEMORY_GRAPH,
+        MEMORY_STATS,
+        MEMORY_RECOVER,
+        MEMORY_BACKFILL,
+        MEMORY_HYGIENE,
     ];
 }
 

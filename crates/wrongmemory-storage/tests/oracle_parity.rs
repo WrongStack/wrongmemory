@@ -173,11 +173,8 @@ fn search_matches_oracle() {
             let ours_ids: Vec<String> = ours.hits.iter().map(|h| f.label(&h.memory.id)).collect();
             let want = ids_of(&f, q["result"]["ok"].as_array().unwrap());
             let multi = wrongmemory_storage::store::fts_prefix_terms(&query).len() >= 2;
-            let ok = if multi {
-                ours_ids.iter().collect::<BTreeSet<_>>() == want.iter().collect::<BTreeSet<_>>()
-            } else {
-                ours_ids == want
-            };
+            let ok = ours_ids == want;
+            let _ = multi;
             report.push(format!(
                 "{} {name} {qname}: oracle={want:?} ours={ours_ids:?}",
                 if ok { "PASS" } else { "FAIL" }
@@ -288,7 +285,7 @@ fn path_retrieval_matches_oracle_sets() {
         // matching must at least return every directly anchored oracle hit
         // and nothing the oracle hides.
         assert!(
-            ours.is_subset(&want) || ours == want,
+            ours == want,
             "{qname}: ours {ours:?} not within oracle {want:?}"
         );
         compared += 1;

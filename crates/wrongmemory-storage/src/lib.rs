@@ -6,9 +6,13 @@
 //! * [`owner`] — OS-backed owner guard per store.
 //! * [`text`] — JS-compatible text/path normalization.
 
+pub mod candidates;
+pub mod hygiene;
 pub mod inspect;
 pub mod mutate;
 pub mod owner;
+pub mod recovery;
+pub mod retrieval;
 pub mod rules;
 pub mod schema;
 pub mod similarity;
@@ -367,7 +371,33 @@ mod tests {
                 .id,
             id
         );
-        assert_eq!(store.for_path("src\\app", 10, &v).unwrap().hits.len(), 1);
+        // Baseline retrieveForPath: a directory query does not return memories
+        // anchored to files below it; a file query does return memories
+        // anchored to its ancestor directories.
+        assert!(store.for_path("src\\app", 10, &v).unwrap().hits.is_empty());
+        let dir_note = store
+            .remember(
+                &RememberParams {
+                    text: "Everything under src/app is generated code".into(),
+                    anchors: vec![MemoryAnchor {
+                        kind: "directory".into(),
+                        path: Some("src/app".into()),
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                },
+                &ctx(None, None),
+            )
+            .unwrap()
+            .id;
+        let ids: Vec<String> = store
+            .for_path("src/app/other.rs", 10, &v)
+            .unwrap()
+            .hits
+            .into_iter()
+            .map(|h| h.memory.id)
+            .collect();
+        assert_eq!(ids, vec![dir_note]);
         assert!(
             store
                 .for_path("docs/readme.md", 10, &v)

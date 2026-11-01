@@ -25,6 +25,7 @@ use wrongmemory_ipc::endpoint::{generate_token, token_eq};
 use wrongmemory_ipc::frame::{FrameError, read_frame, write_frame};
 use wrongmemory_ipc::{DataRoot, Discovery};
 use wrongmemory_registry::{Registry, now_iso, now_ms};
+use wrongmemory_storage::mutate::UsageKind;
 use wrongmemory_storage::{MutationCtx, Viewer};
 
 use crate::projects::{self, Stores};
@@ -502,9 +503,23 @@ fn required_action(m: &str) -> Option<Action> {
         | method::SESSION_RELEASE
         | method::MEMORY_SEARCH
         | method::MEMORY_GET
-        | method::MEMORY_FOR_PATH => Action::Read,
-        method::CANDIDATE_LIST | method::CANDIDATE_PROPOSE => Action::Propose,
-        method::MEMORY_REMEMBER => Action::Write,
+        | method::MEMORY_FOR_PATH
+        | method::MEMORY_LIST_PAGE
+        | method::MEMORY_RELATED
+        | method::MEMORY_GRAPH
+        | method::MEMORY_STATS => Action::Read,
+        method::CANDIDATE_LIST
+        | method::CANDIDATE_PROPOSE
+        | method::MEMORY_FEEDBACK
+        | method::MEMORY_RECORD_USAGE => Action::Propose,
+        method::MEMORY_REMEMBER | method::MEMORY_UPDATE => Action::Write,
+        method::MEMORY_DELETE
+        | method::CANDIDATE_ACCEPT
+        | method::CANDIDATE_REJECT
+        | method::CANDIDATE_RESOLVE
+        | method::MEMORY_RECOVER
+        | method::MEMORY_BACKFILL
+        | method::MEMORY_HYGIENE => Action::Curate,
         method::DAEMON_SHUTDOWN
         | method::PROJECT_REGISTER
         | method::PROJECT_DETACH
@@ -513,6 +528,43 @@ fn required_action(m: &str) -> Option<Action> {
         | method::GRANT_REVOKE => Action::Admin,
         _ => return None,
     })
+}
+
+fn mutation_ctx(state: &Conn, idempotency_key: Option<String>) -> MutationCtx {
+    MutationCtx {
+        principal_id: state.principal.id.clone(),
+        client_label: state.principal.label.clone(),
+        session_id: state.session.clone(),
+        idempotency_key,
+        now_iso: now_iso(),
+    }
+}
+
+fn obj(params: Value) -> Result<serde_json::Map<String, Value>, ErrorBody> {
+    match params {
+        Value::Null => Ok(serde_json::Map::new()),
+        Value::Object(m) => Ok(m),
+        _ => Err(err(ErrorCode::InvalidRequest, "params must be an object")),
+    }
+}
+
+/// Run `f` against the project's store on the blocking pool, serialized by
+/// the store mutex (the project's writer lane).
+async fn store_op<T, F>(shared: &Arc<Shared>, pid: String, f: F) -> Result<T, ErrorBody>
+where
+    T: Send + 'static,
+    F: FnOnce(&mut wrongmemory_storage::SageStore) -> Result<T, ErrorBody> + Send + 'static,
+{
+    shared
+        .blocking(move |s| {
+            let h = s.stores.handle(&s.registry, &s.instance_id, &pid)?;
+            let mut store = h
+                .store
+                .lock()
+                .map_err(|_| err(ErrorCode::Internal, "store lock poisoned"))?;
+            f(&mut store)
+        })
+        .await
 }
 
 fn parse<T: DeserializeOwned>(params: Value) -> Result<T, ErrorBody> {
@@ -565,16 +617,9 @@ async fn dispatch(
         return Err(err(ErrorCode::ShuttingDown, "daemon is draining"));
     }
 
-    let project_scoped = matches!(
-        req.method.as_str(),
-        method::PROJECT_GET
-            | method::MEMORY_SEARCH
-            | method::MEMORY_GET
-            | method::MEMORY_FOR_PATH
-            | method::MEMORY_REMEMBER
-            | method::CANDIDATE_LIST
-            | method::CANDIDATE_PROPOSE
-    );
+    let project_scoped = req.method == method::PROJECT_GET
+        || req.method.starts_with("memory.")
+        || req.method.starts_with("candidate.");
     let project_id = if project_scoped {
         let id = req
             .project_id
@@ -842,6 +887,7 @@ async fn dispatch(
             };
             let pid = project_id.expect("scoped");
             let is_remember = req.method == method::MEMORY_REMEMBER;
+            let is_grant = state.principal.grant.is_some();
             let params = req.params;
             shared.inflight.fetch_add(1, Ordering::SeqCst);
             let result = shared
@@ -856,6 +902,12 @@ async fn dispatch(
                         store.remember(&p, &ctx)
                     } else {
                         let p: ProposeParams = parse(params)?;
+                        if is_grant && p.scope.as_deref() == Some("session") {
+                            return Err(err(
+                                ErrorCode::InvalidRequest,
+                                "scope session is not available for external proposals; use project, file, symbol, or user.",
+                            ));
+                        }
                         store.propose(&p, &ctx)
                     }
                 })
@@ -867,6 +919,206 @@ async fn dispatch(
                 "principal": state.principal.id,
             });
             to_value(outcome)
+        }
+        method::MEMORY_UPDATE
+        | method::MEMORY_FEEDBACK
+        | method::MEMORY_DELETE
+        | method::MEMORY_RECORD_USAGE
+        | method::CANDIDATE_ACCEPT
+        | method::CANDIDATE_REJECT
+        | method::CANDIDATE_RESOLVE
+        | method::MEMORY_RECOVER
+        | method::MEMORY_BACKFILL
+        | method::MEMORY_HYGIENE => {
+            let ctx = mutation_ctx(state, req.idempotency_key.clone());
+            let curator = state
+                .principal
+                .grant
+                .as_ref()
+                .is_none_or(|g| g.profile.allows(Action::Curate));
+            let pid = project_id.expect("scoped");
+            let m = req.method.clone();
+            let params = obj(req.params)?;
+            shared.inflight.fetch_add(1, Ordering::SeqCst);
+            let result = store_op(shared, pid, move |store| {
+                let id = || {
+                    params
+                        .get("id")
+                        .and_then(Value::as_str)
+                        .map(str::to_string)
+                        .ok_or_else(|| err(ErrorCode::InvalidRequest, "id is required"))
+                };
+                match m.as_str() {
+                    method::MEMORY_UPDATE => {
+                        let mut input = params.clone();
+                        input.remove("id");
+                        if input.contains_key("feedback") {
+                            return Err(err(
+                                ErrorCode::InvalidRequest,
+                                "use memory.feedback for feedback",
+                            ));
+                        }
+                        to_value(store.update(&id()?, &input, &ctx, curator)?)
+                    }
+                    method::MEMORY_FEEDBACK => {
+                        let mut input = serde_json::Map::new();
+                        input.insert(
+                            "feedback".into(),
+                            params.get("feedback").cloned().ok_or_else(|| {
+                                err(ErrorCode::InvalidRequest, "feedback is required")
+                            })?,
+                        );
+                        to_value(store.update(&id()?, &input, &ctx, false)?)
+                    }
+                    method::MEMORY_DELETE => {
+                        let reason = params
+                            .get("reason")
+                            .and_then(Value::as_str)
+                            .unwrap_or("Deleted via WrongMemory");
+                        let force = params
+                            .get("force")
+                            .and_then(Value::as_bool)
+                            .unwrap_or(false);
+                        let never = params
+                            .get("neverInject")
+                            .and_then(Value::as_bool)
+                            .unwrap_or(false);
+                        to_value(store.delete(&id()?, reason, force, never, &ctx, curator)?)
+                    }
+                    method::MEMORY_RECORD_USAGE => {
+                        let ids: Vec<String> =
+                            serde_json::from_value(params.get("ids").cloned().unwrap_or(json!([])))
+                                .map_err(|_| {
+                                    err(
+                                        ErrorCode::InvalidRequest,
+                                        "ids must be an array of strings",
+                                    )
+                                })?;
+                        let kind = match params.get("kind").and_then(Value::as_str) {
+                            Some("injection") => UsageKind::Injection,
+                            Some("use") => UsageKind::Use,
+                            _ => {
+                                return Err(err(
+                                    ErrorCode::InvalidRequest,
+                                    "kind must be injection or use",
+                                ));
+                            }
+                        };
+                        let label = params
+                            .get("label")
+                            .and_then(Value::as_str)
+                            .unwrap_or("external");
+                        let n = store.record_usage(&ids, kind, label, &ctx)?;
+                        Ok(json!({ "recorded": n }))
+                    }
+                    method::CANDIDATE_ACCEPT => to_value(store.accept_candidate(&id()?, &ctx)?),
+                    method::MEMORY_RECOVER => {
+                        let reason = params.get("reason").and_then(Value::as_str);
+                        to_value(store.recover(&id()?, reason, &ctx)?)
+                    }
+                    method::MEMORY_BACKFILL => {
+                        let filter: wrongmemory_storage::recovery::BackfillFilter =
+                            serde_json::from_value(
+                                params.get("filter").cloned().unwrap_or(json!({})),
+                            )
+                            .map_err(|e| {
+                                err(ErrorCode::InvalidRequest, format!("invalid filter: {e}"))
+                            })?;
+                        let apply = params
+                            .get("apply")
+                            .and_then(Value::as_bool)
+                            .unwrap_or(false);
+                        to_value(store.backfill_recoverable(&filter, !apply, &ctx)?)
+                    }
+                    method::MEMORY_HYGIENE => {
+                        let opts: wrongmemory_storage::hygiene::HygieneOptions =
+                            serde_json::from_value(Value::Object(params.clone())).map_err(|e| {
+                                err(ErrorCode::InvalidRequest, format!("invalid options: {e}"))
+                            })?;
+                        to_value(store.hygiene(&opts, &ctx)?)
+                    }
+                    method::CANDIDATE_REJECT => {
+                        let reason = params
+                            .get("reason")
+                            .and_then(Value::as_str)
+                            .unwrap_or("Rejected");
+                        to_value(store.reject_candidate(&id()?, reason, &ctx)?)
+                    }
+                    _ => {
+                        let decision = params.get("decision").and_then(Value::as_str).unwrap_or("");
+                        let reason = params.get("reason").and_then(Value::as_str);
+                        to_value(store.resolve_candidate(
+                            &id()?,
+                            decision,
+                            reason,
+                            &ctx,
+                            curator,
+                        )?)
+                    }
+                }
+            })
+            .await;
+            shared.inflight.fetch_sub(1, Ordering::SeqCst);
+            result
+        }
+        method::MEMORY_LIST_PAGE
+        | method::MEMORY_RELATED
+        | method::MEMORY_GRAPH
+        | method::MEMORY_STATS => {
+            let viewer = Viewer {
+                session_id: state.session.clone(),
+            };
+            let pid = project_id.expect("scoped");
+            let m = req.method.clone();
+            let params = obj(req.params)?;
+            store_op(shared, pid, move |store| {
+                let s = |k: &str| params.get(k).and_then(Value::as_str).map(str::to_string);
+                let n = |k: &str| params.get(k).and_then(Value::as_u64).map(|v| v as usize);
+                match m.as_str() {
+                    method::MEMORY_LIST_PAGE => {
+                        let statuses: Option<Vec<String>> = params
+                            .get("statuses")
+                            .map(|v| serde_json::from_value(v.clone()))
+                            .transpose()
+                            .map_err(|_| {
+                                err(ErrorCode::InvalidRequest, "statuses must be an array")
+                            })?;
+                        to_value(store.list_page(
+                            statuses.as_deref(),
+                            s("kind").as_deref(),
+                            s("query").as_deref(),
+                            n("limit"),
+                            s("cursor").as_deref(),
+                            &viewer,
+                        )?)
+                    }
+                    method::MEMORY_RELATED => {
+                        let ids: Vec<String> =
+                            serde_json::from_value(params.get("ids").cloned().unwrap_or(json!([])))
+                                .map_err(|_| {
+                                    err(
+                                        ErrorCode::InvalidRequest,
+                                        "ids must be an array of strings",
+                                    )
+                                })?;
+                        let hits = store.find_related(
+                            &ids,
+                            n("limit").unwrap_or(10),
+                            n("maxDepth").unwrap_or(3),
+                            &viewer,
+                        )?;
+                        Ok(json!({ "hits": hits }))
+                    }
+                    method::MEMORY_GRAPH => to_value(store.graph_for(
+                        &s("query").unwrap_or_default(),
+                        n("maxDepth").unwrap_or(2),
+                        n("limit").unwrap_or(100),
+                        &viewer,
+                    )?),
+                    _ => store.stats(&viewer),
+                }
+            })
+            .await
         }
         other => Err(err(
             ErrorCode::MethodNotFound,
