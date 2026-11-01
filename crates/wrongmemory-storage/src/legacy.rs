@@ -514,7 +514,7 @@ impl SageStore {
         };
         let resolved_root = crate::paths::resolved_root_of(&root);
         let real_root = std::fs::canonicalize(&root)
-            .map(|p| crate::wrongstack_paths::node_resolve(&PathBufExt::strip_verbatim(p)))
+            .map(|p| crate::wrongstack_paths::node_resolve(&crate::paths::strip_verbatim(p)))
             .unwrap_or_else(|_| resolved_root.clone());
         let mut bodies = Vec::new();
         let mut total = 0u64;
@@ -529,22 +529,43 @@ impl SageStore {
                 return Err(outside(f));
             }
             let real = std::fs::canonicalize(&lexical)
-                .map(PathBufExt::strip_verbatim)
+                .map(crate::paths::strip_verbatim)
                 .map_err(|e| invalid(format!("cannot read {f}: {e}")))?;
             if !crate::paths::lexically_inside(&real_root, &real) {
                 return Err(outside(f));
             }
-            total += std::fs::metadata(&real)
-                .map_err(|e| invalid(format!("cannot read {f}: {e}")))?
-                .len();
+            // Only legacy Markdown notes: never the daemon's own store,
+            // WAL or journal (`.wrongstack/`), VCS internals, or other files
+            // whose bytes could carry another session's private records.
+            if !is_importable_note(&real_root, &real) {
+                return Err(invalid(format!(
+                    "importLegacyFiles: only .md/.markdown notes outside .wrongstack and .git can be imported: {f}"
+                )));
+            }
+            let meta = std::fs::symlink_metadata(&real)
+                .map_err(|e| invalid(format!("cannot read {f}: {e}")))?;
+            if !meta.is_file() {
+                return Err(invalid(format!(
+                    "importLegacyFiles: not a regular file: {f}"
+                )));
+            }
+            let remaining = MAX_LEGACY_IMPORT_BYTES - total;
+            let mut body = Vec::new();
+            std::fs::File::open(&real)
+                .and_then(|file| {
+                    use std::io::Read;
+                    file.take(remaining + 1).read_to_end(&mut body)
+                })
+                .map_err(|e| invalid(format!("cannot read {f}: {e}")))?;
+            total += body.len() as u64;
             if total > MAX_LEGACY_IMPORT_BYTES {
                 return Err(invalid(format!(
                     "Legacy memory import exceeds {MAX_LEGACY_IMPORT_BYTES} bytes"
                 )));
             }
-            let body =
-                std::fs::read(&real).map_err(|e| invalid(format!("cannot read {f}: {e}")))?;
-            bodies.push(String::from_utf8_lossy(&body).into_owned());
+            let text = String::from_utf8(body)
+                .map_err(|_| invalid(format!("importLegacyFiles: {f} is not valid UTF-8")))?;
+            bodies.push(text);
         }
         let (mut imported, mut skipped) = (0, 0);
         for b in &bodies {
@@ -556,19 +577,20 @@ impl SageStore {
     }
 }
 
-/// Strip the Windows verbatim prefix from a canonical path.
-trait PathBufExt {
-    fn strip_verbatim(self) -> std::path::PathBuf;
-}
-
-impl PathBufExt for std::path::PathBuf {
-    fn strip_verbatim(self) -> std::path::PathBuf {
-        let s = self.to_string_lossy().into_owned();
-        match s.strip_prefix(r"\?\") {
-            Some(rest) if !rest.starts_with("UNC\\") => std::path::PathBuf::from(rest),
-            _ => self,
-        }
-    }
+/// A canonical path (inside `real_root`) that names a legacy Markdown note:
+/// a `.md`/`.markdown` extension and no `.wrongstack` or `.git` component
+/// below the root.
+fn is_importable_note(real_root: &std::path::Path, real: &std::path::Path) -> bool {
+    let ext_ok = real
+        .extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case("md") || e.eq_ignore_ascii_case("markdown"));
+    let rel_components = real.components().skip(real_root.components().count());
+    let reserved = rel_components.into_iter().any(|c| {
+        let c = c.as_os_str().to_string_lossy();
+        c.eq_ignore_ascii_case(".wrongstack") || c.eq_ignore_ascii_case(".git")
+    });
+    ext_ok && !reserved
 }
 
 #[cfg(test)]

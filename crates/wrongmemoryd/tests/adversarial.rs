@@ -1117,7 +1117,8 @@ async fn verify_is_curated_and_session_safe() {
 }
 
 /// `memory.importLegacy` reads Markdown notes from disk on the daemon's
-/// side, so only files inside the project root may be named.
+/// side: curator-only, only `.md`/`.markdown` files inside the project root,
+/// never the daemon's own `.wrongstack` store or `.git` internals.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn legacy_import_only_reads_project_files() {
     let tmp = tempfile::tempdir().unwrap();
@@ -1134,7 +1135,20 @@ async fn legacy_import_only_reads_project_files() {
     std::fs::write(tmp.path().join("outside.md"), "- outside secret fact\n").unwrap();
     std::fs::write(tmp.path().join("proj-b").join("B.md"), "- project b fact\n").unwrap();
 
-    let mut wr = connect(&root, &w.wr).await;
+    std::fs::write(proj_a.join("notes.txt"), "- text file fact\n").unwrap();
+    std::fs::create_dir_all(proj_a.join(".git")).unwrap();
+    std::fs::write(proj_a.join(".git").join("x.md"), "- git fact\n").unwrap();
+    std::fs::create_dir_all(proj_a.join("dir.md")).unwrap();
+    std::fs::write(proj_a.join("latin1.md"), b"- caf\xe9 fact\n").unwrap();
+    // An adopted store lives under `.wrongstack/memories`; nothing below
+    // `.wrongstack` is importable, whatever its extension.
+    let ws = proj_a.join(".wrongstack").join("memories");
+    std::fs::create_dir_all(&ws).unwrap();
+    std::fs::write(ws.join("sage.db"), "- store bytes fact\n").unwrap();
+    std::fs::write(ws.join("notes.md"), "- wrongstack fact\n").unwrap();
+
+    let curator = grant(&mut h, "curator", &w.a).await;
+    let mut wr = connect(&root, &curator).await;
     let ok = call(
         &mut wr,
         method::MEMORY_IMPORT_LEGACY,
@@ -1148,9 +1162,20 @@ async fn legacy_import_only_reads_project_files() {
         json!({"files": ["../outside.md"]}),
         json!({"files": [tmp.path().join("outside.md").display().to_string()]}),
         json!({"files": [tmp.path().join("proj-b").join("B.md").display().to_string()]}),
-        json!({"files": [r"\attacker\share\notes.md"]}),
+        json!({"files": [r"\\attacker\share\notes.md"]}),
+        json!({"files": ["//attacker/share/notes.md"]}),
         json!({"files": []}),
-    ] {
+        json!({"files": ["notes.txt"]}),
+        json!({"files": [".git/x.md"]}),
+        json!({"files": ["dir.md"]}),
+        json!({"files": ["latin1.md"]}),
+    ]
+    .into_iter()
+    .chain([
+        json!({"files": [".wrongstack/memories/sage.db"]}),
+        json!({"files": [".wrongstack/memories/notes.md"]}),
+        json!({"files": [".WrongStack/memories/notes.md"]}),
+    ]) {
         let (code, msg) = fail(
             &mut wr,
             method::MEMORY_IMPORT_LEGACY,
@@ -1181,6 +1206,16 @@ async fn legacy_import_only_reads_project_files() {
     .await;
     assert_eq!(found["hits"].as_array().unwrap().len(), 0);
 
+    // A writer grant is not enough: the import reads files as the daemon.
+    let mut writer = connect(&root, &w.wr).await;
+    let (code, _) = fail(
+        &mut writer,
+        method::MEMORY_IMPORT_LEGACY,
+        Some(&w.a),
+        json!({"files": ["NOTES.md"]}),
+    )
+    .await;
+    assert_eq!(code, ErrorCode::Forbidden);
     let mut rp = connect(&root, &w.rp).await;
     let (code, _) = fail(
         &mut rp,

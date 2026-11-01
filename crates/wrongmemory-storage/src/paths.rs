@@ -16,7 +16,7 @@ use std::path::{Component, Path, PathBuf};
 use crate::text::normalize_slashes;
 use crate::wrongstack_paths::node_resolve;
 
-fn strip_verbatim(p: PathBuf) -> PathBuf {
+pub(crate) fn strip_verbatim(p: PathBuf) -> PathBuf {
     let s = p.to_string_lossy().into_owned();
     if let Some(rest) = s.strip_prefix(r"\\?\UNC\") {
         PathBuf::from(format!(r"\\{rest}"))

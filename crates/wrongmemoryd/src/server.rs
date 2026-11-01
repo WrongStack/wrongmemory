@@ -581,9 +581,7 @@ fn required_action(m: &str) -> Option<Action> {
         | method::CANDIDATE_PROPOSE
         | method::MEMORY_FEEDBACK
         | method::MEMORY_RECORD_USAGE => Action::Propose,
-        method::MEMORY_REMEMBER | method::MEMORY_UPDATE | method::MEMORY_IMPORT_LEGACY => {
-            Action::Write
-        }
+        method::MEMORY_REMEMBER | method::MEMORY_UPDATE => Action::Write,
         method::MEMORY_DELETE
         | method::CANDIDATE_ACCEPT
         | method::CANDIDATE_REJECT
@@ -592,6 +590,7 @@ fn required_action(m: &str) -> Option<Action> {
         | method::MEMORY_BACKFILL
         | method::MEMORY_HYGIENE
         | method::MEMORY_VERIFY
+        | method::MEMORY_IMPORT_LEGACY
         | method::MEMORY_LEGACY_FORGET
         | method::MEMORY_LEGACY_CONSOLIDATE
         | method::MEMORY_LEGACY_CLEAR
