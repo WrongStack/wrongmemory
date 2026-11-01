@@ -1192,24 +1192,40 @@ async fn dispatch_inner(
                         Ok(json!({ "hits": hits }))
                     }
                     method::MEMORY_FOR_AUDIENCE => {
-                        let context = params.get("context").cloned().unwrap_or(json!({}));
-                        if !context.is_object() {
+                        // Only role/taskType/mode, as bounded strings: the
+                        // context reaches the truncation audit record.
+                        const FIELD_MAX: usize = 256;
+                        let raw = params.get("context").cloned().unwrap_or(json!({}));
+                        let Some(fields) = raw.as_object() else {
                             return Err(err(
                                 ErrorCode::InvalidRequest,
                                 "context must be an object",
                             ));
-                        }
-                        for k in ["role", "taskType", "mode"] {
-                            if context
-                                .get(k)
-                                .is_some_and(|v| !v.is_string() && !v.is_null())
-                            {
+                        };
+                        let mut context = serde_json::Map::new();
+                        for (k, v) in fields {
+                            if !matches!(k.as_str(), "role" | "taskType" | "mode") {
                                 return Err(err(
                                     ErrorCode::InvalidRequest,
-                                    format!("context.{k} must be a string"),
+                                    "context accepts only role, taskType and mode",
                                 ));
                             }
+                            match v {
+                                Value::Null => {}
+                                Value::String(s) if s.len() <= FIELD_MAX => {
+                                    context.insert(k.clone(), v.clone());
+                                }
+                                _ => {
+                                    return Err(err(
+                                        ErrorCode::InvalidRequest,
+                                        format!(
+                                            "context.{k} must be a string of at most {FIELD_MAX} bytes"
+                                        ),
+                                    ));
+                                }
+                            }
                         }
+                        let context = Value::Object(context);
                         let limit = params.get("limit").and_then(Value::as_i64);
                         to_value(store.retrieve_for_audience(
                             &context,

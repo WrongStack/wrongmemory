@@ -839,3 +839,47 @@ async fn hostile_frames_and_forged_credentials() {
     let health = call(&mut h, method::DAEMON_HEALTH, None, json!({})).await;
     assert!(health.is_object());
 }
+
+/// `memory.forAudience` is a read: a read-only grant must not be able to
+/// push arbitrary payloads into the store through the truncation audit.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn audience_context_is_bounded_before_it_reaches_the_audit_log() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("home");
+    let _d = start(&root).await;
+    let mut h = Client::connect_host(&dr(&root), "host").await.unwrap();
+    let a = register(&mut h, &tmp.path().join("proj")).await;
+    // Enough audience rows that limit=1 truncates (window 5 < rows).
+    for i in 0..7 {
+        call(
+            &mut h,
+            method::MEMORY_REMEMBER,
+            Some(&a),
+            json!({"text": format!("Audience fact {i}: {}", ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf"][i]),
+                   "audience": {"roles": ["reviewer"]}}),
+        )
+        .await;
+    }
+    let ro = grant(&mut h, "read-only", &a).await;
+    let mut c = connect(&root, &ro).await;
+    let big = "x".repeat(300);
+    for bad in [
+        json!({"context": {"role": "reviewer", "blob": "y"}}),
+        json!({"context": {"role": big}}),
+        json!({"context": {"role": 7}}),
+        json!({"context": "reviewer"}),
+    ] {
+        let (code, msg) = fail(&mut c, method::MEMORY_FOR_AUDIENCE, Some(&a), bad.clone()).await;
+        assert_eq!(code, ErrorCode::InvalidRequest, "{bad}");
+        assert!(!msg.contains("blob") && !msg.contains(&big), "{msg}");
+    }
+    let ok = call(
+        &mut c,
+        method::MEMORY_FOR_AUDIENCE,
+        Some(&a),
+        json!({"context": {"role": "reviewer"}, "limit": 1}),
+    )
+    .await;
+    assert_eq!(ok["memories"].as_array().unwrap().len(), 1);
+    assert_eq!(ok["truncated"]["returned"], 1);
+}

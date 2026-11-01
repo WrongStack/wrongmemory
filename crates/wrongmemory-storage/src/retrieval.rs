@@ -1206,6 +1206,8 @@ pub struct AudienceTruncation {
 
 const AUDIENCE_OVERFETCH_FACTOR: usize = 5;
 const AUDIENCE_MAX_SCAN: usize = 10_000;
+/// Characters kept per context field in the truncation audit record.
+const AUDIENCE_AUDIT_FIELD_MAX: usize = 128;
 
 impl SageStore {
     /// `retrieveSqliteSageForAudience` + `retrieveSageAudienceWithAudit`
@@ -1296,11 +1298,22 @@ impl SageStore {
         if let Some(t) = truncated
             && self.writable()
         {
+            // The baseline audits the caller's context object as given. Here
+            // the caller may be a read-scoped grant, so only the three
+            // matching fields are recorded, each bounded: a read must not be
+            // able to write arbitrary payloads into the store.
+            let mut audited = serde_json::Map::new();
+            for k in ["role", "taskType", "mode"] {
+                if let Some(v) = context.get(k).and_then(Value::as_str) {
+                    let bounded: String = v.chars().take(AUDIENCE_AUDIT_FIELD_MAX).collect();
+                    audited.insert(k.to_string(), json!(bounded));
+                }
+            }
             crate::store::audit(
                 &self.conn,
                 "memory.audience_truncated",
                 now_iso,
-                json!({"context": context, "sqlRowsExamined": t.sql_rows_examined, "returned": t.returned}),
+                json!({"context": audited, "sqlRowsExamined": t.sql_rows_examined, "returned": t.returned}),
             )
             .map_err(sql_err)?;
         }
@@ -1308,5 +1321,71 @@ impl SageStore {
             memories: matched,
             truncated,
         })
+    }
+}
+
+#[cfg(test)]
+mod audience_tests {
+    use super::*;
+    use crate::MutationCtx;
+    use wrongmemory_contracts::{MemoryAudience, MemorySource, RememberParams};
+
+    #[test]
+    fn audience_truncation_audit_records_only_bounded_matching_fields() {
+        let tmp = tempfile::tempdir().unwrap();
+        let db = tmp.path().join("sage.db");
+        SageStore::create_managed(&db, "2026-11-01T00:00:00.000Z").unwrap();
+        let (mut store, _) = SageStore::open(&db, true, None, "2026-11-01T00:00:00.000Z").unwrap();
+        let role = "r".repeat(200);
+        for w in [
+            "alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf",
+        ] {
+            let p = RememberParams {
+                text: format!("Distinct audience fact about {w} rotations"),
+                audience: Some(MemoryAudience {
+                    roles: Some(vec![role.clone()]),
+                    ..Default::default()
+                }),
+                sources: vec![MemorySource {
+                    kind: "user".into(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            };
+            let ctx = MutationCtx {
+                principal_id: "host".into(),
+                client_label: "t".into(),
+                session_id: None,
+                idempotency_key: None,
+                now_iso: "2026-11-01T00:00:01.000Z".into(),
+            };
+            store.remember(&p, &ctx).unwrap();
+        }
+        let context = json!({"role": role, "extra": {"huge": "z".repeat(10_000)}});
+        let res = store
+            .retrieve_for_audience(
+                &context,
+                Some(1),
+                &Viewer::default(),
+                "2026-11-01T00:00:02.000Z",
+            )
+            .unwrap();
+        assert_eq!(res.memories.len(), 1);
+        assert!(res.truncated.is_some());
+        let data: String = store
+            .conn
+            .query_row(
+                "SELECT data FROM audit_log WHERE event = 'memory.audience_truncated'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        let v: Value = serde_json::from_str(&data).unwrap();
+        assert_eq!(
+            v["context"]["role"].as_str().unwrap().len(),
+            AUDIENCE_AUDIT_FIELD_MAX
+        );
+        assert!(v["context"].get("extra").is_none());
+        assert!(data.len() < 400, "audit row is {} bytes", data.len());
     }
 }
