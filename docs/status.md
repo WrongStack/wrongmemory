@@ -165,7 +165,7 @@ Two gaps remain open:
 | ID | State | Evidence / gap |
 |---|---|---|
 | WM-700 | Done (local) | `install`, `uninstall`, `autostart enable/status/disable` (per-user Run value), tested with override keys and temp prefixes. |
-| WM-701 | Partial | `install --stop-daemon` keeps `.old` copies for rollback; `migrate inspect`. The v1→v2 registry upgrade keeps projects, epochs and grants (`v1_registry_upgrades_in_place`). `scripts/upgrade/upgrade-smoke.ps1` exercises upgrades between built releases in a throwaway work directory (temp data roots, projects and install prefix; no PATH, autostart or real store). Run 2026-11-01, **PASS 11/11**:<ul><li>`40f7275` → `bab5b13` with `install --stop-daemon` over a running old daemon. The old fact, old grant and MCP bridge all work after the upgrade.</li><li>Rollback via `*.exe.old`: the old build reads data the new build wrote.</li><li>Registry v1 data from `b9c13b9` opens under the current build, and its grant still authenticates.</li></ul>Not covered: interrupting an install part-way, and signed release artifacts. |
+| WM-701 | Partial | `install --stop-daemon` keeps `.old` copies for rollback; `migrate inspect`. The v1→v2 registry upgrade keeps projects, epochs and grants (`v1_registry_upgrades_in_place`). `scripts/upgrade/upgrade-smoke.ps1` exercises upgrades between built releases in a throwaway work directory (temp data roots, projects and install prefix; no PATH, autostart or real store). Run 2026-11-01, **PASS 11/11**:<ul><li>`40f7275` → `bab5b13` with `install --stop-daemon` over a running old daemon. The old fact, old grant and MCP bridge all work after the upgrade.</li><li>Rollback via `*.exe.old`: the old build reads data the new build wrote.</li><li>Registry v1 data from `b9c13b9` opens under the current build, and its grant still authenticates.</li></ul>An install interrupted after the first binary was replaced rolls that binary back, so the prefix never holds a mixed CLI/daemon pair (`interrupted_install_rolls_back_to_the_previous_binaries`). Not covered: signed release artifacts. |
 | WM-702 | Done (local) | `uninstall` stops the daemon, removes the autostart entry and removes binaries; client entries go through `disconnect`. |
 | WM-703 | Done | `docs/operations.md`, `docs/runbooks.md` |
 | WM-704 | Partial | `release.yml` builds a draft, unsigned release with `SHA256SUMS` on tag. **Code signing and provenance are NOT RUN.** The hosted release workflow has not run. |
@@ -219,7 +219,7 @@ Findings from the M run:
 |---|---|
 | `cargo fmt --all -- --check` | PASS |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo test --workspace --locked` ×5 | PASS 140/140 on each run; no leftover daemon processes |
+| `cargo test --workspace --locked` ×5 | PASS 140/140 on each run (141 after the WM-701 interrupted-install test, single run); no leftover daemon processes |
 | `bun run test:client` (TS client 10/10, contract parity) | PASS |
 | Adapter: wrongmemory-client 6/6, sage port 20/20 against the release daemon | PASS |
 | Hosted CI (`32f0e8b`) | PASS |

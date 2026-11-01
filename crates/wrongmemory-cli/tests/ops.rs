@@ -258,3 +258,40 @@ fn autostart_enable_status_disable_with_override_key() {
         .args(["delete", r"HKCU\Software\WrongMemoryTest", "/f"])
         .output();
 }
+
+/// WM-701: an install interrupted after the first binary was replaced
+/// rolls that binary back, so the prefix never holds a mixed CLI/daemon
+/// pair. The second replacement is made to fail by occupying its staging
+/// path with a directory.
+#[test]
+fn interrupted_install_rolls_back_to_the_previous_binaries() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let prefix = tmp.path().join("prefix");
+    std::fs::create_dir_all(&prefix).unwrap();
+    let cli = prefix.join("wrongmemory.exe");
+    let daemon = prefix.join("wrongmemoryd.exe");
+    std::fs::write(&cli, b"previous cli").unwrap();
+    std::fs::write(&daemon, b"previous daemon").unwrap();
+    std::fs::create_dir_all(prefix.join("wrongmemoryd.exe.new")).unwrap();
+
+    let out = run(&home, &["install", "--prefix", prefix.to_str().unwrap()]);
+    assert!(!out.status.success(), "install must fail");
+    assert!(
+        String::from_utf8_lossy(&out.stderr).contains("rolled back"),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(sha(&cli).as_deref(), Some(&b"previous cli"[..]));
+    assert_eq!(sha(&daemon).as_deref(), Some(&b"previous daemon"[..]));
+    assert!(!prefix.join("install.json").exists());
+
+    // Clearing the obstruction lets the same install complete.
+    std::fs::remove_dir(prefix.join("wrongmemoryd.exe.new")).unwrap();
+    json(&home, &["install", "--prefix", prefix.to_str().unwrap()]);
+    assert_eq!(sha(&cli), sha(Path::new(env!("CARGO_BIN_EXE_wrongmemory"))));
+    assert_eq!(
+        sha(&prefix.join("wrongmemory.exe.old")).as_deref(),
+        Some(&b"previous cli"[..])
+    );
+}
