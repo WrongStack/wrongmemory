@@ -41,7 +41,12 @@ struct Mcp {
     stdin: Option<ChildStdin>,
     stdout: BufReader<ChildStdout>,
     next: u64,
+    /// Bridge stderr and the daemon log, reported when the bridge dies.
+    stderr_path: std::path::PathBuf,
+    home: std::path::PathBuf,
 }
+
+static BRIDGE_SEQ: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
 impl Mcp {
     fn start(home: &Path, project: &str, grant: &str) -> Self {
@@ -49,6 +54,9 @@ impl Mcp {
     }
 
     fn start_with_env(home: &Path, project: &str, grant: &str, env: &[(&str, &str)]) -> Self {
+        let n = BRIDGE_SEQ.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let stderr_path = home.parent().unwrap().join(format!("bridge-{n}.stderr"));
+        let stderr = std::fs::File::create(&stderr_path).unwrap();
         let mut child = wm(home)
             .envs(env.iter().copied())
             .args([
@@ -62,7 +70,7 @@ impl Mcp {
             ])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
+            .stderr(stderr)
             .spawn()
             .unwrap();
         let stdin = child.stdin.take();
@@ -72,21 +80,38 @@ impl Mcp {
             stdin,
             stdout,
             next: 0,
+            stderr_path,
+            home: home.to_path_buf(),
         }
+    }
+
+    /// What the bridge and the daemon said, for a failure message.
+    fn diagnostics(&self) -> String {
+        let stderr = std::fs::read_to_string(&self.stderr_path).unwrap_or_default();
+        let log = std::fs::read_to_string(self.home.join("logs").join("wrongmemoryd.log"))
+            .unwrap_or_default();
+        let tail: Vec<&str> = log.lines().rev().take(40).collect();
+        format!(
+            "bridge stderr:\n{stderr}\ndaemon log (newest first):\n{}",
+            tail.join("\n")
+        )
     }
 
     fn send(&mut self, method: &str, params: Value) -> Value {
         self.next += 1;
         let msg = json!({"jsonrpc": "2.0", "id": self.next, "method": method, "params": params});
         let stdin = self.stdin.as_mut().unwrap();
-        writeln!(stdin, "{msg}").unwrap();
-        stdin.flush().unwrap();
+        if writeln!(stdin, "{msg}")
+            .and_then(|_| stdin.flush())
+            .is_err()
+        {
+            panic!("bridge stdin closed\n{}", self.diagnostics());
+        }
         loop {
             let mut line = String::new();
-            assert!(
-                self.stdout.read_line(&mut line).unwrap() > 0,
-                "bridge closed stdout"
-            );
+            if self.stdout.read_line(&mut line).unwrap_or(0) == 0 {
+                panic!("bridge closed stdout\n{}", self.diagnostics());
+            }
             // stdout carries protocol frames only.
             let v: Value = serde_json::from_str(&line).expect("non-JSON line on stdout");
             if v["id"] == json!(self.next) {
