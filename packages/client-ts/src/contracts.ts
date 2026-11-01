@@ -448,6 +448,8 @@ export interface ProposeParams {
   targetRevision?: number;
   reviewReason?: string;
   suggestedAction?: string;
+  supersedesMemoryIds?: string[];
+  supersedesRevisions?: number[];
 }
 
 export interface CandidateListParams {

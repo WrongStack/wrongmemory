@@ -1413,3 +1413,294 @@ fn hq_sync_scenario_matches_oracle() {
     assert_eq!(compared, 9, "every list/apply/version step is compared");
     assert_no_diffs(diffs);
 }
+
+/// Secret-shaped stand-in for the generator's masked `<fake-secret:…>`
+/// samples, built at runtime so no literal credential lands in the repo.
+fn runtime_secret() -> String {
+    ["AK", "IA", "ABCDEFGHIJKLMNOP"].concat()
+}
+
+/// Fixture value -> replay value: labels to our ids, masked secrets to a
+/// runtime secret.
+fn replay_value(r: &Replay, v: &Value) -> Value {
+    match v {
+        Value::String(s) if s.starts_with("<fake-secret:") => json!(runtime_secret()),
+        Value::String(s) if s.starts_with("candidate_<id:") => {
+            let label = s.trim_start_matches("candidate_");
+            json!(
+                r.ids
+                    .get(&Replay::fixture_label(label))
+                    .cloned()
+                    .unwrap_or_else(|| s.clone())
+            )
+        }
+        Value::String(s) if s.starts_with("<id:") || s.starts_with("<ulid:") => json!(r.real(s)),
+        Value::Array(a) => Value::Array(a.iter().map(|x| replay_value(r, x)).collect()),
+        Value::Object(o) => Value::Object(
+            o.iter()
+                .map(|(k, x)| (k.clone(), replay_value(r, x)))
+                .collect(),
+        ),
+        other => other.clone(),
+    }
+}
+
+/// Replay one core mutation scenario; returns `(step, difference)` pairs.
+fn replay_core_scenario(name: &str) -> Vec<(String, String)> {
+    use wrongmemory_contracts::ProposeParams;
+    use wrongmemory_storage::mutate::UsageKind;
+    use wrongmemory_storage::store::Viewer;
+    let f = fixture(name);
+    let mut r = Replay::new();
+    let mut out: Vec<(String, String)> = Vec::new();
+    let mut clock = "2026-11-01T00:00:00.000Z".to_string();
+    let mut owners: BTreeMap<String, String> = BTreeMap::new();
+    for st in f["steps"].as_array().unwrap() {
+        let step = st["step"].as_str().unwrap().to_string();
+        let Some(method) = st["call"]["method"].as_str() else {
+            continue; // pure observations (`note`)
+        };
+        clock = st["result"]["updatedAt"]
+            .as_str()
+            .or_else(|| st["result"]["createdAt"].as_str())
+            .map(str::to_string)
+            .unwrap_or_else(|| bump_second(&clock));
+        let input = replay_value(&r, &st["call"]["input"]);
+        // The oracle acts in-process and sees every candidate; act on a
+        // session candidate as its owner session.
+        let session = input["ownerSessionId"]
+            .as_str()
+            .map(str::to_string)
+            .or_else(|| input["id"].as_str().and_then(|id| owners.get(id).cloned()));
+        let c = ctx(&clock, session.as_deref());
+        let want_err = st.get("error").is_some();
+        let fixture_id = st["result"]["id"].as_str().map(str::to_string);
+        let outcome: Result<Option<String>, String> = match method {
+            "rememberSage" => {
+                // The counters seed was recorded without its input; the
+                // oracle's result carries the text it stored.
+                let input = if input.get("text").is_none() {
+                    json!({"text": st["result"]["text"]})
+                } else {
+                    input.clone()
+                };
+                let (p, _) = remember_params(&input);
+                r.store
+                    .remember(&p, &c)
+                    .map(|o| Some(o.id))
+                    .map_err(|e| e.message)
+            }
+            "updateSage" => {
+                let id = input["id"].as_str().unwrap_or_default().to_string();
+                let mut patch = input.as_object().cloned().unwrap_or_default();
+                patch.remove("id");
+                // The oracle calls the store in-process with host authority.
+                // Ours gates destructive deletes on the connection's grant;
+                // a `force` delete stands for a curator caller.
+                let force = patch.get("force").and_then(Value::as_bool) == Some(true);
+                let authorized = patch
+                    .remove("deleteAuthorized")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false)
+                    || force;
+                let mut res = r.store.update(&id, &patch, &c, authorized);
+                if let Err(e) = &res
+                    && e.message.contains("immutable through ordinary update")
+                {
+                    // Deliberate: ours refuses `scope`/`ownerSessionId` where
+                    // the baseline drops them silently. Record it, then apply
+                    // the rest as the baseline did so later steps line up.
+                    out.push((
+                        step.clone(),
+                        format!("refused, oracle ignored: {}", e.message),
+                    ));
+                    patch.remove("scope");
+                    patch.remove("ownerSessionId");
+                    res = r.store.update(&id, &patch, &c, authorized);
+                }
+                res.map(|o| Some(o.id)).map_err(|e| e.message)
+            }
+            "recordInjection" | "recordUse" => {
+                let ids: Vec<String> = serde_json::from_value(input["ids"].clone()).unwrap();
+                let (kind, label) = if method == "recordInjection" {
+                    (
+                        UsageKind::Injection,
+                        input["trigger"].as_str().unwrap_or("tool"),
+                    )
+                } else {
+                    (
+                        UsageKind::Use,
+                        input["source"].as_str().unwrap_or("reference"),
+                    )
+                };
+                r.store
+                    .record_usage(&ids, kind, label, &c)
+                    .map(|_| None)
+                    .map_err(|e| e.message)
+            }
+            "getSage" => r
+                .store
+                .get(input["id"].as_str().unwrap(), &Viewer::default())
+                .map(|m| m.map(|m| m.id))
+                .map_err(|e| e.message),
+            "createCandidate" => {
+                let mut i = input.clone();
+                if let Some(o) = i.as_object_mut() {
+                    o.remove("ownerSessionId");
+                }
+                match serde_json::from_value::<ProposeParams>(i) {
+                    Ok(mut p) => {
+                        if p.sources.is_empty() {
+                            p.sources = vec![MemorySource {
+                                kind: "user".into(),
+                                ..Default::default()
+                            }];
+                        }
+                        let out = r.store.propose(&p, &c);
+                        if let (Ok(o), Some(sess)) = (&out, &session) {
+                            owners.insert(o.id.clone(), sess.clone());
+                        }
+                        out.map(|o| Some(o.id)).map_err(|e| e.message)
+                    }
+                    Err(e) => Err(format!("params: {e}")),
+                }
+            }
+            "listCandidates" => {
+                let statuses: &[&str] = if input["includeResolved"] == true {
+                    &["pending", "accepted", "rejected", "merged"]
+                } else {
+                    &["pending"]
+                };
+                // The in-process oracle lists every session's candidates;
+                // ours lists what each viewer may see, so union the views.
+                let mut viewers = vec![None];
+                viewers.extend(owners.values().cloned().map(Some));
+                let mut seen_ids = std::collections::BTreeSet::new();
+                let mut ours: Vec<String> = Vec::new();
+                for session_id in viewers {
+                    let viewer = Viewer { session_id };
+                    for s in statuses {
+                        let (list, _, _) = r.store.list_candidates(s, 200, &viewer).unwrap();
+                        for cand in list {
+                            if seen_ids.insert(cand.id.clone()) {
+                                let v = serde_json::to_value(&cand).unwrap();
+                                ours.push(r.candidate_key(&v, false));
+                            }
+                        }
+                    }
+                }
+                let mut want: Vec<String> = st["result"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|v| r.candidate_key(v, true))
+                    .collect();
+                ours.sort();
+                want.sort();
+                if ours != want {
+                    out.push((step.clone(), format!("list oracle={want:?} ours={ours:?}")));
+                }
+                Ok(None)
+            }
+            "acceptCandidate" => r
+                .store
+                .accept_candidate(input["id"].as_str().unwrap(), &c)
+                .map(|o| o.memory_id)
+                .map_err(|e| e.message),
+            "rejectCandidate" => r
+                .store
+                .reject_candidate(
+                    input["id"].as_str().unwrap(),
+                    input["reason"].as_str().unwrap_or(""),
+                    &c,
+                )
+                .map(|_| None)
+                .map_err(|e| e.message),
+            "resolveCandidate" => r
+                .store
+                .resolve_candidate(
+                    input["id"].as_str().unwrap(),
+                    input["decision"].as_str().unwrap(),
+                    input["reason"].as_str(),
+                    &c,
+                    // In-process resolution passes `deleteAuthorized: true`.
+                    true,
+                )
+                .map(|_| None)
+                .map_err(|e| e.message),
+            other => panic!("unhandled oracle method {other}"),
+        };
+        // Ours refuses a missing/hidden candidate with NotFound where the
+        // in-process oracle returns `undefined`.
+        let outcome = match outcome {
+            Err(e) if e == "candidate not found" && st["result"] == "<undefined>" => Ok(None),
+            other => other,
+        };
+        match (&outcome, want_err) {
+            (Err(e), false) => out.push((step.clone(), format!("refused, oracle accepted: {e}"))),
+            (Ok(_), true) => out.push((
+                step.clone(),
+                format!("accepted, oracle refused: {}", st["error"]["message"]),
+            )),
+            _ => {}
+        }
+        // Learn labels from the oracle's result ids.
+        if let (Ok(Some(ours)), Some(fid)) = (&outcome, &fixture_id) {
+            let label = Replay::fixture_label(fid.trim_start_matches("candidate_"));
+            let plain = label
+                .chars()
+                .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_');
+            // `<ulid:n>` numbers unlabelled ids per scenario, so they map too.
+            if plain || label.starts_with("<ulid:") {
+                r.ids.entry(label).or_insert_with(|| ours.clone());
+            }
+        }
+        if st.get("state").is_some() {
+            for d in r.compare_state(&step, &st["state"]) {
+                out.push((step.clone(), d));
+            }
+            for d in r.compare_candidates(&step, &st["state"]) {
+                out.push((step.clone(), d));
+            }
+        }
+    }
+    out
+}
+
+/// The remaining mutation oracle scenarios (`remember`, `update`,
+/// `counters`, `candidates`; WM-511). Every difference must be either fixed
+/// or listed here as a deliberate deviation with its reason, and every
+/// listed deviation must still differ (so the list cannot rot).
+#[test]
+fn core_mutation_scenarios_match_oracle() {
+    let deliberate: &[(&str, &str, &str)] = &[(
+        "update",
+        "scope-ignored-immutable",
+        "an ordinary update naming scope/ownerSessionId is refused instead of silently          ignoring them (retrieval-and-lifecycle.md: scope and owner session are immutable          through ordinary updates; a silent drop would hide a client bug)",
+    )];
+    let mut unexplained = Vec::new();
+    let mut seen: Vec<(String, String)> = Vec::new();
+    for name in ["remember", "update", "counters", "candidates"] {
+        for (step, diff) in replay_core_scenario(name) {
+            if deliberate
+                .iter()
+                .any(|(s, st, _)| *s == name && *st == step)
+            {
+                seen.push((name.to_string(), step));
+            } else {
+                unexplained.push(format!("{name}/{step}: {diff}"));
+            }
+        }
+    }
+    for (s, st, why) in deliberate {
+        assert!(
+            seen.iter().any(|(a, b)| a == s && b == st),
+            "documented deviation {s}/{st} no longer differs ({why}); drop it from the list"
+        );
+    }
+    assert!(
+        unexplained.is_empty(),
+        "unexplained oracle differences:\n{}",
+        unexplained.join("\n")
+    );
+}

@@ -719,6 +719,12 @@ pub struct ProposeParams {
     pub target_memory_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target_revision: Option<i64>,
+    /// Consolidation proposal: the members it replaces, each with the
+    /// revision that was distilled (1-50 distinct ids, one revision each).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub supersedes_memory_ids: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub supersedes_revisions: Option<Vec<i64>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub review_reason: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

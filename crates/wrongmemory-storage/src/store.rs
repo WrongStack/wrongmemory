@@ -846,34 +846,28 @@ impl SageStore {
         {
             return Err(invalid(format!("unknown suggested action {a}")));
         }
-        if p.target_memory_id.is_some() != p.target_revision.is_some()
-            && p.target_revision.is_some()
+        if let Some(rev) = p.target_revision
+            && (p.target_memory_id.is_none() || rev < 1)
         {
-            return Err(invalid("targetRevision requires targetMemoryId"));
+            return Err(invalid(
+                "SAGE targetRevision requires a targetMemoryId and a positive integer revision.",
+            ));
         }
+        validate_supersedes(p)?;
         if let Some(target) = &p.target_memory_id {
             // A proposal may only target a memory the proposer can see, so a
             // review proposal cannot probe hidden IDs (WM-INV-08).
             let viewer = Viewer {
                 session_id: ctx.session_id.clone(),
             };
-            match self.get(target, &viewer)? {
-                None => {
-                    return Err(ErrorBody::new(
-                        ErrorCode::NotFound,
-                        "target memory not found",
-                    ));
-                }
-                Some(m) => {
-                    if let Some(rev) = p.target_revision
-                        && rev != m.revision
-                    {
-                        return Err(ErrorBody::new(
-                            ErrorCode::RevisionConflict,
-                            format!("target is at revision {}, not {rev}", m.revision),
-                        ));
-                    }
-                }
+            // A stale `targetRevision` is accepted here, as in the baseline:
+            // resolution passes it as `expectedRevision`, so a stale review
+            // fails there and the candidate stays pending.
+            if self.get(target, &viewer)?.is_none() {
+                return Err(ErrorBody::new(
+                    ErrorCode::NotFound,
+                    "target memory not found",
+                ));
             }
         }
         let owner_session_id = if scope == "session" {
@@ -915,11 +909,42 @@ impl SageStore {
             target_revision: p.target_revision,
             review_reason: p.review_reason.clone(),
             suggested_action: p.suggested_action.clone(),
-            supersedes_memory_ids: None,
-            supersedes_revisions: None,
+            supersedes_memory_ids: p.supersedes_memory_ids.clone(),
+            supersedes_revisions: p.supersedes_revisions.clone(),
             extra,
         })
     }
+}
+
+/// `validateSupersedes`: a consolidation proposal names 1-50 distinct member
+/// ids with one positive revision each. Members are not looked up here; one
+/// the curator cannot see or that changed is skipped at accept.
+fn validate_supersedes(p: &ProposeParams) -> StoreResult<()> {
+    const MAX_SUPERSEDED_MEMBERS: usize = 50;
+    let (ids, revs) = match (&p.supersedes_memory_ids, &p.supersedes_revisions) {
+        (None, None) => return Ok(()),
+        (Some(ids), Some(revs)) => (ids, revs),
+        _ => return Err(bad_supersedes()),
+    };
+    let distinct: std::collections::HashSet<&String> = ids.iter().collect();
+    if ids.is_empty()
+        || ids.len() != revs.len()
+        || ids.len() > MAX_SUPERSEDED_MEMBERS
+        || distinct.len() != ids.len()
+        || ids
+            .iter()
+            .any(|id| id.is_empty() || crate::text::js_length(id) > 200)
+        || revs.iter().any(|r| *r < 1)
+    {
+        return Err(bad_supersedes());
+    }
+    Ok(())
+}
+
+fn bad_supersedes() -> ErrorBody {
+    invalid(
+        "SAGE supersedesMemoryIds needs 1-50 distinct ids with one positive integer revision each.",
+    )
 }
 
 fn clamp01(v: f64) -> f64 {

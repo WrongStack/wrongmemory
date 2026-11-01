@@ -18,7 +18,7 @@ use crate::MutationCtx;
 use crate::store::{SageStore, StoreResult, Viewer, audit, sql_err};
 use crate::text::normalize_text;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CandidateOutcome {
     pub candidate_id: String,
@@ -37,6 +37,10 @@ pub struct CandidateOutcome {
     /// Members skipped because they changed since the proposal.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub skipped_members: Vec<String>,
+    /// The target mutation failed; the candidate stays pending for a retry
+    /// (`resolveCandidate` reports `applied: false` with the error).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 fn not_found() -> ErrorBody {
@@ -109,6 +113,7 @@ impl SageStore {
 
     fn already(c: &MemoryCandidate) -> CandidateOutcome {
         CandidateOutcome {
+            error: None,
             candidate_id: c.id.clone(),
             status: c.status.clone(),
             memory_id: c.memory_id.clone(),
@@ -206,6 +211,7 @@ impl SageStore {
                 .map_err(sql_err)?;
             }
             Ok(CandidateOutcome {
+            error: None,
                 candidate_id: id.into(),
                 status: "accepted".into(),
                 memory_id: Some(keeper),
@@ -251,6 +257,7 @@ impl SageStore {
             )
             .map_err(sql_err)?;
             Ok(CandidateOutcome {
+                error: None,
                 candidate_id: id.into(),
                 status: "rejected".into(),
                 memory_id: None,
@@ -282,11 +289,19 @@ impl SageStore {
                 "decision must be keep, archive, or delete",
             ));
         }
-        let viewer = Viewer {
-            session_id: ctx.session_id.clone(),
-        };
-        let result = self.resolve_in_tx(id, decision, reason, ctx, delete_authorized, &viewer);
+        let mut mutation_failed = false;
+        let result = self.resolve_in_tx(
+            id,
+            decision,
+            reason,
+            ctx,
+            delete_authorized,
+            &mut mutation_failed,
+        );
+        // Only a failed target mutation is a retryable revert; the
+        // transaction rolled back, so the candidate is still pending.
         if let Err(e) = &result
+            && mutation_failed
             && let Ok(Some((_, c))) = self.read_candidate(id)
             && c.status == "pending"
         {
@@ -301,6 +316,15 @@ impl SageStore {
                 json!({"memoryId": c.target_memory_id, "reason": reason.map(normalize_text).unwrap_or(fallback),
                        "details": {"candidateId": id, "decision": decision, "mutationError": e.message}}),
             );
+            return Ok(CandidateOutcome {
+                candidate_id: id.to_string(),
+                status: "pending".into(),
+                decision: Some(decision.to_string()),
+                target_memory_id: c.target_memory_id.clone(),
+                applied: false,
+                error: Some(e.message.clone()),
+                ..Default::default()
+            });
         }
         result
     }
@@ -312,8 +336,11 @@ impl SageStore {
         reason: Option<&str>,
         ctx: &MutationCtx,
         delete_authorized: bool,
-        viewer: &Viewer,
+        mutation_failed: &mut bool,
     ) -> StoreResult<CandidateOutcome> {
+        let viewer = &Viewer {
+            session_id: ctx.session_id.clone(),
+        };
         self.in_transaction(|s| {
             let (mut m, c) = s.visible_candidate(id, viewer)?;
             if c.status != "pending" {
@@ -336,7 +363,12 @@ impl SageStore {
                             input.insert("expectedRevision".into(), json!(rev));
                         }
                         let inner = MutationCtx { idempotency_key: None, ..ctx.clone() };
-                        s.update(target, &input, &inner, delete_authorized)?;
+                        if let Err(e) = s.update(target, &input, &inner, delete_authorized) {
+                            // A missing grant stays an error; any other
+                            // target failure is a retryable revert.
+                            *mutation_failed = e.code != ErrorCode::Forbidden;
+                            return Err(e);
+                        }
                         applied = true;
                     }
                 }
@@ -364,6 +396,7 @@ impl SageStore {
             )
             .map_err(sql_err)?;
             Ok(CandidateOutcome {
+            error: None,
                 candidate_id: id.into(),
                 status: if decision == "keep" { "rejected" } else { "accepted" }.into(),
                 memory_id: None,
@@ -454,10 +487,13 @@ mod tests {
         let mut input = Map::new();
         input.insert("importance".into(), json!(0.9));
         s.update(&target, &input, &ctx(), false).unwrap();
-        let err = s
+        // Baseline shape: `applied: false` with the mutation error.
+        let out = s
             .resolve_candidate(&prop.id, "archive", None, &ctx(), false)
-            .unwrap_err();
-        assert_eq!(err.code, ErrorCode::RevisionConflict);
+            .unwrap();
+        assert!(!out.applied);
+        assert_eq!(out.status, "pending");
+        assert!(out.error.unwrap().contains("revision changed"));
         let (list, _, _) = s
             .list_candidates("pending", 10, &Viewer::default())
             .unwrap();

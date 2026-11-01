@@ -301,14 +301,27 @@ mod tests {
         assert_eq!(corrupt, 0);
         assert_eq!(list.len(), 1);
         assert_eq!(list[0].target_memory_id.as_deref(), Some(target.as_str()));
-        // Stale revision and hidden targets are refused.
+        // A stale revision is accepted (resolution re-checks it, see
+        // `stale_review_resolution_stays_pending`); hidden targets are refused.
         let stale = ProposeParams {
             target_revision: Some(7),
+            suggested_action: Some("delete".into()),
+            text: "stale review".into(),
+            kind: Some("memory_review".into()),
             ..p.clone()
         };
-        assert_eq!(
-            store.propose(&stale, &ctx(None, None)).unwrap_err().code,
-            ErrorCode::RevisionConflict
+        let stale_id = store.propose(&stale, &ctx(None, None)).unwrap().id;
+        let out = store
+            .resolve_candidate(&stale_id, "delete", None, &ctx(None, None), true)
+            .unwrap();
+        assert!(!out.applied);
+        assert_eq!(out.status, "pending");
+        assert!(out.error.as_deref().unwrap().contains("revision changed"));
+        assert!(
+            store
+                .get(&target, &Viewer::default())
+                .unwrap()
+                .is_some_and(|m| m.status == "active")
         );
         let probe = ProposeParams {
             target_memory_id: Some(hidden),
