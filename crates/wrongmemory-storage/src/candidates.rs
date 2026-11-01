@@ -89,7 +89,9 @@ impl SageStore {
         viewer: &Viewer,
     ) -> StoreResult<(Map<String, Value>, MemoryCandidate)> {
         let (m, c) = self.read_candidate(id)?.ok_or_else(not_found)?;
-        if c.scope == "session" && c.owner_session_id != viewer.session_id {
+        if c.scope == "session"
+            && (c.owner_session_id.is_none() || c.owner_session_id != viewer.session_id)
+        {
             return Err(not_found());
         }
         Ok((m, c))
@@ -502,5 +504,61 @@ mod tests {
             .resolve_candidate(&p2, "keep", None, &ctx(), false)
             .unwrap();
         assert_eq!(k.status, "rejected");
+    }
+
+    #[test]
+    fn hygiene_review_of_session_memory_stays_in_its_session() {
+        let (_t, mut s) = store();
+        let sess = MutationCtx {
+            session_id: Some("s1".into()),
+            ..ctx()
+        };
+        for text in [
+            "The integration suite always runs against the staging database cluster",
+            "The integration suite never runs against the staging database cluster",
+        ] {
+            s.remember(
+                &RememberParams {
+                    text: text.into(),
+                    scope: Some("session".into()),
+                    ..Default::default()
+                },
+                &sess,
+            )
+            .unwrap();
+        }
+        let report = s
+            .hygiene(&crate::hygiene::HygieneOptions::default(), &sess)
+            .unwrap();
+        assert!(
+            report.contradicted > 0,
+            "fixture must produce a contradiction review"
+        );
+        for other in [None, Some("s2".to_string())] {
+            let (list, _, _) = s
+                .list_candidates(
+                    "pending",
+                    50,
+                    &Viewer {
+                        session_id: other.clone(),
+                    },
+                )
+                .unwrap();
+            assert!(list.is_empty(), "review leaked to {other:?}: {list:?}");
+        }
+        let (own, _, _) = s
+            .list_candidates(
+                "pending",
+                50,
+                &Viewer {
+                    session_id: Some("s1".into()),
+                },
+            )
+            .unwrap();
+        assert!(!own.is_empty());
+        assert!(
+            own.iter()
+                .all(|c| c.scope == "session" && c.owner_session_id.as_deref() == Some("s1"))
+        );
     }
 }

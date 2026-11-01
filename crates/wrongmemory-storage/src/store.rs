@@ -495,7 +495,10 @@ impl SageStore {
             let data = row.map_err(sql_err)?;
             match serde_json::from_str::<MemoryCandidate>(&data) {
                 Ok(c) => {
-                    let visible = c.scope != "session" || c.owner_session_id == viewer.session_id;
+                    // Fail closed: an unowned session proposal is visible to no one.
+                    let visible = c.scope != "session"
+                        || (c.owner_session_id.is_some()
+                            && c.owner_session_id == viewer.session_id);
                     if visible {
                         out.push(c);
                     }

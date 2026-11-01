@@ -406,7 +406,17 @@ fn review_candidate(
     c.insert("text".into(), json!(target.text));
     c.insert("kind".into(), json!("memory_review"));
     c.insert("status".into(), json!("pending"));
-    c.insert("scope".into(), json!(scope));
+    // Isolation (WM-INV-08), stronger than the baseline: a review of a
+    // session-scoped memory copies its text, so the proposal stays in the
+    // owning session instead of becoming project-visible.
+    if target.scope == "session" {
+        c.insert("scope".into(), json!("session"));
+        if let Some(owner) = &target.owner_session_id {
+            c.insert("ownerSessionId".into(), json!(owner));
+        }
+    } else {
+        c.insert("scope".into(), json!(scope));
+    }
     c.insert("confidence".into(), json!(confidence));
     c.insert("importance".into(), json!(importance));
     c.insert("reviewReason".into(), json!(reason));
