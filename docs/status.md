@@ -137,7 +137,7 @@ These failures are not caused by the adapter. The main checkout was not modified
 | WM-601 | Partial | A conflict between a managed and an adopted store for one root is refused. Export is not implemented. |
 | WM-602 | Done | Fault points (debug builds only) `after_commit_before_reply` and `before_commit`. Retry replays the receipt, rollback leaves nothing behind, a crash during accept recovers, and a kill while idle restarts over a stale endpoint. Crash cases were repeated 5×. |
 | WM-603 | Done (with gaps) | See the review results below. |
-| WM-604 | Partial | Synthetic S/M benchmark. No soak run or WAL tuning. |
+| WM-604 | Done (local) | `wrongmemory-bench --soak-secs N` runs mixed search, forPath, propose, remember and listPage traffic with 8 clients across 40 projects. That is more than the cap of 32 open stores, so stores are evicted and reopened under load. Result: `benchmarks/results/2026-11-01-soak.json`.<ul><li>**Found and fixed:** concurrent requests for a closed project raced on its owner lock. 9% of requests (48,868 of 523,202) failed with `OWNER_CONFLICT` against the daemon's own lock. Store opens are now serialized behind one opening lock (cache hits are unaffected), and a regression test fails without the fix.</li><li>**After the fix (5 min):**<ul><li>260,142 operations, 0 errors.</li><li>Median latency is 0.5–3.5 ms per operation. p95 is about 40 ms, from the deliberate eviction churn.</li><li>Handles 285 → 293 (no leak); RSS 34 → 86 MB with 32 stores open.</li></ul></li></ul>WAL tuning and multi-hour soaks have not been run. |
 | WM-605 | Partial | Synthetic recall@5 with leak counting. No real-task corpus or regression budget. |
 | WM-606 | Not started | Process-tree certification. |
 
@@ -212,7 +212,7 @@ Findings from the M run:
 |---|---|
 | `cargo fmt --all -- --check` | PASS |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo test --workspace --locked` ×5 | PASS 133/133 on each run; no leftover daemon processes |
+| `cargo test --workspace --locked` ×5 | PASS 134/134 on each run; no leftover daemon processes |
 | `bun run test:client` (TS client 10/10, contract parity) | PASS |
 | Adapter: wrongmemory-client 6/6, sage port 20/20 against the release daemon | PASS |
 | Hosted CI (`32f0e8b`) | PASS |

@@ -92,6 +92,11 @@ impl ProjectHandle {
 
 pub struct Stores {
     open: Mutex<HashMap<String, Arc<ProjectHandle>>>,
+    /// Serializes the miss path (re-check, evict, open, insert). Without it
+    /// two requests for a closed project both opened it and the second lost
+    /// the owner lock to the first: OWNER_CONFLICT against this very daemon
+    /// (found by the WM-604 soak). Cache hits never take it.
+    opening: Mutex<()>,
     max_open: usize,
 }
 
@@ -145,6 +150,7 @@ impl Stores {
     pub fn new(max_open: usize) -> Self {
         Self {
             open: Mutex::new(HashMap::new()),
+            opening: Mutex::new(()),
             max_open: max_open.max(1),
         }
     }
@@ -169,6 +175,12 @@ impl Stores {
             h.last_used_ms.store(now_ms(), Ordering::Relaxed);
             return Ok(h.clone());
         }
+        let _opening = self.opening.lock().map_err(internal)?;
+        // Re-check: another request may have opened it while we waited.
+        if let Some(h) = self.open.lock().map_err(internal)?.get(project_id) {
+            h.last_used_ms.store(now_ms(), Ordering::Relaxed);
+            return Ok(h.clone());
+        }
         let info = registry
             .lock()
             .map_err(internal)?
@@ -180,7 +192,6 @@ impl Stores {
         self.evict_to(self.max_open - 1, registry, instance_id)?;
         let handle = Arc::new(open_handle(registry, instance_id, info)?);
         let mut open = self.open.lock().map_err(internal)?;
-        // Another request may have opened it meanwhile; keep the first.
         Ok(open.entry(project_id.to_string()).or_insert(handle).clone())
     }
 

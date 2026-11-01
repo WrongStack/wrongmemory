@@ -14,6 +14,8 @@
 //!
 //! The daemon binary is taken from `--daemon` or next to this executable.
 
+mod soak;
+
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
@@ -41,6 +43,17 @@ struct Args {
     /// Path to wrongmemoryd.
     #[arg(long)]
     daemon: Option<PathBuf>,
+    /// Soak mode (WM-604): run a mixed multi-project load for this many
+    /// seconds instead of the latency benchmark.
+    #[arg(long, default_value_t = 0)]
+    soak_secs: u64,
+    /// Soak: projects. More than the daemon's open-store cap (32) forces
+    /// store eviction and reopen under load.
+    #[arg(long, default_value_t = 40)]
+    soak_projects: usize,
+    /// Soak: concurrent client connections.
+    #[arg(long, default_value_t = 8)]
+    soak_clients: usize,
 }
 
 /// SplitMix64: deterministic, dependency-free.
@@ -222,6 +235,16 @@ async fn main() -> anyhow::Result<()> {
             .unwrap()
             .join(format!("wrongmemoryd{}", std::env::consts::EXE_SUFFIX)),
     };
+    if args.soak_secs > 0 {
+        return soak::run(
+            &exe,
+            args.soak_secs,
+            args.soak_projects,
+            args.soak_clients,
+            args.out.as_deref(),
+        )
+        .await;
+    }
     let tmp = tempfile::tempdir()?;
     let home = tmp.path().join("home");
     let proj = tmp.path().join("proj");

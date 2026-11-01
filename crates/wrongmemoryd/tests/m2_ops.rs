@@ -517,3 +517,67 @@ async fn store_cap_evicts_idle_handles_and_missing_stores_recover() {
     drop(h);
     daemon.stop(&root).await;
 }
+
+/// Concurrent requests for a project whose store is not open (and the
+/// eviction churn a small cap causes) must never race on store ownership:
+/// found by the soak run, where ~9% of requests failed with OWNER_CONFLICT
+/// against the daemon's own lock.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn concurrent_opens_under_eviction_never_conflict() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("home");
+    let daemon = Daemon::start(
+        &root,
+        &["--scheduler-tick-ms", "60000", "--max-open-stores", "2"],
+    )
+    .await;
+    let mut h = host(&root).await;
+    let mut projects = Vec::new();
+    for i in 0..6 {
+        let (p, _) = register(&mut h, &mkdir(tmp.path().join(format!("P{i}")))).await;
+        remember(
+            &mut h,
+            &p,
+            &format!("Project {i} keeps a changelog"),
+            json!({}),
+        )
+        .await;
+        projects.push(p);
+    }
+    let mut tasks = Vec::new();
+    for w in 0..8usize {
+        let root = root.clone();
+        let projects = projects.clone();
+        tasks.push(tokio::spawn(async move {
+            let mut c = host(&root).await;
+            let mut failures = Vec::new();
+            for k in 0..150usize {
+                let p = &projects[(w * 7 + k * 5) % projects.len()];
+                if let Err(e) = c
+                    .call_raw(
+                        method::MEMORY_SEARCH,
+                        Some(p),
+                        json!({"query": "changelog"}),
+                        None,
+                    )
+                    .await
+                {
+                    failures.push(e.to_string());
+                }
+            }
+            failures
+        }));
+    }
+    let mut failures = Vec::new();
+    for t in tasks {
+        failures.extend(t.await.unwrap());
+    }
+    assert!(
+        failures.is_empty(),
+        "{} failed, first: {:?}",
+        failures.len(),
+        failures.first()
+    );
+    drop(h);
+    daemon.stop(&root).await;
+}
