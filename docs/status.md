@@ -96,15 +96,16 @@ Branch `feat/wrongmemory-adapter` in the worktree `D:/Codebox/PROJECTS/WrongStac
 - `3ee3ca973`: `verify` and `verifyForPaths` through `memory.verify`.
 - `488e07e8d`: `unifiedSearchService` through `memory.unifiedSearch`, with an invalid cursor mapped to `InvalidSearchCursorError`. Adapter tests: 25/25 against the real daemon.
 - `fff633d45`: `surface.importLegacy(files)` through `memory.importLegacy` (curator action). The client is re-vendored at `d78559e`, and the author field in its package.json is no longer mis-encoded. Adapter tests: 27/27 against the real daemon; sage and client typecheck and biome are clean.
+- `5e46190b8`: client re-vendored at `1799ad0` (`PROJECT_EXPORT`), plus a WrongMemory → local SAGE → WrongMemory rollback round-trip test. Adapter tests: 28/28.
 
 | ID | State | Evidence / gap |
 |---|---|---|
 | WM-400 | Done (branch) | `packages/sage/src/wrongmemory-port.ts`. Typed `UNAVAILABLE` errors; it never falls back to local SQLite. Port tests run against a real daemon. No operation throws `NOT_IMPLEMENTED` any more; unified search goes through `memory.unifiedSearch`. `searchSageWithBreakdown` is lexical-only because there is no vector channel (WM-405). |
 | WM-401 | Done (branch) | `Sage.service` is `local` (the default), `wrongmemory` or `auto`; a repo's own config cannot set it. |
 | WM-402 | Done (branch) | Session ids reach the port per call from the host middleware (`host-wiring`, tool-call and turn memory), and the port binds them with `session.acquire{hostSessionId}`. Like the baseline container, the WrongMemory port gets no container-level resolver. A call without a session releases the binding, so it under-reports and cannot leak. |
-| WM-403 | Partial | The daemon serves audience retrieval, `findMemoriesForFile`, `verify` and `verifyForPaths`. Host session id wiring and setup-time injection remain open. |
+| WM-403 | Partial | The daemon serves audience retrieval, `findMemoriesForFile`, `verify` and `verifyForPaths`. Session ids follow the baseline: the host passes them per call (the baseline container gives the in-process port no ambient `getSessionId` either), and the port binds them through `session.acquire`. Setup-time injection through a real host run remains open. |
 | WM-404..408 | Not started | Capture/remap hooks; vector fusion; WebUI/slash/desktop; MCP connect migration; HQ sync. |
-| WM-409 | Partial | `local` mode leaves behaviour unchanged. `auto` uses WrongMemory only if a daemon is already running and the project is registered. Ownership-safe rollback is not exercised. |
+| WM-409 | Partial | `local` mode leaves behaviour unchanged. `auto` uses WrongMemory only if a daemon is already running and the project is registered. Ownership-safe rollback is not exercised. Rollback is exercised in the adapter (`5e46190b8`): write through WrongMemory, run `project.export`, read and write the exported store with local SAGE, then switch back to WrongMemory, which adopts the same store and sees both records. Still NOT RUN: a full WrongStack host run switching modes. |
 
 Without the adapter, the WrongStack suites on the branch give core 10305/10305 pass. With it:
 
