@@ -28,7 +28,7 @@ Last updated: 2026-11-01 (session 1). **Release level reached: none.** L1 needs 
 
 | ID | State | Evidence / gap |
 |---|---|---|
-| WM-100 | Done (local) | Cargo workspace, toolchain pin 1.93.0, Bun scripts, `AGENTS.md`, Windows CI workflow (not yet run on hosted CI at the time of writing). |
+| WM-100 | Done (local) | Cargo workspace, toolchain pin 1.93.0, Bun scripts, `AGENTS.md`, Windows CI workflow (hosted run 41300045407: PASS). |
 | WM-101 | Partial | Exact pins from crates.io: `rusqlite 0.41.1`, `tokio 1.54.1`, `rmcp 3.8.0`, `ulid 3.0.0`, `unicode-normalization 0.1.26`. Toolchain upgrade and MSRV review: NOT RUN. |
 | WM-102 | Partial | Rust contracts with unknown-field round-trip tests. Generated TypeScript DTOs: not started. |
 | WM-103 | Done | Read-only inspector with verdicts compatible, unknown-data, older, newer, divergent, not-a-sage-store, unreadable and missing. A test proves the adopted store's bytes are unchanged. |
@@ -103,7 +103,7 @@ Ported from `searchSage` / `ftsPrefixTerms`:
 | Oracle scripts (`baseline:export`, `oracle:prepare`, `oracle:build`, `inventory:writers`) | PASS; generated JSON is byte-identical across two runs (the sage.db bytes differ because of ULID and randomblob) |
 | Real MCP client (Claude Code / Codex / Cursor / Antigravity) | NOT RUN |
 | WrongStack adapter, ownership transfer, live store adoption | NOT RUN (not implemented) |
-| Hosted CI | NOT RUN at time of writing |
+| Hosted CI (windows-latest, run 41300045407) | PASS |
 
 ## Next exit gates
 
