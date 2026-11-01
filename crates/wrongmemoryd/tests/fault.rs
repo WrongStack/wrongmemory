@@ -352,3 +352,181 @@ async fn idle_kill_leaves_recoverable_discovery_and_lock() {
     drop(h);
     d.stop(&root).await;
 }
+
+/// WM-208: a full disk is a typed, survivable failure. Reads keep working,
+/// the failed write leaves no row or receipt, and after the condition clears
+/// the same idempotency key commits exactly once.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn disk_full_is_typed_and_leaves_nothing_behind() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("home");
+    let proj = tmp.path().join("proj");
+    // Seed one memory with room to spare, then restart with the cap.
+    let d = Daemon::start(&root, None).await;
+    let mut h = host(&root).await;
+    let p = register(&mut h, &proj).await;
+    call(
+        &mut h,
+        method::MEMORY_REMEMBER,
+        &p,
+        json!({"text": "Seeded fact before the disk filled up"}),
+    )
+    .await;
+    drop(h);
+    d.stop(&root).await;
+
+    let d = Daemon::start(&root, Some("disk_full")).await;
+    let mut h = host(&root).await;
+    let params = json!({"text": format!("Large fact that cannot fit {}", "x".repeat(3000))});
+    let mut code = None;
+    for i in 0..50 {
+        let mut p2 = params.clone();
+        p2["text"] = json!(format!("{} variant {i}", params["text"].as_str().unwrap()));
+        match h
+            .call_raw(
+                method::MEMORY_REMEMBER,
+                Some(&p),
+                p2,
+                Some(&format!("k-full-{i}")),
+            )
+            .await
+        {
+            Ok(_) => continue,
+            Err(CallError::Remote(e)) => {
+                code = Some((e.code, i));
+                break;
+            }
+            Err(other) => panic!("expected a typed error, got {other:?}"),
+        }
+    }
+    let (code, failed_at) = code.expect("the capped store never filled up");
+    assert_eq!(code, wrongmemory_contracts::ErrorCode::DiskFull);
+    // Still alive and readable.
+    let health = h
+        .call_raw(method::DAEMON_HEALTH, None, json!({}), None)
+        .await
+        .unwrap();
+    assert_eq!(health["draining"], false, "{health}");
+    assert_eq!(rows_with(&mut h, &p, "Seeded fact").await.len(), 1);
+    let failed_text = format!("{} variant {failed_at}", params["text"].as_str().unwrap());
+    assert!(rows_with(&mut h, &p, &failed_text).await.is_empty());
+    drop(h);
+    d.stop(&root).await;
+
+    // Space is back: the same key is a fresh commit (no receipt was kept).
+    let d = Daemon::start(&root, None).await;
+    let mut h = host(&root).await;
+    let mut retry_params = params.clone();
+    retry_params["text"] = json!(failed_text);
+    let retry = h
+        .call_raw(
+            method::MEMORY_REMEMBER,
+            Some(&p),
+            retry_params,
+            Some(&format!("k-full-{failed_at}")),
+        )
+        .await
+        .unwrap();
+    assert_eq!(retry["replayed"], false);
+    assert_eq!(rows_with(&mut h, &p, &failed_text).await.len(), 1);
+    drop(h);
+    d.stop(&root).await;
+}
+
+/// WM-208: a project whose store vanished or was corrupted while the daemon
+/// was down fails with a typed error, never takes the daemon or other
+/// projects with it, and recovers when the file is restored.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn lost_or_corrupt_store_is_isolated_and_recoverable() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("home");
+    let d = Daemon::start(&root, None).await;
+    let mut h = host(&root).await;
+    let a = register(&mut h, &tmp.path().join("proj-a")).await;
+    let b = register(&mut h, &tmp.path().join("proj-b")).await;
+    call(
+        &mut h,
+        method::MEMORY_REMEMBER,
+        &a,
+        json!({"text": "Project A survives restores"}),
+    )
+    .await;
+    call(
+        &mut h,
+        method::MEMORY_REMEMBER,
+        &b,
+        json!({"text": "Project B is unaffected"}),
+    )
+    .await;
+    let info = h
+        .call_raw(method::PROJECT_GET, Some(&a), json!({}), None)
+        .await
+        .unwrap();
+    let store = std::path::PathBuf::from(info["storePath"].as_str().unwrap());
+    drop(h);
+    d.stop(&root).await;
+
+    let store_dir = store.parent().unwrap().to_path_buf();
+    let backup = tmp.path().join("a-backup");
+    for (label, damage) in [("missing", 0), ("corrupt", 1)] {
+        if damage == 0 {
+            std::fs::rename(&store_dir, &backup).unwrap();
+        } else {
+            copy_dir(&store_dir, &backup);
+            std::fs::write(&store, b"this is not a sqlite database at all").unwrap();
+            for ext in ["-wal", "-shm"] {
+                let _ = std::fs::remove_file(format!("{}{ext}", store.display()));
+            }
+        }
+        let d = Daemon::start(&root, None).await;
+        let mut h = host(&root).await;
+        let e = h
+            .call_raw(
+                method::MEMORY_SEARCH,
+                Some(&a),
+                json!({"query": "survives"}),
+                None,
+            )
+            .await
+            .expect_err(&format!("{label}: a broken store must fail"));
+        let CallError::Remote(e) = e else {
+            panic!("{label}: expected a typed error, got {e:?}");
+        };
+        assert!(
+            matches!(
+                e.code,
+                wrongmemory_contracts::ErrorCode::StoreUnavailable
+                    | wrongmemory_contracts::ErrorCode::DatabaseCorrupt
+                    | wrongmemory_contracts::ErrorCode::ProfileUnsupported
+            ),
+            "{label}: {e:?}"
+        );
+        // Other projects and the daemon itself are fine.
+        assert_eq!(rows_with(&mut h, &b, "Project B").await.len(), 1, "{label}");
+        let health = h
+            .call_raw(method::DAEMON_HEALTH, None, json!({}), None)
+            .await
+            .unwrap();
+        assert_eq!(health["draining"], false, "{label}: {health}");
+        // Restore the files: the next request reopens without a restart.
+        let _ = std::fs::remove_dir_all(&store_dir);
+        std::fs::rename(&backup, &store_dir).unwrap();
+        assert_eq!(
+            rows_with(&mut h, &a, "Project A survives").await.len(),
+            1,
+            "{label}: recovered"
+        );
+        drop(h);
+        d.stop(&root).await;
+    }
+}
+
+fn copy_dir(from: &Path, to: &Path) {
+    std::fs::create_dir_all(to).unwrap();
+    for e in std::fs::read_dir(from).unwrap() {
+        let e = e.unwrap();
+        if e.file_type().unwrap().is_file() {
+            std::fs::copy(e.path(), to.join(e.file_name())).unwrap();
+        }
+    }
+}

@@ -67,7 +67,7 @@ Legend: **Done**, meaning implemented and covered by an automated test or record
 | WM-205 | Done | One store mutex per project acts as its serialized writer; SQLite runs on the blocking pool. LRU of open stores, capped at 32. |
 | WM-206 | Done | Durable maintenance schedules and jobs in the registry; tick-driven scheduler; cancel. |
 | WM-207 | Done | `events.since`, filtered by visibility. |
-| WM-208 | Partial | Graceful shutdown, restart over a stale endpoint, crash recovery (`tests/fault.rs`). Disk-full and root-loss are mapped to error codes but not exercised by injection. |
+| WM-208 | Done | Graceful shutdown, restart over a stale endpoint, crash recovery, and three injected failures (`tests/fault.rs`):<ul><li>Disk full (a real `SQLITE_FULL` through a debug-only `max_page_count` cap): a typed `DISK_FULL`, reads keep working, no row or receipt is left, and the same idempotency key commits once space is back.</li><li>A store that is missing after a restart: a typed error, other projects unaffected, and it recovers without a restart once the files are restored.</li><li>A store that is corrupt after a restart: the same as a missing store.</li></ul>Deleting a store while it is open is not possible on Windows. |
 
 ## M3 — MCP
 
@@ -158,7 +158,7 @@ Two gaps remain open:
 | ID | State | Evidence / gap |
 |---|---|---|
 | WM-700 | Done (local) | `install`, `uninstall`, `autostart enable/status/disable` (per-user Run value), tested with override keys and temp prefixes. |
-| WM-701 | Partial | `install --stop-daemon` keeps `.old` copies for rollback; `migrate inspect`. A cross-version upgrade is not exercised. |
+| WM-701 | Partial | `install --stop-daemon` keeps `.old` copies for rollback; `migrate inspect`. The v1→v2 registry upgrade keeps projects, epochs and grants (`v1_registry_upgrades_in_place`). An upgrade between two built releases is not exercised. |
 | WM-702 | Done (local) | `uninstall` stops the daemon, removes the autostart entry and removes binaries; client entries go through `disconnect`. |
 | WM-703 | Done | `docs/operations.md`, `docs/runbooks.md` |
 | WM-704 | Partial | `release.yml` builds a draft, unsigned release with `SHA256SUMS` on tag. **Code signing and provenance are NOT RUN.** The hosted release workflow has not run. |
@@ -212,7 +212,7 @@ Findings from the M run:
 |---|---|
 | `cargo fmt --all -- --check` | PASS |
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
-| `cargo test --workspace --locked` ×5 | PASS 130/130 on each run; no leftover daemon processes |
+| `cargo test --workspace --locked` ×5 | PASS 133/133 on each run; no leftover daemon processes |
 | `bun run test:client` (TS client 10/10, contract parity) | PASS |
 | Adapter: wrongmemory-client 6/6, sage port 20/20 against the release daemon | PASS |
 | Hosted CI (`32f0e8b`) | PASS |

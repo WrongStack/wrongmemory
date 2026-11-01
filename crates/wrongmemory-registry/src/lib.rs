@@ -600,6 +600,76 @@ mod tests {
         assert_eq!(r.begin_ownership(&p.project_id, "i2").unwrap(), 2);
     }
 
+    /// WM-701: a registry written by the v1 build (no jobs/schedules tables)
+    /// upgrades in place; projects, ownership epochs and grants survive.
+    #[test]
+    fn v1_registry_upgrades_in_place() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("registry.db");
+        let (project, grant) = {
+            let mut r = Registry::open(&path).unwrap();
+            let p = r
+                .insert_project(&NewProject {
+                    display_name: "a",
+                    root: Path::new("/a"),
+                    store_path: Path::new("/a/s.db"),
+                    store_kind: StoreKind::Managed,
+                    want_write: true,
+                    admission: Admission::ReadWrite,
+                    admission_reason: "",
+                    storage_profile_id: None,
+                })
+                .unwrap();
+            r.begin_ownership(&p.project_id, "i1").unwrap();
+            let g = r
+                .create_grant(
+                    "codex",
+                    PolicyProfile::Writer,
+                    std::slice::from_ref(&p.project_id),
+                    None,
+                    "s3cret",
+                )
+                .unwrap();
+            (p, g)
+        };
+        // Reduce it to exactly what the v1 build wrote.
+        {
+            let c = Connection::open(&path).unwrap();
+            c.execute_batch(
+                "DROP TABLE jobs; DROP TABLE maintenance_schedules;
+                 UPDATE registry_meta SET value = '1' WHERE key = 'schema_version';",
+            )
+            .unwrap();
+        }
+        let mut r = Registry::open(&path).unwrap();
+        assert_eq!(r.version().unwrap(), REGISTRY_SCHEMA_VERSION);
+        let got = r.get_project(&project.project_id).unwrap().unwrap();
+        assert_eq!(got.store_path, project.store_path);
+        assert_eq!(r.begin_ownership(&project.project_id, "i2").unwrap(), 2);
+        let auth = r
+            .authenticate_grant(&grant.grant_id, "s3cret")
+            .unwrap()
+            .unwrap();
+        assert_eq!(auth.profile, PolicyProfile::Writer);
+        let c = Connection::open(&path).unwrap();
+        for t in ["jobs", "maintenance_schedules"] {
+            let n: i64 = c
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?1",
+                    [t],
+                    |row| row.get(0),
+                )
+                .unwrap();
+            assert_eq!(n, 1, "{t} recreated");
+        }
+        // Reopening an up-to-date registry is a no-op.
+        drop(r);
+        assert_eq!(
+            Registry::open(&path).unwrap().version().unwrap(),
+            REGISTRY_SCHEMA_VERSION
+        );
+    }
+
     #[test]
     fn newer_registry_is_refused() {
         let tmp = tempfile::tempdir().unwrap();

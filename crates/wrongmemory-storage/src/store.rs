@@ -125,6 +125,16 @@ impl SageStore {
         };
         conn.busy_timeout(Duration::from_secs(30))
             .map_err(sql_err)?;
+        // Fault injection (debug builds only, `WRONGMEMORY_FAULT=disk_full`):
+        // cap the file at its current size so the next growing write fails
+        // with a real SQLITE_FULL (WM-208).
+        if writable && fault_is("disk_full") {
+            let pages: i64 = conn
+                .query_row("PRAGMA page_count", [], |r| r.get(0))
+                .map_err(sql_err)?;
+            conn.pragma_update(None, "max_page_count", pages)
+                .map_err(sql_err)?;
+        }
         Ok((
             Self {
                 conn,
@@ -1288,4 +1298,12 @@ fn injected_before_commit() -> bool {
             .map(|v| v.split(':').next() == Some("before_commit"))
             .unwrap_or(false)
         && !FIRED.swap(true, Ordering::SeqCst)
+}
+
+/// `WRONGMEMORY_FAULT=<point>[:...]` names `point` (debug builds only).
+fn fault_is(point: &str) -> bool {
+    cfg!(debug_assertions)
+        && std::env::var("WRONGMEMORY_FAULT")
+            .map(|v| v.split(':').next() == Some(point))
+            .unwrap_or(false)
 }
