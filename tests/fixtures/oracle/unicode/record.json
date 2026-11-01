@@ -1,0 +1,512 @@
+{
+  "fixture": "unicode",
+  "idLabels": [
+    "turkish",
+    "nfkc",
+    "astral",
+    "crlf",
+    "bom",
+    "german"
+  ],
+  "tables": {
+    "audit_log": [],
+    "candidates": [],
+    "edges": [],
+    "hq_memory_sync": [
+      {
+        "id": "<id:turkish>",
+        "revision": 1,
+        "change_id": "<volatile>",
+        "data": "{\"id\":\"<id:turkish>\",\"revision\":1,\"text\":\"İstanbul ŞEHİR çalışma dizini: Iğdır ve ığdır farklı yazılır.\",\"kind\":\"fact\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[\"türkçe\"],\"anchors\":[],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.75,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:02.000Z\",\"updatedAt\":\"2026-11-01T00:00:02.000Z\"}"
+      },
+      {
+        "id": "<id:nfkc>",
+        "revision": 1,
+        "change_id": "<volatile>",
+        "data": "{\"id\":\"<id:nfkc>\",\"revision\":1,\"text\":\"The ﬁle ligature and Ｆｕｌｌｗｉｄｔｈ text fold under NFKC ①.\",\"kind\":\"fact\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[],\"anchors\":[],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.75,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:03.000Z\",\"updatedAt\":\"2026-11-01T00:00:03.000Z\"}"
+      },
+      {
+        "id": "<id:astral>",
+        "revision": 1,
+        "change_id": "<volatile>",
+        "data": "{\"id\":\"<id:astral>\",\"revision\":1,\"text\":\"Rocket 🚀 launch notes with math 𝒜𝒷𝒸 letters and 𝟙𝟚𝟛 digits.\",\"kind\":\"fact\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[],\"anchors\":[],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.75,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:04.000Z\",\"updatedAt\":\"2026-11-01T00:00:04.000Z\"}"
+      },
+      {
+        "id": "<id:crlf>",
+        "revision": 1,
+        "change_id": "<volatile>",
+        "data": "{\"id\":\"<id:crlf>\",\"revision\":1,\"text\":\"line one line two with tab and spaces\",\"kind\":\"fact\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[],\"anchors\":[],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.75,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:05.000Z\",\"updatedAt\":\"2026-11-01T00:00:05.000Z\"}"
+      },
+      {
+        "id": "<id:bom>",
+        "revision": 1,
+        "change_id": "<volatile>",
+        "data": "{\"id\":\"<id:bom>\",\"revision\":1,\"text\":\"BOM leading marker text in memory body\",\"kind\":\"fact\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[],\"anchors\":[],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.75,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:06.000Z\",\"updatedAt\":\"2026-11-01T00:00:06.000Z\"}"
+      },
+      {
+        "id": "<id:german>",
+        "revision": 1,
+        "change_id": "<volatile>",
+        "data": "{\"id\":\"<id:german>\",\"revision\":1,\"text\":\"Straße und STRASSE: German sharp s folding check.\",\"kind\":\"fact\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[],\"anchors\":[],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.75,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:07.000Z\",\"updatedAt\":\"2026-11-01T00:00:07.000Z\"}"
+      }
+    ],
+    "hq_memory_sync_clock": [
+      {
+        "id": 1,
+        "epoch": "<volatile>",
+        "revision": 6
+      }
+    ],
+    "memories": [
+      {
+        "_rowid": 1,
+        "id": "<id:turkish>",
+        "data": "{\"id\":\"<id:turkish>\",\"revision\":1,\"text\":\"İstanbul ŞEHİR çalışma dizini: Iğdır ve ığdır farklı yazılır.\",\"kind\":\"fact\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[\"türkçe\"],\"anchors\":[],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.75,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:02.000Z\",\"updatedAt\":\"2026-11-01T00:00:02.000Z\"}",
+        "status": "active",
+        "kind": "fact",
+        "scope": "project",
+        "legacy_scope": "project-memory",
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:02.000Z",
+        "created_at": "2026-11-01T00:00:02.000Z",
+        "audience": null,
+        "tags": "[\"türkçe\"]",
+        "owner_session_id": null,
+        "canonical_text": "i̇stanbul şehi̇r çalışma dizini: iğdır ve ığdır farklı yazılır.",
+        "unicode_text": null
+      },
+      {
+        "_rowid": 2,
+        "id": "<id:nfkc>",
+        "data": "{\"id\":\"<id:nfkc>\",\"revision\":1,\"text\":\"The ﬁle ligature and Ｆｕｌｌｗｉｄｔｈ text fold under NFKC ①.\",\"kind\":\"fact\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[],\"anchors\":[],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.75,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:03.000Z\",\"updatedAt\":\"2026-11-01T00:00:03.000Z\"}",
+        "status": "active",
+        "kind": "fact",
+        "scope": "project",
+        "legacy_scope": "project-memory",
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:03.000Z",
+        "created_at": "2026-11-01T00:00:03.000Z",
+        "audience": null,
+        "tags": "[]",
+        "owner_session_id": null,
+        "canonical_text": "the file ligature and fullwidth text fold under nfkc 1.",
+        "unicode_text": null
+      },
+      {
+        "_rowid": 3,
+        "id": "<id:astral>",
+        "data": "{\"id\":\"<id:astral>\",\"revision\":1,\"text\":\"Rocket 🚀 launch notes with math 𝒜𝒷𝒸 letters and 𝟙𝟚𝟛 digits.\",\"kind\":\"fact\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[],\"anchors\":[],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.75,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:04.000Z\",\"updatedAt\":\"2026-11-01T00:00:04.000Z\"}",
+        "status": "active",
+        "kind": "fact",
+        "scope": "project",
+        "legacy_scope": "project-memory",
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:04.000Z",
+        "created_at": "2026-11-01T00:00:04.000Z",
+        "audience": null,
+        "tags": "[]",
+        "owner_session_id": null,
+        "canonical_text": "rocket 🚀 launch notes with math abc letters and 123 digits.",
+        "unicode_text": null
+      },
+      {
+        "_rowid": 4,
+        "id": "<id:crlf>",
+        "data": "{\"id\":\"<id:crlf>\",\"revision\":1,\"text\":\"line one line two with tab and spaces\",\"kind\":\"fact\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[],\"anchors\":[],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.75,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:05.000Z\",\"updatedAt\":\"2026-11-01T00:00:05.000Z\"}",
+        "status": "active",
+        "kind": "fact",
+        "scope": "project",
+        "legacy_scope": "project-memory",
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:05.000Z",
+        "created_at": "2026-11-01T00:00:05.000Z",
+        "audience": null,
+        "tags": "[]",
+        "owner_session_id": null,
+        "canonical_text": "line one line two with tab and spaces",
+        "unicode_text": null
+      },
+      {
+        "_rowid": 5,
+        "id": "<id:bom>",
+        "data": "{\"id\":\"<id:bom>\",\"revision\":1,\"text\":\"BOM leading marker text in memory body\",\"kind\":\"fact\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[],\"anchors\":[],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.75,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:06.000Z\",\"updatedAt\":\"2026-11-01T00:00:06.000Z\"}",
+        "status": "active",
+        "kind": "fact",
+        "scope": "project",
+        "legacy_scope": "project-memory",
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:06.000Z",
+        "created_at": "2026-11-01T00:00:06.000Z",
+        "audience": null,
+        "tags": "[]",
+        "owner_session_id": null,
+        "canonical_text": "bom leading marker text in memory body",
+        "unicode_text": null
+      },
+      {
+        "_rowid": 6,
+        "id": "<id:german>",
+        "data": "{\"id\":\"<id:german>\",\"revision\":1,\"text\":\"Straße und STRASSE: German sharp s folding check.\",\"kind\":\"fact\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[],\"anchors\":[],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.75,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:07.000Z\",\"updatedAt\":\"2026-11-01T00:00:07.000Z\"}",
+        "status": "active",
+        "kind": "fact",
+        "scope": "project",
+        "legacy_scope": "project-memory",
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:07.000Z",
+        "created_at": "2026-11-01T00:00:07.000Z",
+        "audience": null,
+        "tags": "[]",
+        "owner_session_id": null,
+        "canonical_text": "straße und strasse: german sharp s folding check.",
+        "unicode_text": null
+      }
+    ],
+    "schema_meta": [
+      {
+        "key": "fts_index_initialized",
+        "value": 1
+      },
+      {
+        "key": "hq_memory_sync_schema",
+        "value": 3
+      },
+      {
+        "key": "version",
+        "value": 5
+      }
+    ],
+    "ws_text_index_revisions": [],
+    "memories_fts_instances": [
+      {
+        "term": "turkce",
+        "_rowid": 1,
+        "col": "tags",
+        "offset": 0
+      },
+      {
+        "term": "istanbul",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 0
+      },
+      {
+        "term": "sehir",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 1
+      },
+      {
+        "term": "calısma",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 2
+      },
+      {
+        "term": "dizini",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 3
+      },
+      {
+        "term": "igdır",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 4
+      },
+      {
+        "term": "ve",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 5
+      },
+      {
+        "term": "ıgdır",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 6
+      },
+      {
+        "term": "farklı",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 7
+      },
+      {
+        "term": "yazılır",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 8
+      },
+      {
+        "term": "the",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 0
+      },
+      {
+        "term": "ﬁle",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 1
+      },
+      {
+        "term": "ligature",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 2
+      },
+      {
+        "term": "and",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 3
+      },
+      {
+        "term": "ｆｕｌｌｗｉｄｔｈ",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 4
+      },
+      {
+        "term": "text",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 5
+      },
+      {
+        "term": "fold",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 6
+      },
+      {
+        "term": "under",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 7
+      },
+      {
+        "term": "nfkc",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 8
+      },
+      {
+        "term": "①",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 9
+      },
+      {
+        "term": "rocket",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 0
+      },
+      {
+        "term": "launch",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 1
+      },
+      {
+        "term": "notes",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 2
+      },
+      {
+        "term": "with",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 3
+      },
+      {
+        "term": "math",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 4
+      },
+      {
+        "term": "𝒜𝒷𝒸",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 5
+      },
+      {
+        "term": "letters",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 6
+      },
+      {
+        "term": "and",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 7
+      },
+      {
+        "term": "𝟙𝟚𝟛",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 8
+      },
+      {
+        "term": "digits",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 9
+      },
+      {
+        "term": "line",
+        "_rowid": 4,
+        "col": "text",
+        "offset": 0
+      },
+      {
+        "term": "one",
+        "_rowid": 4,
+        "col": "text",
+        "offset": 1
+      },
+      {
+        "term": "line",
+        "_rowid": 4,
+        "col": "text",
+        "offset": 2
+      },
+      {
+        "term": "two",
+        "_rowid": 4,
+        "col": "text",
+        "offset": 3
+      },
+      {
+        "term": "with",
+        "_rowid": 4,
+        "col": "text",
+        "offset": 4
+      },
+      {
+        "term": "tab",
+        "_rowid": 4,
+        "col": "text",
+        "offset": 5
+      },
+      {
+        "term": "and",
+        "_rowid": 4,
+        "col": "text",
+        "offset": 6
+      },
+      {
+        "term": "spaces",
+        "_rowid": 4,
+        "col": "text",
+        "offset": 7
+      },
+      {
+        "term": "bom",
+        "_rowid": 5,
+        "col": "text",
+        "offset": 0
+      },
+      {
+        "term": "leading",
+        "_rowid": 5,
+        "col": "text",
+        "offset": 1
+      },
+      {
+        "term": "marker",
+        "_rowid": 5,
+        "col": "text",
+        "offset": 2
+      },
+      {
+        "term": "text",
+        "_rowid": 5,
+        "col": "text",
+        "offset": 3
+      },
+      {
+        "term": "in",
+        "_rowid": 5,
+        "col": "text",
+        "offset": 4
+      },
+      {
+        "term": "memory",
+        "_rowid": 5,
+        "col": "text",
+        "offset": 5
+      },
+      {
+        "term": "body",
+        "_rowid": 5,
+        "col": "text",
+        "offset": 6
+      },
+      {
+        "term": "straße",
+        "_rowid": 6,
+        "col": "text",
+        "offset": 0
+      },
+      {
+        "term": "und",
+        "_rowid": 6,
+        "col": "text",
+        "offset": 1
+      },
+      {
+        "term": "strasse",
+        "_rowid": 6,
+        "col": "text",
+        "offset": 2
+      },
+      {
+        "term": "german",
+        "_rowid": 6,
+        "col": "text",
+        "offset": 3
+      },
+      {
+        "term": "sharp",
+        "_rowid": 6,
+        "col": "text",
+        "offset": 4
+      },
+      {
+        "term": "s",
+        "_rowid": 6,
+        "col": "text",
+        "offset": 5
+      },
+      {
+        "term": "folding",
+        "_rowid": 6,
+        "col": "text",
+        "offset": 6
+      },
+      {
+        "term": "check",
+        "_rowid": 6,
+        "col": "text",
+        "offset": 7
+      }
+    ]
+  }
+}

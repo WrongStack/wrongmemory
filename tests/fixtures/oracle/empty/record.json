@@ -1,0 +1,34 @@
+{
+  "fixture": "empty",
+  "idLabels": [],
+  "tables": {
+    "audit_log": [],
+    "candidates": [],
+    "edges": [],
+    "hq_memory_sync": [],
+    "hq_memory_sync_clock": [
+      {
+        "id": 1,
+        "epoch": "<volatile>",
+        "revision": 0
+      }
+    ],
+    "memories": [],
+    "schema_meta": [
+      {
+        "key": "fts_index_initialized",
+        "value": 1
+      },
+      {
+        "key": "hq_memory_sync_schema",
+        "value": 3
+      },
+      {
+        "key": "version",
+        "value": 5
+      }
+    ],
+    "ws_text_index_revisions": [],
+    "memories_fts_instances": []
+  }
+}

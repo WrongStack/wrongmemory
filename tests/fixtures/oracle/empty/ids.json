@@ -1,0 +1,6 @@
+{
+  "fixture": "empty",
+  "note": "Volatile: real ids/hash of this build of sage.db; regenerated with the db.",
+  "sageDbSha256": "c9cf8fd417825889baa249e79a18147e7e74dfa32f9aa244b7751657eb2027e4",
+  "ids": {}
+}

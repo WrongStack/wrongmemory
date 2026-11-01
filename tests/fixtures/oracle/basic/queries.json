@@ -1,0 +1,2850 @@
+{
+  "fixture": "basic",
+  "queryClock": "2026-11-01T01:00:00.000Z",
+  "warnings": [],
+  "results": [
+    {
+      "name": "searchSage(\"bun\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:convention>",
+            "revision": 1,
+            "text": "Use bun run for repository scripts; never call npm directly in this project.",
+            "kind": "convention",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "tooling",
+              "bun"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/app.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "file",
+                "path": "package.json"
+              }
+            ],
+            "validity": {
+              "statement": "Holds while package.json declares bun scripts.",
+              "checks": [
+                {
+                  "type": "source_contains",
+                  "path": "package.json",
+                  "text": "\"scripts\""
+                }
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          },
+          {
+            "id": "<id:user>",
+            "revision": 1,
+            "text": "The user prefers concise English explanations with bun commands.",
+            "kind": "preference",
+            "scope": "user",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "persistence": "permanent",
+            "createdAt": "2026-11-01T00:00:07.000Z",
+            "updatedAt": "2026-11-01T00:00:07.000Z"
+          },
+          {
+            "id": "<id:successor>",
+            "revision": 1,
+            "text": "Use bun run for all repository scripts, including CI workflows.",
+            "kind": "convention",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "tooling"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/app.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "supersedes": [
+              "<id:convention>"
+            ],
+            "createdAt": "2026-11-01T00:00:08.000Z",
+            "updatedAt": "2026-11-01T00:00:08.000Z"
+          },
+          {
+            "id": "<id:command>",
+            "revision": 2,
+            "text": "Run the watch test command with bun run test --watch for fast feedback.",
+            "kind": "command_note",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "testing",
+              "watch"
+            ],
+            "anchors": [
+              {
+                "type": "command",
+                "command": "bun run test --watch"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.65,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:04.000Z",
+            "updatedAt": "2026-11-01T00:00:12.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"Bun scripts\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:successor>",
+            "revision": 1,
+            "text": "Use bun run for all repository scripts, including CI workflows.",
+            "kind": "convention",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "tooling"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/app.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "supersedes": [
+              "<id:convention>"
+            ],
+            "createdAt": "2026-11-01T00:00:08.000Z",
+            "updatedAt": "2026-11-01T00:00:08.000Z"
+          },
+          {
+            "id": "<id:convention>",
+            "revision": 1,
+            "text": "Use bun run for repository scripts; never call npm directly in this project.",
+            "kind": "convention",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "tooling",
+              "bun"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/app.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "file",
+                "path": "package.json"
+              }
+            ],
+            "validity": {
+              "statement": "Holds while package.json declares bun scripts.",
+              "checks": [
+                {
+                  "type": "source_contains",
+                  "path": "package.json",
+                  "text": "\"scripts\""
+                }
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"server start\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:decision>",
+            "revision": 1,
+            "text": "The HTTP server start sequence binds the port before loading plugins.",
+            "kind": "decision",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/app.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.9,
+            "confidence": 0.85,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:03.000Z",
+            "updatedAt": "2026-11-01T00:00:03.000Z",
+            "feedback": [
+              {
+                "verdict": "useful",
+                "observedRevision": 1,
+                "evidence": "Confirmed in src/app.ts startServer.",
+                "sessionId": "sess-A",
+                "at": "2026-11-01T00:00:11.000Z"
+              }
+            ],
+            "injectionCount": 1,
+            "lastAccessedAt": "2026-11-01T00:00:15.000Z",
+            "useCount": 1,
+            "lastUsedAt": "2026-11-01T00:00:15.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"START\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:decision>",
+            "revision": 1,
+            "text": "The HTTP server start sequence binds the port before loading plugins.",
+            "kind": "decision",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/app.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.9,
+            "confidence": 0.85,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:03.000Z",
+            "updatedAt": "2026-11-01T00:00:03.000Z",
+            "feedback": [
+              {
+                "verdict": "useful",
+                "observedRevision": 1,
+                "evidence": "Confirmed in src/app.ts startServer.",
+                "sessionId": "sess-A",
+                "at": "2026-11-01T00:00:11.000Z"
+              }
+            ],
+            "injectionCount": 1,
+            "lastAccessedAt": "2026-11-01T00:00:15.000Z",
+            "useCount": 1,
+            "lastUsedAt": "2026-11-01T00:00:15.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"nonexistentterm\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:decision>",
+            "revision": 1,
+            "text": "The HTTP server start sequence binds the port before loading plugins.",
+            "kind": "decision",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/app.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.9,
+            "confidence": 0.85,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:03.000Z",
+            "updatedAt": "2026-11-01T00:00:03.000Z",
+            "feedback": [
+              {
+                "verdict": "useful",
+                "observedRevision": 1,
+                "evidence": "Confirmed in src/app.ts startServer.",
+                "sessionId": "sess-A",
+                "at": "2026-11-01T00:00:11.000Z"
+              }
+            ],
+            "injectionCount": 1,
+            "lastAccessedAt": "2026-11-01T00:00:15.000Z",
+            "useCount": 1,
+            "lastUsedAt": "2026-11-01T00:00:15.000Z"
+          },
+          {
+            "id": "<id:command>",
+            "revision": 2,
+            "text": "Run the watch test command with bun run test --watch for fast feedback.",
+            "kind": "command_note",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "testing",
+              "watch"
+            ],
+            "anchors": [
+              {
+                "type": "command",
+                "command": "bun run test --watch"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.65,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:04.000Z",
+            "updatedAt": "2026-11-01T00:00:12.000Z"
+          },
+          {
+            "id": "<id:successor>",
+            "revision": 1,
+            "text": "Use bun run for all repository scripts, including CI workflows.",
+            "kind": "convention",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "tooling"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/app.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "supersedes": [
+              "<id:convention>"
+            ],
+            "createdAt": "2026-11-01T00:00:08.000Z",
+            "updatedAt": "2026-11-01T00:00:08.000Z"
+          },
+          {
+            "id": "<id:user>",
+            "revision": 1,
+            "text": "The user prefers concise English explanations with bun commands.",
+            "kind": "preference",
+            "scope": "user",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "persistence": "permanent",
+            "createdAt": "2026-11-01T00:00:07.000Z",
+            "updatedAt": "2026-11-01T00:00:07.000Z"
+          },
+          {
+            "id": "<id:audience>",
+            "revision": 1,
+            "text": "Reviewer guidance: check error handling paths in every review.",
+            "kind": "role_operational",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/lib"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ],
+              "taskTypes": [
+                "review"
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:05.000Z",
+            "updatedAt": "2026-11-01T00:00:05.000Z"
+          },
+          {
+            "id": "<id:convention>",
+            "revision": 1,
+            "text": "Use bun run for repository scripts; never call npm directly in this project.",
+            "kind": "convention",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "tooling",
+              "bun"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/app.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "file",
+                "path": "package.json"
+              }
+            ],
+            "validity": {
+              "statement": "Holds while package.json declares bun scripts.",
+              "checks": [
+                {
+                  "type": "source_contains",
+                  "path": "package.json",
+                  "text": "\"scripts\""
+                }
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          },
+          {
+            "id": "01LEGACYUNOWNEDSESSION0000",
+            "revision": 1,
+            "text": "Legacy unowned session memory about session cleanup behavior.",
+            "kind": "fact",
+            "scope": "session",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "legacy_memory"
+              }
+            ],
+            "importance": 0.5,
+            "confidence": 0.6,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:30.000Z",
+            "updatedAt": "2026-11-01T00:00:30.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"AND OR NOT\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"a\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:decision>",
+            "revision": 1,
+            "text": "The HTTP server start sequence binds the port before loading plugins.",
+            "kind": "decision",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/app.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.9,
+            "confidence": 0.85,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:03.000Z",
+            "updatedAt": "2026-11-01T00:00:03.000Z",
+            "feedback": [
+              {
+                "verdict": "useful",
+                "observedRevision": 1,
+                "evidence": "Confirmed in src/app.ts startServer.",
+                "sessionId": "sess-A",
+                "at": "2026-11-01T00:00:11.000Z"
+              }
+            ],
+            "injectionCount": 1,
+            "lastAccessedAt": "2026-11-01T00:00:15.000Z",
+            "useCount": 1,
+            "lastUsedAt": "2026-11-01T00:00:15.000Z"
+          },
+          {
+            "id": "<id:command>",
+            "revision": 2,
+            "text": "Run the watch test command with bun run test --watch for fast feedback.",
+            "kind": "command_note",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "testing",
+              "watch"
+            ],
+            "anchors": [
+              {
+                "type": "command",
+                "command": "bun run test --watch"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.65,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:04.000Z",
+            "updatedAt": "2026-11-01T00:00:12.000Z"
+          },
+          {
+            "id": "<id:successor>",
+            "revision": 1,
+            "text": "Use bun run for all repository scripts, including CI workflows.",
+            "kind": "convention",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "tooling"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/app.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "supersedes": [
+              "<id:convention>"
+            ],
+            "createdAt": "2026-11-01T00:00:08.000Z",
+            "updatedAt": "2026-11-01T00:00:08.000Z"
+          },
+          {
+            "id": "<id:user>",
+            "revision": 1,
+            "text": "The user prefers concise English explanations with bun commands.",
+            "kind": "preference",
+            "scope": "user",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "persistence": "permanent",
+            "createdAt": "2026-11-01T00:00:07.000Z",
+            "updatedAt": "2026-11-01T00:00:07.000Z"
+          },
+          {
+            "id": "<id:audience>",
+            "revision": 1,
+            "text": "Reviewer guidance: check error handling paths in every review.",
+            "kind": "role_operational",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/lib"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ],
+              "taskTypes": [
+                "review"
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:05.000Z",
+            "updatedAt": "2026-11-01T00:00:05.000Z"
+          },
+          {
+            "id": "<id:convention>",
+            "revision": 1,
+            "text": "Use bun run for repository scripts; never call npm directly in this project.",
+            "kind": "convention",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "tooling",
+              "bun"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/app.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "file",
+                "path": "package.json"
+              }
+            ],
+            "validity": {
+              "statement": "Holds while package.json declares bun scripts.",
+              "checks": [
+                {
+                  "type": "source_contains",
+                  "path": "package.json",
+                  "text": "\"scripts\""
+                }
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          },
+          {
+            "id": "01LEGACYUNOWNEDSESSION0000",
+            "revision": 1,
+            "text": "Legacy unowned session memory about session cleanup behavior.",
+            "kind": "fact",
+            "scope": "session",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "legacy_memory"
+              }
+            ],
+            "importance": 0.5,
+            "confidence": 0.6,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:30.000Z",
+            "updatedAt": "2026-11-01T00:00:30.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"session\")",
+      "result": {
+        "ok": [
+          {
+            "id": "01LEGACYUNOWNEDSESSION0000",
+            "revision": 1,
+            "text": "Legacy unowned session memory about session cleanup behavior.",
+            "kind": "fact",
+            "scope": "session",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "legacy_memory"
+              }
+            ],
+            "importance": 0.5,
+            "confidence": 0.6,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:30.000Z",
+            "updatedAt": "2026-11-01T00:00:30.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"review\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:audience>",
+            "revision": 1,
+            "text": "Reviewer guidance: check error handling paths in every review.",
+            "kind": "role_operational",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/lib"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ],
+              "taskTypes": [
+                "review"
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:05.000Z",
+            "updatedAt": "2026-11-01T00:00:05.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"session\", sessionId=sess-A)",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:sessionA>",
+            "revision": 1,
+            "text": "Session note: the current session is investigating flaky retry timing.",
+            "kind": "fact",
+            "scope": "session",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:06.000Z",
+            "updatedAt": "2026-11-01T00:00:06.000Z",
+            "ownerSessionId": "sess-A"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"session\", sessionId=sess-B)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"session\", includeAllSessions)",
+      "result": {
+        "ok": [
+          {
+            "id": "01LEGACYUNOWNEDSESSION0000",
+            "revision": 1,
+            "text": "Legacy unowned session memory about session cleanup behavior.",
+            "kind": "fact",
+            "scope": "session",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "legacy_memory"
+              }
+            ],
+            "importance": 0.5,
+            "confidence": 0.6,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:30.000Z",
+            "updatedAt": "2026-11-01T00:00:30.000Z"
+          },
+          {
+            "id": "<id:sessionA>",
+            "revision": 1,
+            "text": "Session note: the current session is investigating flaky retry timing.",
+            "kind": "fact",
+            "scope": "session",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:06.000Z",
+            "updatedAt": "2026-11-01T00:00:06.000Z",
+            "ownerSessionId": "sess-A"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"\", includeStatuses=all, includeAllSessions)",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:decision>",
+            "revision": 1,
+            "text": "The HTTP server start sequence binds the port before loading plugins.",
+            "kind": "decision",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/app.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.9,
+            "confidence": 0.85,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:03.000Z",
+            "updatedAt": "2026-11-01T00:00:03.000Z",
+            "feedback": [
+              {
+                "verdict": "useful",
+                "observedRevision": 1,
+                "evidence": "Confirmed in src/app.ts startServer.",
+                "sessionId": "sess-A",
+                "at": "2026-11-01T00:00:11.000Z"
+              }
+            ],
+            "injectionCount": 1,
+            "lastAccessedAt": "2026-11-01T00:00:15.000Z",
+            "useCount": 1,
+            "lastUsedAt": "2026-11-01T00:00:15.000Z"
+          },
+          {
+            "id": "<id:command>",
+            "revision": 2,
+            "text": "Run the watch test command with bun run test --watch for fast feedback.",
+            "kind": "command_note",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "testing",
+              "watch"
+            ],
+            "anchors": [
+              {
+                "type": "command",
+                "command": "bun run test --watch"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.65,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:04.000Z",
+            "updatedAt": "2026-11-01T00:00:12.000Z"
+          },
+          {
+            "id": "<id:toDelete>",
+            "revision": 2,
+            "text": "Temporary workaround: pin the fixture clock to UTC midnight.",
+            "kind": "warning",
+            "scope": "project",
+            "status": "deleted",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/lib/util.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:09.000Z",
+            "updatedAt": "2026-11-01T00:00:10.000Z"
+          },
+          {
+            "id": "<id:successor>",
+            "revision": 1,
+            "text": "Use bun run for all repository scripts, including CI workflows.",
+            "kind": "convention",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "tooling"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/app.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "supersedes": [
+              "<id:convention>"
+            ],
+            "createdAt": "2026-11-01T00:00:08.000Z",
+            "updatedAt": "2026-11-01T00:00:08.000Z"
+          },
+          {
+            "id": "<id:user>",
+            "revision": 1,
+            "text": "The user prefers concise English explanations with bun commands.",
+            "kind": "preference",
+            "scope": "user",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "persistence": "permanent",
+            "createdAt": "2026-11-01T00:00:07.000Z",
+            "updatedAt": "2026-11-01T00:00:07.000Z"
+          },
+          {
+            "id": "<id:sessionA>",
+            "revision": 1,
+            "text": "Session note: the current session is investigating flaky retry timing.",
+            "kind": "fact",
+            "scope": "session",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:06.000Z",
+            "updatedAt": "2026-11-01T00:00:06.000Z",
+            "ownerSessionId": "sess-A"
+          },
+          {
+            "id": "<id:audience>",
+            "revision": 1,
+            "text": "Reviewer guidance: check error handling paths in every review.",
+            "kind": "role_operational",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/lib"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ],
+              "taskTypes": [
+                "review"
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:05.000Z",
+            "updatedAt": "2026-11-01T00:00:05.000Z"
+          },
+          {
+            "id": "<id:convention>",
+            "revision": 1,
+            "text": "Use bun run for repository scripts; never call npm directly in this project.",
+            "kind": "convention",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "tooling",
+              "bun"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/app.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "file",
+                "path": "package.json"
+              }
+            ],
+            "validity": {
+              "statement": "Holds while package.json declares bun scripts.",
+              "checks": [
+                {
+                  "type": "source_contains",
+                  "path": "package.json",
+                  "text": "\"scripts\""
+                }
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          },
+          {
+            "id": "01LEGACYUNOWNEDSESSION0000",
+            "revision": 1,
+            "text": "Legacy unowned session memory about session cleanup behavior.",
+            "kind": "fact",
+            "scope": "session",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "legacy_memory"
+              }
+            ],
+            "importance": 0.5,
+            "confidence": 0.6,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:30.000Z",
+            "updatedAt": "2026-11-01T00:00:30.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"reviewer\", includeAudienceScoped=false)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"bun\", limit=1)",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:convention>",
+            "revision": 1,
+            "text": "Use bun run for repository scripts; never call npm directly in this project.",
+            "kind": "convention",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "tooling",
+              "bun"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/app.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "file",
+                "path": "package.json"
+              }
+            ],
+            "validity": {
+              "statement": "Holds while package.json declares bun scripts.",
+              "checks": [
+                {
+                  "type": "source_contains",
+                  "path": "package.json",
+                  "text": "\"scripts\""
+                }
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"convention scripts\", requireAllTerms)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"bun\", scope=user)",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:user>",
+            "revision": 1,
+            "text": "The user prefers concise English explanations with bun commands.",
+            "kind": "preference",
+            "scope": "user",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "persistence": "permanent",
+            "createdAt": "2026-11-01T00:00:07.000Z",
+            "updatedAt": "2026-11-01T00:00:07.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "retrieveForPath([src/app.ts])",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:decision>",
+            "revision": 1,
+            "text": "The HTTP server start sequence binds the port before loading plugins.",
+            "kind": "decision",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/app.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.9,
+            "confidence": 0.85,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:03.000Z",
+            "updatedAt": "2026-11-01T00:00:03.000Z",
+            "feedback": [
+              {
+                "verdict": "useful",
+                "observedRevision": 1,
+                "evidence": "Confirmed in src/app.ts startServer.",
+                "sessionId": "sess-A",
+                "at": "2026-11-01T00:00:11.000Z"
+              }
+            ],
+            "injectionCount": 1,
+            "lastAccessedAt": "2026-11-01T00:00:15.000Z",
+            "useCount": 1,
+            "lastUsedAt": "2026-11-01T00:00:15.000Z"
+          },
+          {
+            "id": "<id:successor>",
+            "revision": 1,
+            "text": "Use bun run for all repository scripts, including CI workflows.",
+            "kind": "convention",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "tooling"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/app.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "supersedes": [
+              "<id:convention>"
+            ],
+            "createdAt": "2026-11-01T00:00:08.000Z",
+            "updatedAt": "2026-11-01T00:00:08.000Z"
+          },
+          {
+            "id": "<id:convention>",
+            "revision": 1,
+            "text": "Use bun run for repository scripts; never call npm directly in this project.",
+            "kind": "convention",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "tooling",
+              "bun"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/app.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "file",
+                "path": "package.json"
+              }
+            ],
+            "validity": {
+              "statement": "Holds while package.json declares bun scripts.",
+              "checks": [
+                {
+                  "type": "source_contains",
+                  "path": "package.json",
+                  "text": "\"scripts\""
+                }
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "retrieveForPath([src/app.ts], sessionId=sess-A)",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:decision>",
+            "revision": 1,
+            "text": "The HTTP server start sequence binds the port before loading plugins.",
+            "kind": "decision",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/app.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.9,
+            "confidence": 0.85,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:03.000Z",
+            "updatedAt": "2026-11-01T00:00:03.000Z",
+            "feedback": [
+              {
+                "verdict": "useful",
+                "observedRevision": 1,
+                "evidence": "Confirmed in src/app.ts startServer.",
+                "sessionId": "sess-A",
+                "at": "2026-11-01T00:00:11.000Z"
+              }
+            ],
+            "injectionCount": 1,
+            "lastAccessedAt": "2026-11-01T00:00:15.000Z",
+            "useCount": 1,
+            "lastUsedAt": "2026-11-01T00:00:15.000Z"
+          },
+          {
+            "id": "<id:successor>",
+            "revision": 1,
+            "text": "Use bun run for all repository scripts, including CI workflows.",
+            "kind": "convention",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "tooling"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/app.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "supersedes": [
+              "<id:convention>"
+            ],
+            "createdAt": "2026-11-01T00:00:08.000Z",
+            "updatedAt": "2026-11-01T00:00:08.000Z"
+          },
+          {
+            "id": "<id:convention>",
+            "revision": 1,
+            "text": "Use bun run for repository scripts; never call npm directly in this project.",
+            "kind": "convention",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "tooling",
+              "bun"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/app.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "file",
+                "path": "package.json"
+              }
+            ],
+            "validity": {
+              "statement": "Holds while package.json declares bun scripts.",
+              "checks": [
+                {
+                  "type": "source_contains",
+                  "path": "package.json",
+                  "text": "\"scripts\""
+                }
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "retrieveForPath([src/lib/util.ts])",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:audience>",
+            "revision": 1,
+            "text": "Reviewer guidance: check error handling paths in every review.",
+            "kind": "role_operational",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/lib"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ],
+              "taskTypes": [
+                "review"
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:05.000Z",
+            "updatedAt": "2026-11-01T00:00:05.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "retrieveForPath([docs/none.md])",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "listCandidates(false)",
+      "result": {
+        "ok": [
+          {
+            "schemaVersion": 1,
+            "id": "candidate_<id:reviewCandidate>",
+            "status": "pending",
+            "text": "Review: the watch test command note may be outdated.",
+            "kind": "memory_review",
+            "scope": "project",
+            "confidence": 0.6,
+            "importance": 0.6,
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "session"
+              }
+            ],
+            "createdAt": "2026-11-01T00:00:14.000Z",
+            "updatedAt": "2026-11-01T00:00:14.000Z",
+            "targetMemoryId": "<id:command>",
+            "targetRevision": 2,
+            "reviewReason": "possibly_outdated",
+            "suggestedAction": "investigate"
+          },
+          {
+            "schemaVersion": 1,
+            "id": "candidate_<id:candidate>",
+            "status": "pending",
+            "text": "Proposal: document the plugin loading order in README.",
+            "kind": "workflow",
+            "scope": "project",
+            "confidence": 0.6,
+            "importance": 0.6,
+            "tags": [
+              "docs"
+            ],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "session",
+                "sessionId": "sess-A"
+              }
+            ],
+            "createdAt": "2026-11-01T00:00:13.000Z",
+            "updatedAt": "2026-11-01T00:00:13.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "listCandidates(true)",
+      "result": {
+        "ok": [
+          {
+            "schemaVersion": 1,
+            "id": "candidate_<id:reviewCandidate>",
+            "status": "pending",
+            "text": "Review: the watch test command note may be outdated.",
+            "kind": "memory_review",
+            "scope": "project",
+            "confidence": 0.6,
+            "importance": 0.6,
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "session"
+              }
+            ],
+            "createdAt": "2026-11-01T00:00:14.000Z",
+            "updatedAt": "2026-11-01T00:00:14.000Z",
+            "targetMemoryId": "<id:command>",
+            "targetRevision": 2,
+            "reviewReason": "possibly_outdated",
+            "suggestedAction": "investigate"
+          },
+          {
+            "schemaVersion": 1,
+            "id": "candidate_<id:candidate>",
+            "status": "pending",
+            "text": "Proposal: document the plugin loading order in README.",
+            "kind": "workflow",
+            "scope": "project",
+            "confidence": 0.6,
+            "importance": 0.6,
+            "tags": [
+              "docs"
+            ],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "session",
+                "sessionId": "sess-A"
+              }
+            ],
+            "createdAt": "2026-11-01T00:00:13.000Z",
+            "updatedAt": "2026-11-01T00:00:13.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "listSagePage()",
+      "result": {
+        "ok": {
+          "memories": [
+            {
+              "id": "01LEGACYUNOWNEDSESSION0000",
+              "revision": 1,
+              "text": "Legacy unowned session memory about session cleanup behavior.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "legacy_memory"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.6,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:30.000Z",
+              "updatedAt": "2026-11-01T00:00:30.000Z"
+            },
+            {
+              "id": "<id:command>",
+              "revision": 2,
+              "text": "Run the watch test command with bun run test --watch for fast feedback.",
+              "kind": "command_note",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "testing",
+                "watch"
+              ],
+              "anchors": [
+                {
+                  "type": "command",
+                  "command": "bun run test --watch"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.65,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:04.000Z",
+              "updatedAt": "2026-11-01T00:00:12.000Z"
+            },
+            {
+              "id": "<id:successor>",
+              "revision": 1,
+              "text": "Use bun run for all repository scripts, including CI workflows.",
+              "kind": "convention",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "tooling"
+              ],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/app.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "supersedes": [
+                "<id:convention>"
+              ],
+              "createdAt": "2026-11-01T00:00:08.000Z",
+              "updatedAt": "2026-11-01T00:00:08.000Z"
+            },
+            {
+              "id": "<id:user>",
+              "revision": 1,
+              "text": "The user prefers concise English explanations with bun commands.",
+              "kind": "preference",
+              "scope": "user",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:00:07.000Z",
+              "updatedAt": "2026-11-01T00:00:07.000Z"
+            },
+            {
+              "id": "<id:audience>",
+              "revision": 1,
+              "text": "Reviewer guidance: check error handling paths in every review.",
+              "kind": "role_operational",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "directory",
+                  "path": "src/lib"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "audience": {
+                "roles": [
+                  "reviewer"
+                ],
+                "taskTypes": [
+                  "review"
+                ]
+              },
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:05.000Z",
+              "updatedAt": "2026-11-01T00:00:05.000Z"
+            },
+            {
+              "id": "<id:decision>",
+              "revision": 1,
+              "text": "The HTTP server start sequence binds the port before loading plugins.",
+              "kind": "decision",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "server"
+              ],
+              "anchors": [
+                {
+                  "type": "symbol",
+                  "path": "src/app.ts",
+                  "symbol": "startServer"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.9,
+              "confidence": 0.85,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:03.000Z",
+              "updatedAt": "2026-11-01T00:00:03.000Z",
+              "feedback": [
+                {
+                  "verdict": "useful",
+                  "observedRevision": 1,
+                  "evidence": "Confirmed in src/app.ts startServer.",
+                  "sessionId": "sess-A",
+                  "at": "2026-11-01T00:00:11.000Z"
+                }
+              ],
+              "injectionCount": 1,
+              "lastAccessedAt": "2026-11-01T00:00:15.000Z",
+              "useCount": 1,
+              "lastUsedAt": "2026-11-01T00:00:15.000Z"
+            },
+            {
+              "id": "<id:convention>",
+              "revision": 1,
+              "text": "Use bun run for repository scripts; never call npm directly in this project.",
+              "kind": "convention",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "tooling",
+                "bun"
+              ],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/app.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "file",
+                  "path": "package.json"
+                }
+              ],
+              "validity": {
+                "statement": "Holds while package.json declares bun scripts.",
+                "checks": [
+                  {
+                    "type": "source_contains",
+                    "path": "package.json",
+                    "text": "\"scripts\""
+                  }
+                ]
+              },
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:02.000Z",
+              "updatedAt": "2026-11-01T00:00:02.000Z"
+            }
+          ],
+          "nextCursor": null,
+          "total": 7,
+          "statusCounts": {
+            "active": 7,
+            "deleted": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "listSagePage(statuses=[deleted])",
+      "result": {
+        "ok": {
+          "memories": [
+            {
+              "id": "<id:toDelete>",
+              "revision": 2,
+              "text": "Temporary workaround: pin the fixture clock to UTC midnight.",
+              "kind": "warning",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/lib/util.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:09.000Z",
+              "updatedAt": "2026-11-01T00:00:10.000Z"
+            }
+          ],
+          "nextCursor": null,
+          "total": 1,
+          "statusCounts": {
+            "active": 7,
+            "deleted": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "listSagePage(limit=2)",
+      "result": {
+        "ok": {
+          "memories": [
+            {
+              "id": "01LEGACYUNOWNEDSESSION0000",
+              "revision": 1,
+              "text": "Legacy unowned session memory about session cleanup behavior.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "legacy_memory"
+                }
+              ],
+              "importance": 0.5,
+              "confidence": 0.6,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:30.000Z",
+              "updatedAt": "2026-11-01T00:00:30.000Z"
+            },
+            {
+              "id": "<id:command>",
+              "revision": 2,
+              "text": "Run the watch test command with bun run test --watch for fast feedback.",
+              "kind": "command_note",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "testing",
+                "watch"
+              ],
+              "anchors": [
+                {
+                  "type": "command",
+                  "command": "bun run test --watch"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.65,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:04.000Z",
+              "updatedAt": "2026-11-01T00:00:12.000Z"
+            }
+          ],
+          "nextCursor": "<cursor:{\"u\":\"2026-11-01T00:00:12.000Z\",\"i\":\"<id:command>\"}>",
+          "total": 7,
+          "statusCounts": {
+            "active": 7,
+            "deleted": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "listSagePage(sessionId=sess-A)",
+      "result": {
+        "ok": {
+          "memories": [
+            {
+              "id": "<id:command>",
+              "revision": 2,
+              "text": "Run the watch test command with bun run test --watch for fast feedback.",
+              "kind": "command_note",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "testing",
+                "watch"
+              ],
+              "anchors": [
+                {
+                  "type": "command",
+                  "command": "bun run test --watch"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.65,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:04.000Z",
+              "updatedAt": "2026-11-01T00:00:12.000Z"
+            },
+            {
+              "id": "<id:successor>",
+              "revision": 1,
+              "text": "Use bun run for all repository scripts, including CI workflows.",
+              "kind": "convention",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "tooling"
+              ],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/app.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "supersedes": [
+                "<id:convention>"
+              ],
+              "createdAt": "2026-11-01T00:00:08.000Z",
+              "updatedAt": "2026-11-01T00:00:08.000Z"
+            },
+            {
+              "id": "<id:user>",
+              "revision": 1,
+              "text": "The user prefers concise English explanations with bun commands.",
+              "kind": "preference",
+              "scope": "user",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:00:07.000Z",
+              "updatedAt": "2026-11-01T00:00:07.000Z"
+            },
+            {
+              "id": "<id:sessionA>",
+              "revision": 1,
+              "text": "Session note: the current session is investigating flaky retry timing.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:06.000Z",
+              "updatedAt": "2026-11-01T00:00:06.000Z",
+              "ownerSessionId": "sess-A"
+            },
+            {
+              "id": "<id:audience>",
+              "revision": 1,
+              "text": "Reviewer guidance: check error handling paths in every review.",
+              "kind": "role_operational",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "directory",
+                  "path": "src/lib"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "audience": {
+                "roles": [
+                  "reviewer"
+                ],
+                "taskTypes": [
+                  "review"
+                ]
+              },
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:05.000Z",
+              "updatedAt": "2026-11-01T00:00:05.000Z"
+            },
+            {
+              "id": "<id:decision>",
+              "revision": 1,
+              "text": "The HTTP server start sequence binds the port before loading plugins.",
+              "kind": "decision",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "server"
+              ],
+              "anchors": [
+                {
+                  "type": "symbol",
+                  "path": "src/app.ts",
+                  "symbol": "startServer"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.9,
+              "confidence": 0.85,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:03.000Z",
+              "updatedAt": "2026-11-01T00:00:03.000Z",
+              "feedback": [
+                {
+                  "verdict": "useful",
+                  "observedRevision": 1,
+                  "evidence": "Confirmed in src/app.ts startServer.",
+                  "sessionId": "sess-A",
+                  "at": "2026-11-01T00:00:11.000Z"
+                }
+              ],
+              "injectionCount": 1,
+              "lastAccessedAt": "2026-11-01T00:00:15.000Z",
+              "useCount": 1,
+              "lastUsedAt": "2026-11-01T00:00:15.000Z"
+            },
+            {
+              "id": "<id:convention>",
+              "revision": 1,
+              "text": "Use bun run for repository scripts; never call npm directly in this project.",
+              "kind": "convention",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "tooling",
+                "bun"
+              ],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/app.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "file",
+                  "path": "package.json"
+                }
+              ],
+              "validity": {
+                "statement": "Holds while package.json declares bun scripts.",
+                "checks": [
+                  {
+                    "type": "source_contains",
+                    "path": "package.json",
+                    "text": "\"scripts\""
+                  }
+                ]
+              },
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:02.000Z",
+              "updatedAt": "2026-11-01T00:00:02.000Z"
+            }
+          ],
+          "nextCursor": null,
+          "total": 7,
+          "statusCounts": {
+            "active": 7,
+            "deleted": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "getSage(unknown)",
+      "result": {
+        "ok": null
+      }
+    },
+    {
+      "name": "getStats()",
+      "result": {
+        "ok": {
+          "total": 9,
+          "byStatus": {
+            "active": 8,
+            "stale": 0,
+            "superseded": 0,
+            "contradicted": 0,
+            "archived": 0,
+            "deleted": 1
+          },
+          "byKind": {
+            "command_note": 1,
+            "convention": 2,
+            "decision": 1,
+            "fact": 2,
+            "preference": 1,
+            "role_operational": 1,
+            "warning": 1
+          },
+          "edges": 10
+        }
+      }
+    },
+    {
+      "name": "graphFor(\"src/app.ts\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<ulid:1>",
+            "from": "file:src/app.ts",
+            "to": "dir:src",
+            "relation": "related_to",
+            "weight": 0.85,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "schemaVersion": 1
+          },
+          {
+            "id": "<ulid:2>",
+            "from": "symbol:src/app.ts#startServer",
+            "to": "file:src/app.ts",
+            "relation": "related_to",
+            "weight": 0.85,
+            "createdAt": "2026-11-01T00:00:03.000Z",
+            "schemaVersion": 1
+          },
+          {
+            "id": "<ulid:3>",
+            "from": "mem:<id:convention>",
+            "to": "file:src/app.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "schemaVersion": 1,
+            "evidence": [
+              "file:src/app.ts"
+            ]
+          },
+          {
+            "id": "<ulid:4>",
+            "from": "mem:<id:successor>",
+            "to": "file:src/app.ts",
+            "relation": "about_file",
+            "weight": 0.8,
+            "createdAt": "2026-11-01T00:00:08.000Z",
+            "schemaVersion": 1,
+            "evidence": [
+              "file:src/app.ts"
+            ]
+          },
+          {
+            "id": "<ulid:5>",
+            "from": "mem:<id:decision>",
+            "to": "symbol:src/app.ts#startServer",
+            "relation": "about_symbol",
+            "weight": 0.85,
+            "createdAt": "2026-11-01T00:00:03.000Z",
+            "schemaVersion": 1,
+            "evidence": [
+              "symbol:src/app.ts#startServer"
+            ]
+          },
+          {
+            "id": "<ulid:6>",
+            "from": "mem:<id:successor>",
+            "to": "mem:<id:convention>",
+            "relation": "supersedes",
+            "weight": 1,
+            "createdAt": "2026-11-01T00:00:08.000Z",
+            "schemaVersion": 1
+          },
+          {
+            "id": "<ulid:7>",
+            "from": "dir:src/lib",
+            "to": "dir:src",
+            "relation": "related_to",
+            "weight": 0.8,
+            "createdAt": "2026-11-01T00:00:05.000Z",
+            "schemaVersion": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "getSage(each)",
+      "result": {
+        "ok": [
+          [
+            "convention",
+            {
+              "id": "<id:convention>",
+              "revision": 1,
+              "text": "Use bun run for repository scripts; never call npm directly in this project.",
+              "kind": "convention",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "tooling",
+                "bun"
+              ],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/app.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "file",
+                  "path": "package.json"
+                }
+              ],
+              "validity": {
+                "statement": "Holds while package.json declares bun scripts.",
+                "checks": [
+                  {
+                    "type": "source_contains",
+                    "path": "package.json",
+                    "text": "\"scripts\""
+                  }
+                ]
+              },
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:02.000Z",
+              "updatedAt": "2026-11-01T00:00:02.000Z"
+            }
+          ],
+          [
+            "decision",
+            {
+              "id": "<id:decision>",
+              "revision": 1,
+              "text": "The HTTP server start sequence binds the port before loading plugins.",
+              "kind": "decision",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "server"
+              ],
+              "anchors": [
+                {
+                  "type": "symbol",
+                  "path": "src/app.ts",
+                  "symbol": "startServer"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.9,
+              "confidence": 0.85,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:03.000Z",
+              "updatedAt": "2026-11-01T00:00:03.000Z",
+              "feedback": [
+                {
+                  "verdict": "useful",
+                  "observedRevision": 1,
+                  "evidence": "Confirmed in src/app.ts startServer.",
+                  "sessionId": "sess-A",
+                  "at": "2026-11-01T00:00:11.000Z"
+                }
+              ],
+              "injectionCount": 1,
+              "lastAccessedAt": "2026-11-01T00:00:15.000Z",
+              "useCount": 1,
+              "lastUsedAt": "2026-11-01T00:00:15.000Z"
+            }
+          ],
+          [
+            "command",
+            {
+              "id": "<id:command>",
+              "revision": 2,
+              "text": "Run the watch test command with bun run test --watch for fast feedback.",
+              "kind": "command_note",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "testing",
+                "watch"
+              ],
+              "anchors": [
+                {
+                  "type": "command",
+                  "command": "bun run test --watch"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.65,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:04.000Z",
+              "updatedAt": "2026-11-01T00:00:12.000Z"
+            }
+          ],
+          [
+            "audience",
+            {
+              "id": "<id:audience>",
+              "revision": 1,
+              "text": "Reviewer guidance: check error handling paths in every review.",
+              "kind": "role_operational",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "directory",
+                  "path": "src/lib"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "audience": {
+                "roles": [
+                  "reviewer"
+                ],
+                "taskTypes": [
+                  "review"
+                ]
+              },
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:05.000Z",
+              "updatedAt": "2026-11-01T00:00:05.000Z"
+            }
+          ],
+          [
+            "sessionA",
+            {
+              "id": "<id:sessionA>",
+              "revision": 1,
+              "text": "Session note: the current session is investigating flaky retry timing.",
+              "kind": "fact",
+              "scope": "session",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:06.000Z",
+              "updatedAt": "2026-11-01T00:00:06.000Z",
+              "ownerSessionId": "sess-A"
+            }
+          ],
+          [
+            "user",
+            {
+              "id": "<id:user>",
+              "revision": 1,
+              "text": "The user prefers concise English explanations with bun commands.",
+              "kind": "preference",
+              "scope": "user",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "persistence": "permanent",
+              "createdAt": "2026-11-01T00:00:07.000Z",
+              "updatedAt": "2026-11-01T00:00:07.000Z"
+            }
+          ],
+          [
+            "successor",
+            {
+              "id": "<id:successor>",
+              "revision": 1,
+              "text": "Use bun run for all repository scripts, including CI workflows.",
+              "kind": "convention",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "tooling"
+              ],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/app.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "supersedes": [
+                "<id:convention>"
+              ],
+              "createdAt": "2026-11-01T00:00:08.000Z",
+              "updatedAt": "2026-11-01T00:00:08.000Z"
+            }
+          ],
+          [
+            "toDelete",
+            {
+              "id": "<id:toDelete>",
+              "revision": 2,
+              "text": "Temporary workaround: pin the fixture clock to UTC midnight.",
+              "kind": "warning",
+              "scope": "project",
+              "status": "deleted",
+              "tags": [],
+              "anchors": [
+                {
+                  "type": "file",
+                  "path": "src/lib/util.ts"
+                }
+              ],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.8,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:09.000Z",
+              "updatedAt": "2026-11-01T00:00:10.000Z"
+            }
+          ],
+          [
+            "candidate",
+            null
+          ],
+          [
+            "reviewCandidate",
+            null
+          ]
+        ]
+      }
+    },
+    {
+      "name": "findRelatedSage([successor])",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:convention>",
+            "revision": 1,
+            "text": "Use bun run for repository scripts; never call npm directly in this project.",
+            "kind": "convention",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "tooling",
+              "bun"
+            ],
+            "anchors": [
+              {
+                "type": "file",
+                "path": "src/app.ts"
+              }
+            ],
+            "sources": [
+              {
+                "type": "file",
+                "path": "package.json"
+              }
+            ],
+            "validity": {
+              "statement": "Holds while package.json declares bun scripts.",
+              "checks": [
+                {
+                  "type": "source_contains",
+                  "path": "package.json",
+                  "text": "\"scripts\""
+                }
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          },
+          {
+            "id": "<id:decision>",
+            "revision": 1,
+            "text": "The HTTP server start sequence binds the port before loading plugins.",
+            "kind": "decision",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "server"
+            ],
+            "anchors": [
+              {
+                "type": "symbol",
+                "path": "src/app.ts",
+                "symbol": "startServer"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.9,
+            "confidence": 0.85,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:03.000Z",
+            "updatedAt": "2026-11-01T00:00:03.000Z",
+            "feedback": [
+              {
+                "verdict": "useful",
+                "observedRevision": 1,
+                "evidence": "Confirmed in src/app.ts startServer.",
+                "sessionId": "sess-A",
+                "at": "2026-11-01T00:00:11.000Z"
+              }
+            ],
+            "injectionCount": 1,
+            "lastAccessedAt": "2026-11-01T00:00:15.000Z",
+            "useCount": 1,
+            "lastUsedAt": "2026-11-01T00:00:15.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "retrieveForAudience(role=reviewer)",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:audience>",
+            "revision": 1,
+            "text": "Reviewer guidance: check error handling paths in every review.",
+            "kind": "role_operational",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [
+              {
+                "type": "directory",
+                "path": "src/lib"
+              }
+            ],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "audience": {
+              "roles": [
+                "reviewer"
+              ],
+              "taskTypes": [
+                "review"
+              ]
+            },
+            "importance": 0.6,
+            "confidence": 0.8,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:05.000Z",
+            "updatedAt": "2026-11-01T00:00:05.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "findMemoriesForFile(src/app.ts)",
+      "result": {
+        "ok": {
+          "filePath": "src/app.ts",
+          "primaryMatches": [
+            {
+              "memory": {
+                "id": "<id:successor>",
+                "revision": 1,
+                "text": "Use bun run for all repository scripts, including CI workflows.",
+                "kind": "convention",
+                "scope": "project",
+                "status": "active",
+                "tags": [
+                  "tooling"
+                ],
+                "anchors": [
+                  {
+                    "type": "file",
+                    "path": "src/app.ts"
+                  }
+                ],
+                "sources": [
+                  {
+                    "type": "user"
+                  }
+                ],
+                "importance": 0.6,
+                "confidence": 0.8,
+                "freshness": 1,
+                "supersedes": [
+                  "<id:convention>"
+                ],
+                "createdAt": "2026-11-01T00:00:08.000Z",
+                "updatedAt": "2026-11-01T00:00:08.000Z"
+              },
+              "matchedVia": "anchor_file",
+              "matchStrength": 0.9
+            },
+            {
+              "memory": {
+                "id": "<id:convention>",
+                "revision": 1,
+                "text": "Use bun run for repository scripts; never call npm directly in this project.",
+                "kind": "convention",
+                "scope": "project",
+                "status": "active",
+                "tags": [
+                  "tooling",
+                  "bun"
+                ],
+                "anchors": [
+                  {
+                    "type": "file",
+                    "path": "src/app.ts"
+                  }
+                ],
+                "sources": [
+                  {
+                    "type": "file",
+                    "path": "package.json"
+                  }
+                ],
+                "validity": {
+                  "statement": "Holds while package.json declares bun scripts.",
+                  "checks": [
+                    {
+                      "type": "source_contains",
+                      "path": "package.json",
+                      "text": "\"scripts\""
+                    }
+                  ]
+                },
+                "importance": 0.6,
+                "confidence": 0.8,
+                "freshness": 1,
+                "createdAt": "2026-11-01T00:00:02.000Z",
+                "updatedAt": "2026-11-01T00:00:02.000Z"
+              },
+              "matchedVia": "anchor_file",
+              "matchStrength": 0.9
+            }
+          ],
+          "symbolMatches": [
+            {
+              "memory": {
+                "id": "<id:decision>",
+                "revision": 1,
+                "text": "The HTTP server start sequence binds the port before loading plugins.",
+                "kind": "decision",
+                "scope": "project",
+                "status": "active",
+                "tags": [
+                  "server"
+                ],
+                "anchors": [
+                  {
+                    "type": "symbol",
+                    "path": "src/app.ts",
+                    "symbol": "startServer"
+                  }
+                ],
+                "sources": [
+                  {
+                    "type": "user"
+                  }
+                ],
+                "importance": 0.9,
+                "confidence": 0.85,
+                "freshness": 1,
+                "createdAt": "2026-11-01T00:00:03.000Z",
+                "updatedAt": "2026-11-01T00:00:03.000Z",
+                "feedback": [
+                  {
+                    "verdict": "useful",
+                    "observedRevision": 1,
+                    "evidence": "Confirmed in src/app.ts startServer.",
+                    "sessionId": "sess-A",
+                    "at": "2026-11-01T00:00:11.000Z"
+                  }
+                ],
+                "injectionCount": 1,
+                "lastAccessedAt": "2026-11-01T00:00:15.000Z",
+                "useCount": 1,
+                "lastUsedAt": "2026-11-01T00:00:15.000Z"
+              },
+              "matchedVia": "anchor_symbol",
+              "matchStrength": 0.75
+            }
+          ],
+          "relatedMatches": [],
+          "totalCount": 3,
+          "activeCount": 3,
+          "supersededCount": 0,
+          "reviewPendingCount": 0
+        }
+      }
+    }
+  ]
+}

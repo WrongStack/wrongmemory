@@ -1,0 +1,15 @@
+[package]
+name = "wrongmemory-contracts"
+description = "WrongMemory wire contracts: envelopes, typed errors, SAGE record DTOs, profiles"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

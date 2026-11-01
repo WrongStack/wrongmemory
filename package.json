@@ -1,0 +1,12 @@
+{
+  "name": "wrongmemory-workspace",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "baseline:export": "bun scripts/baseline/export.ts",
+    "oracle:prepare": "bun scripts/oracle/prepare-clean-wrongstack.ts",
+    "oracle:build": "bun scripts/oracle/build-fixtures.ts",
+    "inventory:writers": "bun scripts/inventory/writers.ts",
+    "check": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets --locked -- -D warnings && cargo test --workspace --locked"
+  }
+}

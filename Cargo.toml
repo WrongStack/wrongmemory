@@ -1,0 +1,61 @@
+[workspace]
+resolver = "3"
+members = [
+  "crates/wrongmemory-contracts",
+  "crates/wrongmemory-storage",
+  "crates/wrongmemory-registry",
+  "crates/wrongmemory-ipc",
+  "crates/wrongmemoryd",
+  "crates/wrongmemory-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.93"
+publish = false
+license = "MIT"
+repository = "https://github.com/wrongstack/wrongmemory"
+
+[workspace.dependencies]
+wrongmemory-contracts = { path = "crates/wrongmemory-contracts" }
+wrongmemory-storage = { path = "crates/wrongmemory-storage" }
+wrongmemory-registry = { path = "crates/wrongmemory-registry" }
+wrongmemory-ipc = { path = "crates/wrongmemory-ipc" }
+
+anyhow = "=1.0.104"
+clap = { version = "=4.6.7", features = ["derive"] }
+getrandom = "0.3"
+hex = "=0.4.3"
+rmcp = { version = "=3.8.0", default-features = false, features = ["server", "transport-io"] }
+rusqlite = { version = "=0.41.1", features = ["bundled"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = { version = "=1.0.154", features = ["preserve_order"] }
+sha2 = "=0.11.1"
+tempfile = "=3.27.0"
+thiserror = "=2.0.21"
+tokio = { version = "=1.54.1", features = ["rt-multi-thread", "macros", "net", "io-util", "io-std", "sync", "time", "signal"] }
+ulid = "=3.0.0"
+unicode-normalization = "=0.1.26"
+uuid = { version = "=1.29.0", features = ["v4"] }
+windows-sys = { version = "=0.61.2", features = [
+  "Win32_Foundation",
+  "Win32_Security",
+  "Win32_Security_Authorization",
+  "Win32_System_Threading",
+  "Win32_System_Memory",
+  "Win32_Storage_FileSystem",
+  "Win32_System_Pipes",
+  "Win32_System_Console",
+] }
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[workspace.lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

@@ -1,0 +1,465 @@
+{
+  "fixture": "corrupt-row",
+  "queryClock": "2026-11-01T01:00:00.000Z",
+  "warnings": [
+    "{\"level\":\"warn\",\"event\":\"sage.corrupt_memory_json\",\"message\":\"JSON Parse error: Unterminated string\"}",
+    "{\"level\":\"warn\",\"event\":\"sage.corrupt_memory_record\",\"message\":\"Corrupt SAGE memory record: Memory record field \\\"importance\\\" is missing, expected number\",\"rawDataPreview\":\"{\\\"id\\\":\\\"01CORRUPTSHAPE000000000000\\\",\\\"text\\\":\\\"shape-invalid sibling memory\\\",\\\"scope\\\":\\\"project\\\",\\\"kind\\\":\\\"fact\\\",\\\"status\\\":\\\"active\\\"}\"}",
+    "{\"level\":\"warn\",\"event\":\"sage.corrupt_memory_record\",\"message\":\"Corrupt SAGE memory record: Memory record field \\\"importance\\\" is missing, expected number\",\"rawDataPreview\":\"{\\\"id\\\":\\\"01CORRUPTSHAPE000000000000\\\",\\\"text\\\":\\\"shape-invalid sibling memory\\\",\\\"scope\\\":\\\"project\\\",\\\"kind\\\":\\\"fact\\\",\\\"status\\\":\\\"active\\\"}\"}",
+    "{\"level\":\"warn\",\"event\":\"sage.corrupt_memory_json\",\"message\":\"JSON Parse error: Unterminated string\"}",
+    "{\"level\":\"warn\",\"event\":\"sage.corrupt_memory_record\",\"message\":\"Corrupt SAGE memory record: Memory record field \\\"importance\\\" is missing, expected number\",\"rawDataPreview\":\"{\\\"id\\\":\\\"01CORRUPTSHAPE000000000000\\\",\\\"text\\\":\\\"shape-invalid sibling memory\\\",\\\"scope\\\":\\\"project\\\",\\\"kind\\\":\\\"fact\\\",\\\"status\\\":\\\"active\\\"}\"}",
+    "{\"level\":\"warn\",\"event\":\"sage.corrupt_memory_record\",\"message\":\"Corrupt SAGE memory record: Memory record field \\\"importance\\\" is missing, expected number\",\"rawDataPreview\":\"{\\\"id\\\":\\\"01CORRUPTSHAPE000000000000\\\",\\\"text\\\":\\\"shape-invalid sibling memory\\\",\\\"scope\\\":\\\"project\\\",\\\"kind\\\":\\\"fact\\\",\\\"status\\\":\\\"active\\\"}\"}",
+    "{\"level\":\"warn\",\"event\":\"sage.corrupt_memory_json\",\"message\":\"JSON Parse error: Unterminated string\"}",
+    "{\"level\":\"warn\",\"event\":\"sage.corrupt_memory_record\",\"message\":\"Corrupt SAGE memory record: Memory record field \\\"importance\\\" is missing, expected number\",\"rawDataPreview\":\"{\\\"id\\\":\\\"01CORRUPTSHAPE000000000000\\\",\\\"text\\\":\\\"shape-invalid sibling memory\\\",\\\"scope\\\":\\\"project\\\",\\\"kind\\\":\\\"fact\\\",\\\"status\\\":\\\"active\\\"}\"}",
+    "{\"level\":\"warn\",\"event\":\"sage.corrupt_memory_json\",\"message\":\"JSON Parse error: Unterminated string\"}",
+    "{\"level\":\"warn\",\"event\":\"sage.all_rows_corrupt_in_batch\",\"corruptCount\":2}",
+    "{\"level\":\"warn\",\"event\":\"sage.corrupt_memory_record\",\"message\":\"Corrupt SAGE memory record: Memory record field \\\"importance\\\" is missing, expected number\",\"rawDataPreview\":\"{\\\"id\\\":\\\"01CORRUPTSHAPE000000000000\\\",\\\"text\\\":\\\"shape-invalid sibling memory\\\",\\\"scope\\\":\\\"project\\\",\\\"kind\\\":\\\"fact\\\",\\\"status\\\":\\\"active\\\"}\"}",
+    "{\"level\":\"warn\",\"event\":\"sage.corrupt_memory_json\",\"message\":\"JSON Parse error: Unterminated string\"}",
+    "{\"level\":\"warn\",\"event\":\"sage.corrupt_memory_json\",\"message\":\"JSON Parse error: Unterminated string\"}",
+    "{\"level\":\"warn\",\"event\":\"sage.corrupt_memory_record\",\"message\":\"Corrupt SAGE memory record: Memory record field \\\"importance\\\" is missing, expected number\",\"rawDataPreview\":\"{\\\"id\\\":\\\"01CORRUPTSHAPE000000000000\\\",\\\"text\\\":\\\"shape-invalid sibling memory\\\",\\\"scope\\\":\\\"project\\\",\\\"kind\\\":\\\"fact\\\",\\\"status\\\":\\\"active\\\"}\"}",
+    "{\"level\":\"warn\",\"event\":\"sage.corrupt_memory_record\",\"message\":\"Corrupt SAGE memory record: Memory record field \\\"importance\\\" is missing, expected number\",\"rawDataPreview\":\"{\\\"id\\\":\\\"01CORRUPTSHAPE000000000000\\\",\\\"text\\\":\\\"shape-invalid sibling memory\\\",\\\"scope\\\":\\\"project\\\",\\\"kind\\\":\\\"fact\\\",\\\"status\\\":\\\"active\\\"}\"}",
+    "{\"level\":\"warn\",\"event\":\"sage.row_parse_failed\",\"id\":\"01CORRUPTJSON0000000000000\",\"message\":\"JSON Parse error: Unterminated string\",\"timestamp\":\"2026-11-01T01:00:00.000Z\"}",
+    "{\"level\":\"warn\",\"event\":\"sage.row_parse_failed\",\"id\":\"01CORRUPTSHAPE000000000000\",\"message\":\"Corrupt SAGE memory record: Memory record field \\\"importance\\\" is missing, expected number\",\"timestamp\":\"2026-11-01T01:00:00.000Z\"}"
+  ],
+  "results": [
+    {
+      "name": "searchSage(\"bun\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"Bun scripts\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"server start\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"START\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"nonexistentterm\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:valid>",
+            "revision": 1,
+            "text": "A valid memory beside a corrupt sibling row.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "sibling"
+            ],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"AND OR NOT\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"a\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:valid>",
+            "revision": 1,
+            "text": "A valid memory beside a corrupt sibling row.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "sibling"
+            ],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"session\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"review\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"session\", sessionId=sess-A)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"session\", sessionId=sess-B)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"session\", includeAllSessions)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"\", includeStatuses=all, includeAllSessions)",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:valid>",
+            "revision": 1,
+            "text": "A valid memory beside a corrupt sibling row.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "sibling"
+            ],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"reviewer\", includeAudienceScoped=false)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"bun\", limit=1)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"convention scripts\", requireAllTerms)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"bun\", scope=user)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "retrieveForPath([src/app.ts])",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "retrieveForPath([src/app.ts], sessionId=sess-A)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "retrieveForPath([src/lib/util.ts])",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "retrieveForPath([docs/none.md])",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "listCandidates(false)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "listCandidates(true)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "listSagePage()",
+      "result": {
+        "ok": {
+          "memories": [
+            {
+              "id": "<id:valid>",
+              "revision": 1,
+              "text": "A valid memory beside a corrupt sibling row.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "sibling"
+              ],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:02.000Z",
+              "updatedAt": "2026-11-01T00:00:02.000Z"
+            }
+          ],
+          "nextCursor": null,
+          "total": 3,
+          "statusCounts": {
+            "active": 3
+          }
+        }
+      }
+    },
+    {
+      "name": "listSagePage(statuses=[deleted])",
+      "result": {
+        "ok": {
+          "memories": [],
+          "nextCursor": null,
+          "total": 0,
+          "statusCounts": {
+            "active": 3
+          }
+        }
+      }
+    },
+    {
+      "name": "listSagePage(limit=2)",
+      "result": {
+        "ok": {
+          "memories": [],
+          "nextCursor": "<cursor:{\"u\":\"2026-11-01T00:00:10.000Z\",\"i\":\"01CORRUPTJSON0000000000000\"}>",
+          "total": 3,
+          "statusCounts": {
+            "active": 3
+          }
+        }
+      }
+    },
+    {
+      "name": "listSagePage(sessionId=sess-A)",
+      "result": {
+        "ok": {
+          "memories": [
+            {
+              "id": "<id:valid>",
+              "revision": 1,
+              "text": "A valid memory beside a corrupt sibling row.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "sibling"
+              ],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:02.000Z",
+              "updatedAt": "2026-11-01T00:00:02.000Z"
+            }
+          ],
+          "nextCursor": null,
+          "total": 3,
+          "statusCounts": {
+            "active": 3
+          }
+        }
+      }
+    },
+    {
+      "name": "getSage(unknown)",
+      "result": {
+        "ok": null
+      }
+    },
+    {
+      "name": "getStats()",
+      "result": {
+        "ok": {
+          "total": 3,
+          "byStatus": {
+            "active": 3,
+            "stale": 0,
+            "superseded": 0,
+            "contradicted": 0,
+            "archived": 0,
+            "deleted": 0
+          },
+          "byKind": {
+            "fact": 3
+          },
+          "edges": 0
+        }
+      }
+    },
+    {
+      "name": "graphFor(\"src/app.ts\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"sibling\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:valid>",
+            "revision": 1,
+            "text": "A valid memory beside a corrupt sibling row.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "sibling"
+            ],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"memory\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:valid>",
+            "revision": 1,
+            "text": "A valid memory beside a corrupt sibling row.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "sibling"
+            ],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getSage(01CORRUPTJSON)",
+      "result": {
+        "ok": null
+      }
+    },
+    {
+      "name": "getSage(01CORRUPTSHAPE)",
+      "result": {
+        "ok": null
+      }
+    },
+    {
+      "name": "getSage(valid)",
+      "result": {
+        "ok": {
+          "id": "<id:valid>",
+          "revision": 1,
+          "text": "A valid memory beside a corrupt sibling row.",
+          "kind": "fact",
+          "scope": "project",
+          "status": "active",
+          "tags": [
+            "sibling"
+          ],
+          "anchors": [],
+          "sources": [
+            {
+              "type": "user"
+            }
+          ],
+          "importance": 0.6,
+          "confidence": 0.75,
+          "freshness": 1,
+          "createdAt": "2026-11-01T00:00:02.000Z",
+          "updatedAt": "2026-11-01T00:00:02.000Z"
+        }
+      }
+    }
+  ]
+}

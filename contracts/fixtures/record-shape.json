@@ -1,0 +1,687 @@
+{
+  "schema": "wrongmemory.record-shape/1",
+  "source": {
+    "repository": "https://github.com/WrongStack/WrongStack",
+    "commit": "222d23a90ae9c67c2433d7734c6966be7ee4e696"
+  },
+  "recordSchemaVersion": 1,
+  "sageFields": [
+    "id",
+    "revision",
+    "feedback",
+    "validity",
+    "scope",
+    "legacyScope",
+    "kind",
+    "status",
+    "contextPolicy",
+    "persistence",
+    "text",
+    "summary",
+    "importance",
+    "confidence",
+    "freshness",
+    "tags",
+    "anchors",
+    "audience",
+    "sources",
+    "supersedes",
+    "supersededBy",
+    "contradicts",
+    "createdAt",
+    "updatedAt",
+    "lastAccessedAt",
+    "lastVerifiedAt",
+    "staleReason",
+    "lastUsedAt",
+    "expiresAt",
+    "injectionCount",
+    "useCount",
+    "ownerSessionId"
+  ],
+  "decodeRequiredFields": {
+    "id": "string",
+    "text": "string",
+    "scope": "string",
+    "kind": "string",
+    "status": "string",
+    "importance": "number",
+    "confidence": "number",
+    "freshness": "number",
+    "createdAt": "present (unparseable -> 1970-01-01T00:00:00.000Z)",
+    "updatedAt": "present (unparseable -> 1970-01-01T00:00:00.000Z)"
+  },
+  "decodeDroppedWhenUnparseable": [
+    "expiresAt",
+    "lastAccessedAt",
+    "lastVerifiedAt"
+  ],
+  "kinds": [
+    "fact",
+    "decision",
+    "convention",
+    "preference",
+    "warning",
+    "anti_pattern",
+    "workflow",
+    "bug_root_cause",
+    "file_note",
+    "symbol_note",
+    "command_note",
+    "summary",
+    "memory_review",
+    "tool_outcome",
+    "error_pattern",
+    "session_digest",
+    "role_operational",
+    "task_outcome",
+    "security_signal",
+    "fleet_convention"
+  ],
+  "scopes": [
+    "project",
+    "user",
+    "session",
+    "file",
+    "symbol"
+  ],
+  "statuses": [
+    "active",
+    "stale",
+    "superseded",
+    "contradicted",
+    "archived",
+    "deleted"
+  ],
+  "persistence": {
+    "values": [
+      "permanent",
+      "long_lived",
+      "short_lived"
+    ],
+    "default": "long_lived"
+  },
+  "contextPolicy": [
+    "eligible",
+    "never"
+  ],
+  "staleReason": [
+    "verification",
+    "manual"
+  ],
+  "anchorTypes": [
+    "file",
+    "directory",
+    "symbol",
+    "package",
+    "command",
+    "test",
+    "git",
+    "agent"
+  ],
+  "sourceTypes": [
+    "user",
+    "session",
+    "tool_result",
+    "project_instruction",
+    "file",
+    "test",
+    "command",
+    "legacy_memory"
+  ],
+  "graphRelations": [
+    "about_file",
+    "about_directory",
+    "about_symbol",
+    "about_package",
+    "about_command",
+    "about_agent",
+    "derived_from",
+    "validated_by",
+    "invalidated_by",
+    "supersedes",
+    "contradicts",
+    "related_to",
+    "same_topic"
+  ],
+  "candidateStatuses": [
+    "pending",
+    "accepted",
+    "rejected",
+    "merged"
+  ],
+  "candidateSuggestedActions": [
+    "delete",
+    "archive",
+    "keep",
+    "investigate",
+    "update",
+    "consolidate"
+  ],
+  "feedbackVerdicts": [
+    "useful",
+    "outdated",
+    "incorrect",
+    "irrelevant",
+    "uncertain"
+  ],
+  "limits": {
+    "maxTextChars": 20000,
+    "maxMetadataItems": 128,
+    "maxFeedbackHistory": 8,
+    "validityStatementChars": [
+      1,
+      1000
+    ],
+    "validityMaxChecks": 4,
+    "validityCheckPathMaxChars": 500,
+    "validityCheckTextChars": [
+      1,
+      400
+    ],
+    "ftsMaxPrefixTerms": 64,
+    "defaultListLimit": 20
+  },
+  "rememberDefaults": {
+    "id": "ulid(): 10 Crockford base32 chars of Date.now() ms + 16 chars of randomBytes(16)[i] % 32",
+    "revision": 1,
+    "status": "active",
+    "scope": "input.scope ?? legacyToSageScope(input.legacyScope ?? 'project-memory') -> 'project'",
+    "kind": "input.kind ?? legacyTypeToKind(input.type) -> 'fact'",
+    "importance": "clamp01(input.importance ?? importanceFromPriority(priority)); priority critical 1, high 0.8, medium/undefined 0.6, low 0.3; defaulted value capped by quality.importanceCap",
+    "confidence": "clamp01(input.confidence ?? 0.8); defaulted value capped by quality.confidenceCap",
+    "freshness": "clamp01(input.freshness ?? 1)",
+    "sources": "normalizeSources(input.sources ?? [{ type: 'user' }])",
+    "tags": "dedupe(tag.replace(/^#/, '').trim().toLowerCase()).filter(Boolean)",
+    "text": "normalizeText: text.replace(/\\s+/g, ' ').trim(); empty -> error",
+    "canonical_text": "normalizeTextKey(normalizedText)",
+    "qualityCaps": {
+      "short_text": "text.length < 12 -> conf<=0.55 imp<=0.55",
+      "few_tokens": "tokenize(text).length < 3 -> conf<=0.6 imp<=0.6",
+      "unanchored": "no anchors -> conf<=0.75; and if scope not session/user -> imp<=0.7",
+      "root_cause_unanchored": "bug_root_cause without anchors -> conf<=0.65 imp<=0.75",
+      "ephemeral_pattern": "conf<=0.35 imp<=0.35",
+      "progress_log": "imp<=0.55"
+    }
+  },
+  "kats": {
+    "normalizeText": [
+      {
+        "input": "Use bun",
+        "output": "Use bun"
+      },
+      {
+        "input": "  Use   BUN\tscripts\n",
+        "output": "Use BUN scripts"
+      },
+      {
+        "input": "İstanbul ŞEHİR",
+        "output": "İstanbul ŞEHİR"
+      },
+      {
+        "input": "Iğdır ığdır",
+        "output": "Iğdır ığdır"
+      },
+      {
+        "input": "ﬁle Ｆｕｌｌｗｉｄｔｈ ①",
+        "output": "ﬁle Ｆｕｌｌｗｉｄｔｈ ①"
+      },
+      {
+        "input": "Straße STRASSE",
+        "output": "Straße STRASSE"
+      },
+      {
+        "input": "line one\r\nline two",
+        "output": "line one line two"
+      },
+      {
+        "input": "﻿BOM lead",
+        "output": "BOM lead"
+      },
+      {
+        "input": "Rocket 🚀 𝒜𝒷𝒸 𝟙𝟚𝟛",
+        "output": "Rocket 🚀 𝒜𝒷𝒸 𝟙𝟚𝟛"
+      },
+      {
+        "input": "ǅungla ΣΊΣΥΦΟΣ",
+        "output": "ǅungla ΣΊΣΥΦΟΣ"
+      },
+      {
+        "input": "Use pnpm.",
+        "output": "Use pnpm."
+      },
+      {
+        "input": "C++ foo.bar edge-case snake_case",
+        "output": "C++ foo.bar edge-case snake_case"
+      },
+      {
+        "input": " nbsp em　ideographic",
+        "output": "nbsp em ideographic"
+      },
+      {
+        "input": "",
+        "output": ""
+      }
+    ],
+    "normalizeTextKey": [
+      {
+        "input": "Use bun",
+        "output": "use bun"
+      },
+      {
+        "input": "  Use   BUN\tscripts\n",
+        "output": "use bun scripts"
+      },
+      {
+        "input": "İstanbul ŞEHİR",
+        "output": "i̇stanbul şehi̇r"
+      },
+      {
+        "input": "Iğdır ığdır",
+        "output": "iğdır ığdır"
+      },
+      {
+        "input": "ﬁle Ｆｕｌｌｗｉｄｔｈ ①",
+        "output": "file fullwidth 1"
+      },
+      {
+        "input": "Straße STRASSE",
+        "output": "straße strasse"
+      },
+      {
+        "input": "line one\r\nline two",
+        "output": "line one line two"
+      },
+      {
+        "input": "﻿BOM lead",
+        "output": "bom lead"
+      },
+      {
+        "input": "Rocket 🚀 𝒜𝒷𝒸 𝟙𝟚𝟛",
+        "output": "rocket 🚀 abc 123"
+      },
+      {
+        "input": "ǅungla ΣΊΣΥΦΟΣ",
+        "output": "džungla σίσυφος"
+      },
+      {
+        "input": "Use pnpm.",
+        "output": "use pnpm."
+      },
+      {
+        "input": "C++ foo.bar edge-case snake_case",
+        "output": "c++ foo.bar edge-case snake_case"
+      },
+      {
+        "input": " nbsp em　ideographic",
+        "output": "nbsp em ideographic"
+      },
+      {
+        "input": "",
+        "output": ""
+      }
+    ],
+    "canonicalMemoryText": [
+      {
+        "input": "Use bun",
+        "output": "use bun"
+      },
+      {
+        "input": "  Use   BUN\tscripts\n",
+        "output": "use bun scripts"
+      },
+      {
+        "input": "İstanbul ŞEHİR",
+        "output": "i̇stanbul şehi̇r"
+      },
+      {
+        "input": "Iğdır ığdır",
+        "output": "iğdır ığdır"
+      },
+      {
+        "input": "ﬁle Ｆｕｌｌｗｉｄｔｈ ①",
+        "output": "file fullwidth 1"
+      },
+      {
+        "input": "Straße STRASSE",
+        "output": "straße strasse"
+      },
+      {
+        "input": "line one\r\nline two",
+        "output": "line one line two"
+      },
+      {
+        "input": "﻿BOM lead",
+        "output": "bom lead"
+      },
+      {
+        "input": "Rocket 🚀 𝒜𝒷𝒸 𝟙𝟚𝟛",
+        "output": "rocket 🚀 abc 123"
+      },
+      {
+        "input": "ǅungla ΣΊΣΥΦΟΣ",
+        "output": "džungla σίσυφος"
+      },
+      {
+        "input": "Use pnpm.",
+        "output": "use pnpm"
+      },
+      {
+        "input": "C++ foo.bar edge-case snake_case",
+        "output": "c++ foo.bar edge-case snake_case"
+      },
+      {
+        "input": " nbsp em　ideographic",
+        "output": "nbsp em ideographic"
+      },
+      {
+        "input": "",
+        "output": ""
+      }
+    ],
+    "unicodeTextFold_nfkc_lower_v1": [
+      {
+        "input": "Use bun",
+        "output": "use bun"
+      },
+      {
+        "input": "  Use   BUN\tscripts\n",
+        "output": "  use   bun\tscripts\n"
+      },
+      {
+        "input": "İstanbul ŞEHİR",
+        "output": "i̇stanbul şehi̇r"
+      },
+      {
+        "input": "Iğdır ığdır",
+        "output": "iğdır ığdır"
+      },
+      {
+        "input": "ﬁle Ｆｕｌｌｗｉｄｔｈ ①",
+        "output": "file fullwidth 1"
+      },
+      {
+        "input": "Straße STRASSE",
+        "output": "straße strasse"
+      },
+      {
+        "input": "line one\r\nline two",
+        "output": "line one\r\nline two"
+      },
+      {
+        "input": "﻿BOM lead",
+        "output": "﻿bom lead"
+      },
+      {
+        "input": "Rocket 🚀 𝒜𝒷𝒸 𝟙𝟚𝟛",
+        "output": "rocket 🚀 abc 123"
+      },
+      {
+        "input": "ǅungla ΣΊΣΥΦΟΣ",
+        "output": "džungla σίσυφος"
+      },
+      {
+        "input": "Use pnpm.",
+        "output": "use pnpm."
+      },
+      {
+        "input": "C++ foo.bar edge-case snake_case",
+        "output": "c++ foo.bar edge-case snake_case"
+      },
+      {
+        "input": " nbsp em　ideographic",
+        "output": " nbsp em ideographic"
+      },
+      {
+        "input": "",
+        "output": ""
+      }
+    ],
+    "tokenize": [
+      {
+        "input": "Use bun",
+        "output": [
+          "use",
+          "bun"
+        ]
+      },
+      {
+        "input": "  Use   BUN\tscripts\n",
+        "output": [
+          "use",
+          "bun",
+          "scripts"
+        ]
+      },
+      {
+        "input": "İstanbul ŞEHİR",
+        "output": [
+          "stanbul",
+          "şehi"
+        ]
+      },
+      {
+        "input": "Iğdır ığdır",
+        "output": [
+          "iğdır",
+          "ığdır"
+        ]
+      },
+      {
+        "input": "ﬁle Ｆｕｌｌｗｉｄｔｈ ①",
+        "output": [
+          "file",
+          "fullwidth"
+        ]
+      },
+      {
+        "input": "Straße STRASSE",
+        "output": [
+          "straße",
+          "strasse"
+        ]
+      },
+      {
+        "input": "line one\r\nline two",
+        "output": [
+          "line",
+          "one",
+          "two"
+        ]
+      },
+      {
+        "input": "﻿BOM lead",
+        "output": [
+          "bom",
+          "lead"
+        ]
+      },
+      {
+        "input": "Rocket 🚀 𝒜𝒷𝒸 𝟙𝟚𝟛",
+        "output": [
+          "rocket",
+          "abc",
+          "123"
+        ]
+      },
+      {
+        "input": "ǅungla ΣΊΣΥΦΟΣ",
+        "output": [
+          "džungla",
+          "σίσυφος"
+        ]
+      },
+      {
+        "input": "Use pnpm.",
+        "output": [
+          "use",
+          "pnpm."
+        ]
+      },
+      {
+        "input": "C++ foo.bar edge-case snake_case",
+        "output": [
+          "foo.bar",
+          "edge-case",
+          "snake_case"
+        ]
+      },
+      {
+        "input": " nbsp em　ideographic",
+        "output": [
+          "nbsp",
+          "ideographic"
+        ]
+      },
+      {
+        "input": "",
+        "output": []
+      }
+    ],
+    "ftsPrefixTerms": [
+      {
+        "input": "bun scripts",
+        "output": [
+          "\"bun\"*",
+          "\"scripts\"*"
+        ]
+      },
+      {
+        "input": "AND OR NOT",
+        "output": [
+          "\"AND\"*",
+          "\"OR\"*",
+          "\"NOT\"*"
+        ]
+      },
+      {
+        "input": "a",
+        "output": []
+      },
+      {
+        "input": "foo-bar baz.qux",
+        "output": [
+          "\"foo\"*",
+          "\"bar\"*",
+          "\"baz\"*",
+          "\"qux\"*"
+        ]
+      },
+      {
+        "input": "\"quoted\" (paren) col:umn*",
+        "output": [
+          "\"quoted\"*",
+          "\"paren\"*",
+          "\"col\"*",
+          "\"umn\"*"
+        ]
+      },
+      {
+        "input": "İstanbul çalışma",
+        "output": [
+          "\"İstanbul\"*",
+          "\"çalışma\"*"
+        ]
+      },
+      {
+        "input": "🚀 rocket",
+        "output": [
+          "\"rocket\"*"
+        ]
+      },
+      {
+        "input": "xxx 12 3",
+        "output": [
+          "\"xxx\"*",
+          "\"12\"*"
+        ]
+      },
+      {
+        "input": "t0 t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 t13 t14 t15 t16 t17 t18 t19 t20 t21 t22 t23 t24 t25 t26 t27 t28 t29 t30 t31 t32 t33 t34 t35 t36 t37 t38 t39 t40 t41 t42 t43 t44 t45 t46 t47 t48 t49 t50 t51 t52 t53 t54 t55 t56 t57 t58 t59 t60 t61 t62 t63 t64 t65 t66 t67 t68 t69",
+        "output": [
+          "\"t0\"*",
+          "\"t1\"*",
+          "\"t2\"*",
+          "\"t3\"*",
+          "\"t4\"*",
+          "\"t5\"*",
+          "\"t6\"*",
+          "\"t7\"*",
+          "\"t8\"*",
+          "\"t9\"*",
+          "\"t10\"*",
+          "\"t11\"*",
+          "\"t12\"*",
+          "\"t13\"*",
+          "\"t14\"*",
+          "\"t15\"*",
+          "\"t16\"*",
+          "\"t17\"*",
+          "\"t18\"*",
+          "\"t19\"*",
+          "\"t20\"*",
+          "\"t21\"*",
+          "\"t22\"*",
+          "\"t23\"*",
+          "\"t24\"*",
+          "\"t25\"*",
+          "\"t26\"*",
+          "\"t27\"*",
+          "\"t28\"*",
+          "\"t29\"*",
+          "\"t30\"*",
+          "\"t31\"*",
+          "\"t32\"*",
+          "\"t33\"*",
+          "\"t34\"*",
+          "\"t35\"*",
+          "\"t36\"*",
+          "\"t37\"*",
+          "\"t38\"*",
+          "\"t39\"*",
+          "\"t40\"*",
+          "\"t41\"*",
+          "\"t42\"*",
+          "\"t43\"*",
+          "\"t44\"*",
+          "\"t45\"*",
+          "\"t46\"*",
+          "\"t47\"*",
+          "\"t48\"*",
+          "\"t49\"*",
+          "\"t50\"*",
+          "\"t51\"*",
+          "\"t52\"*",
+          "\"t53\"*",
+          "\"t54\"*",
+          "\"t55\"*",
+          "\"t56\"*",
+          "\"t57\"*",
+          "\"t58\"*",
+          "\"t59\"*",
+          "\"t60\"*",
+          "\"t61\"*",
+          "\"t62\"*",
+          "\"t63\"*"
+        ]
+      }
+    ],
+    "sqliteNormalizeCommand": [
+      {
+        "input": "bun  run   test --watch",
+        "output": "bun run test --watch",
+        "family": "bun run"
+      },
+      {
+        "input": "  ＢＵＮ  Test ",
+        "output": "bun test",
+        "family": " ＢＵＮ"
+      },
+      {
+        "input": "git\tstatus\n-s",
+        "output": "git status -s",
+        "family": "git status"
+      }
+    ]
+  }
+}

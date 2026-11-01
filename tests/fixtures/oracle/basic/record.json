@@ -1,0 +1,998 @@
+{
+  "fixture": "basic",
+  "idLabels": [
+    "convention",
+    "decision",
+    "command",
+    "audience",
+    "sessionA",
+    "user",
+    "successor",
+    "toDelete",
+    "candidate",
+    "reviewCandidate"
+  ],
+  "tables": {
+    "audit_log": [
+      {
+        "id": 1,
+        "event": "memory.deleted",
+        "at": "2026-11-01T00:00:10.000Z",
+        "trace_id": null,
+        "data": "{\"memoryId\":\"<id:toDelete>\",\"reason\":\"oracle fixture tombstone\",\"details\":{\"removedEdges\":1,\"force\":true,\"contextPolicy\":\"eligible\"}}"
+      },
+      {
+        "id": 2,
+        "event": "memory.feedback",
+        "at": "2026-11-01T00:00:11.000Z",
+        "trace_id": null,
+        "data": "{\"memoryId\":\"<id:decision>\",\"details\":{\"verdict\":\"useful\",\"observedRevision\":1,\"evidence\":\"Confirmed in src/app.ts startServer.\",\"sessionId\":\"sess-A\",\"at\":\"2026-11-01T00:00:11.000Z\"}}"
+      },
+      {
+        "id": 3,
+        "event": "memory.candidate_created",
+        "at": "2026-11-01T00:00:13.000Z",
+        "trace_id": null,
+        "data": "{\"details\":{\"candidateId\":\"candidate_<id:candidate>\"}}"
+      },
+      {
+        "id": 4,
+        "event": "memory.candidate_created",
+        "at": "2026-11-01T00:00:14.000Z",
+        "trace_id": null,
+        "data": "{\"details\":{\"candidateId\":\"candidate_<id:reviewCandidate>\"}}"
+      },
+      {
+        "id": 5,
+        "event": "memory.injected",
+        "at": "2026-11-01T00:00:15.000Z",
+        "trace_id": null,
+        "data": "{\"details\":{\"memoryIds\":[\"<id:decision>\"],\"trigger\":\"oracle\",\"sessionId\":\"sess-A\"}}"
+      },
+      {
+        "id": 6,
+        "event": "memory.used",
+        "at": "2026-11-01T00:00:15.000Z",
+        "trace_id": null,
+        "data": "{\"details\":{\"memoryIds\":[\"<id:decision>\"],\"source\":\"oracle\",\"sessionId\":\"sess-A\"}}"
+      }
+    ],
+    "candidates": [
+      {
+        "id": "candidate_<id:candidate>",
+        "data": "{\"schemaVersion\":1,\"id\":\"candidate_<id:candidate>\",\"status\":\"pending\",\"text\":\"Proposal: document the plugin loading order in README.\",\"kind\":\"workflow\",\"scope\":\"project\",\"confidence\":0.6,\"importance\":0.6,\"tags\":[\"docs\"],\"anchors\":[],\"sources\":[{\"type\":\"session\",\"sessionId\":\"sess-A\"}],\"createdAt\":\"2026-11-01T00:00:13.000Z\",\"updatedAt\":\"2026-11-01T00:00:13.000Z\"}",
+        "status": "pending",
+        "created_at": "2026-11-01T00:00:13.000Z",
+        "updated_at": "2026-11-01T00:00:13.000Z",
+        "canonical_text": "proposal: document the plugin loading order in readme."
+      },
+      {
+        "id": "candidate_<id:reviewCandidate>",
+        "data": "{\"schemaVersion\":1,\"id\":\"candidate_<id:reviewCandidate>\",\"status\":\"pending\",\"text\":\"Review: the watch test command note may be outdated.\",\"kind\":\"memory_review\",\"scope\":\"project\",\"confidence\":0.6,\"importance\":0.6,\"tags\":[],\"anchors\":[],\"sources\":[{\"type\":\"session\"}],\"createdAt\":\"2026-11-01T00:00:14.000Z\",\"updatedAt\":\"2026-11-01T00:00:14.000Z\",\"targetMemoryId\":\"<id:command>\",\"targetRevision\":2,\"reviewReason\":\"possibly_outdated\",\"suggestedAction\":\"investigate\"}",
+        "status": "pending",
+        "created_at": "2026-11-01T00:00:14.000Z",
+        "updated_at": "2026-11-01T00:00:14.000Z",
+        "canonical_text": "review: the watch test command note may be outdated."
+      }
+    ],
+    "edges": [
+      {
+        "from_node": "dir:src/lib",
+        "to_node": "dir:src",
+        "relation": "related_to",
+        "weight": 0.8,
+        "created_at": "2026-11-01T00:00:05.000Z"
+      },
+      {
+        "from_node": "file:src/app.ts",
+        "to_node": "dir:src",
+        "relation": "related_to",
+        "weight": 0.85,
+        "created_at": "2026-11-01T00:00:02.000Z"
+      },
+      {
+        "from_node": "file:src/lib/util.ts",
+        "to_node": "dir:src/lib",
+        "relation": "related_to",
+        "weight": 0.8,
+        "created_at": "2026-11-01T00:00:09.000Z"
+      },
+      {
+        "from_node": "mem:<id:convention>",
+        "to_node": "file:src/app.ts",
+        "relation": "about_file",
+        "weight": 0.8,
+        "created_at": "2026-11-01T00:00:02.000Z"
+      },
+      {
+        "from_node": "mem:<id:decision>",
+        "to_node": "symbol:src/app.ts#startServer",
+        "relation": "about_symbol",
+        "weight": 0.85,
+        "created_at": "2026-11-01T00:00:03.000Z"
+      },
+      {
+        "from_node": "mem:<id:command>",
+        "to_node": "command:bun run test --watch",
+        "relation": "about_command",
+        "weight": 0.8,
+        "created_at": "2026-11-01T00:00:04.000Z"
+      },
+      {
+        "from_node": "mem:<id:audience>",
+        "to_node": "dir:src/lib",
+        "relation": "about_directory",
+        "weight": 0.8,
+        "created_at": "2026-11-01T00:00:05.000Z"
+      },
+      {
+        "from_node": "mem:<id:successor>",
+        "to_node": "file:src/app.ts",
+        "relation": "about_file",
+        "weight": 0.8,
+        "created_at": "2026-11-01T00:00:08.000Z"
+      },
+      {
+        "from_node": "mem:<id:successor>",
+        "to_node": "mem:<id:convention>",
+        "relation": "supersedes",
+        "weight": 1,
+        "created_at": "2026-11-01T00:00:08.000Z"
+      },
+      {
+        "from_node": "symbol:src/app.ts#startServer",
+        "to_node": "file:src/app.ts",
+        "relation": "related_to",
+        "weight": 0.85,
+        "created_at": "2026-11-01T00:00:03.000Z"
+      }
+    ],
+    "hq_memory_sync": [
+      {
+        "id": "<id:convention>",
+        "revision": 1,
+        "change_id": "<volatile>",
+        "data": "{\"id\":\"<id:convention>\",\"revision\":1,\"text\":\"Use bun run for repository scripts; never call npm directly in this project.\",\"kind\":\"convention\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[\"tooling\",\"bun\"],\"anchors\":[{\"type\":\"file\",\"path\":\"src/app.ts\"}],\"sources\":[{\"type\":\"file\",\"path\":\"package.json\"}],\"validity\":{\"statement\":\"Holds while package.json declares bun scripts.\",\"checks\":[{\"type\":\"source_contains\",\"path\":\"package.json\",\"text\":\"\\\"scripts\\\"\"}]},\"importance\":0.6,\"confidence\":0.8,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:02.000Z\",\"updatedAt\":\"2026-11-01T00:00:02.000Z\"}"
+      },
+      {
+        "id": "<id:decision>",
+        "revision": 2,
+        "change_id": "<volatile>",
+        "data": "{\"id\":\"<id:decision>\",\"revision\":1,\"text\":\"The HTTP server start sequence binds the port before loading plugins.\",\"kind\":\"decision\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[\"server\"],\"anchors\":[{\"type\":\"symbol\",\"path\":\"src/app.ts\",\"symbol\":\"startServer\"}],\"sources\":[{\"type\":\"user\"}],\"importance\":0.9,\"confidence\":0.85,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:03.000Z\",\"updatedAt\":\"2026-11-01T00:00:03.000Z\",\"feedback\":[{\"verdict\":\"useful\",\"observedRevision\":1,\"evidence\":\"Confirmed in src/app.ts startServer.\",\"sessionId\":\"sess-A\",\"at\":\"2026-11-01T00:00:11.000Z\"}]}"
+      },
+      {
+        "id": "<id:command>",
+        "revision": 2,
+        "change_id": "<volatile>",
+        "data": "{\"id\":\"<id:command>\",\"revision\":2,\"text\":\"Run the watch test command with bun run test --watch for fast feedback.\",\"kind\":\"command_note\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[\"testing\",\"watch\"],\"anchors\":[{\"type\":\"command\",\"command\":\"bun run test --watch\"}],\"sources\":[{\"type\":\"user\"}],\"importance\":0.65,\"confidence\":0.8,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:04.000Z\",\"updatedAt\":\"2026-11-01T00:00:12.000Z\"}"
+      },
+      {
+        "id": "<id:audience>",
+        "revision": 1,
+        "change_id": "<volatile>",
+        "data": "{\"id\":\"<id:audience>\",\"revision\":1,\"text\":\"Reviewer guidance: check error handling paths in every review.\",\"kind\":\"role_operational\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[],\"anchors\":[{\"type\":\"directory\",\"path\":\"src/lib\"}],\"sources\":[{\"type\":\"user\"}],\"audience\":{\"roles\":[\"reviewer\"],\"taskTypes\":[\"review\"]},\"importance\":0.6,\"confidence\":0.8,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:05.000Z\",\"updatedAt\":\"2026-11-01T00:00:05.000Z\"}"
+      },
+      {
+        "id": "<id:successor>",
+        "revision": 1,
+        "change_id": "<volatile>",
+        "data": "{\"id\":\"<id:successor>\",\"revision\":1,\"text\":\"Use bun run for all repository scripts, including CI workflows.\",\"kind\":\"convention\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[\"tooling\"],\"anchors\":[{\"type\":\"file\",\"path\":\"src/app.ts\"}],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.8,\"freshness\":1,\"supersedes\":[\"<id:convention>\"],\"createdAt\":\"2026-11-01T00:00:08.000Z\",\"updatedAt\":\"2026-11-01T00:00:08.000Z\"}"
+      },
+      {
+        "id": "<id:toDelete>",
+        "revision": 2,
+        "change_id": "<volatile>",
+        "data": "{\"id\":\"<id:toDelete>\",\"revision\":2,\"text\":\"Temporary workaround: pin the fixture clock to UTC midnight.\",\"kind\":\"warning\",\"scope\":\"project\",\"status\":\"deleted\",\"tags\":[],\"anchors\":[{\"type\":\"file\",\"path\":\"src/lib/util.ts\"}],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.8,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:09.000Z\",\"updatedAt\":\"2026-11-01T00:00:10.000Z\"}"
+      }
+    ],
+    "hq_memory_sync_clock": [
+      {
+        "id": 1,
+        "epoch": "<volatile>",
+        "revision": 9
+      }
+    ],
+    "memories": [
+      {
+        "_rowid": 1,
+        "id": "<id:convention>",
+        "data": "{\"id\":\"<id:convention>\",\"revision\":1,\"text\":\"Use bun run for repository scripts; never call npm directly in this project.\",\"kind\":\"convention\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[\"tooling\",\"bun\"],\"anchors\":[{\"type\":\"file\",\"path\":\"src/app.ts\"}],\"sources\":[{\"type\":\"file\",\"path\":\"package.json\"}],\"validity\":{\"statement\":\"Holds while package.json declares bun scripts.\",\"checks\":[{\"type\":\"source_contains\",\"path\":\"package.json\",\"text\":\"\\\"scripts\\\"\"}]},\"importance\":0.6,\"confidence\":0.8,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:02.000Z\",\"updatedAt\":\"2026-11-01T00:00:02.000Z\"}",
+        "status": "active",
+        "kind": "convention",
+        "scope": "project",
+        "legacy_scope": "project-memory",
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:02.000Z",
+        "created_at": "2026-11-01T00:00:02.000Z",
+        "audience": null,
+        "tags": "[\"tooling\",\"bun\"]",
+        "owner_session_id": null,
+        "canonical_text": "use bun run for repository scripts; never call npm directly in this project.",
+        "unicode_text": null
+      },
+      {
+        "_rowid": 2,
+        "id": "<id:decision>",
+        "data": "{\"id\":\"<id:decision>\",\"revision\":1,\"text\":\"The HTTP server start sequence binds the port before loading plugins.\",\"kind\":\"decision\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[\"server\"],\"anchors\":[{\"type\":\"symbol\",\"path\":\"src/app.ts\",\"symbol\":\"startServer\"}],\"sources\":[{\"type\":\"user\"}],\"importance\":0.9,\"confidence\":0.85,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:03.000Z\",\"updatedAt\":\"2026-11-01T00:00:03.000Z\",\"feedback\":[{\"verdict\":\"useful\",\"observedRevision\":1,\"evidence\":\"Confirmed in src/app.ts startServer.\",\"sessionId\":\"sess-A\",\"at\":\"2026-11-01T00:00:11.000Z\"}],\"injectionCount\":1,\"lastAccessedAt\":\"2026-11-01T00:00:15.000Z\",\"useCount\":1,\"lastUsedAt\":\"2026-11-01T00:00:15.000Z\"}",
+        "status": "active",
+        "kind": "decision",
+        "scope": "project",
+        "legacy_scope": "project-memory",
+        "importance": 0.9,
+        "confidence": 0.85,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:03.000Z",
+        "created_at": "2026-11-01T00:00:03.000Z",
+        "audience": null,
+        "tags": "[\"server\"]",
+        "owner_session_id": null,
+        "canonical_text": "the http server start sequence binds the port before loading plugins.",
+        "unicode_text": null
+      },
+      {
+        "_rowid": 3,
+        "id": "<id:command>",
+        "data": "{\"id\":\"<id:command>\",\"revision\":2,\"text\":\"Run the watch test command with bun run test --watch for fast feedback.\",\"kind\":\"command_note\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[\"testing\",\"watch\"],\"anchors\":[{\"type\":\"command\",\"command\":\"bun run test --watch\"}],\"sources\":[{\"type\":\"user\"}],\"importance\":0.65,\"confidence\":0.8,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:04.000Z\",\"updatedAt\":\"2026-11-01T00:00:12.000Z\"}",
+        "status": "active",
+        "kind": "command_note",
+        "scope": "project",
+        "legacy_scope": "project-memory",
+        "importance": 0.65,
+        "confidence": 0.8,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:12.000Z",
+        "created_at": "2026-11-01T00:00:04.000Z",
+        "audience": null,
+        "tags": "[\"testing\",\"watch\"]",
+        "owner_session_id": null,
+        "canonical_text": "run the watch test command with bun run test --watch for fast feedback.",
+        "unicode_text": null
+      },
+      {
+        "_rowid": 4,
+        "id": "<id:audience>",
+        "data": "{\"id\":\"<id:audience>\",\"revision\":1,\"text\":\"Reviewer guidance: check error handling paths in every review.\",\"kind\":\"role_operational\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[],\"anchors\":[{\"type\":\"directory\",\"path\":\"src/lib\"}],\"sources\":[{\"type\":\"user\"}],\"audience\":{\"roles\":[\"reviewer\"],\"taskTypes\":[\"review\"]},\"importance\":0.6,\"confidence\":0.8,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:05.000Z\",\"updatedAt\":\"2026-11-01T00:00:05.000Z\"}",
+        "status": "active",
+        "kind": "role_operational",
+        "scope": "project",
+        "legacy_scope": "project-memory",
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:05.000Z",
+        "created_at": "2026-11-01T00:00:05.000Z",
+        "audience": "{\"roles\":[\"reviewer\"],\"taskTypes\":[\"review\"]}",
+        "tags": "[]",
+        "owner_session_id": null,
+        "canonical_text": "reviewer guidance: check error handling paths in every review.",
+        "unicode_text": null
+      },
+      {
+        "_rowid": 5,
+        "id": "<id:sessionA>",
+        "data": "{\"id\":\"<id:sessionA>\",\"revision\":1,\"text\":\"Session note: the current session is investigating flaky retry timing.\",\"kind\":\"fact\",\"scope\":\"session\",\"status\":\"active\",\"tags\":[],\"anchors\":[],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.75,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:06.000Z\",\"updatedAt\":\"2026-11-01T00:00:06.000Z\",\"ownerSessionId\":\"sess-A\"}",
+        "status": "active",
+        "kind": "fact",
+        "scope": "session",
+        "legacy_scope": "project-memory",
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:06.000Z",
+        "created_at": "2026-11-01T00:00:06.000Z",
+        "audience": null,
+        "tags": "[]",
+        "owner_session_id": "sess-A",
+        "canonical_text": "session note: the current session is investigating flaky retry timing.",
+        "unicode_text": null
+      },
+      {
+        "_rowid": 6,
+        "id": "<id:user>",
+        "data": "{\"id\":\"<id:user>\",\"revision\":1,\"text\":\"The user prefers concise English explanations with bun commands.\",\"kind\":\"preference\",\"scope\":\"user\",\"status\":\"active\",\"tags\":[],\"anchors\":[],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.75,\"freshness\":1,\"persistence\":\"permanent\",\"createdAt\":\"2026-11-01T00:00:07.000Z\",\"updatedAt\":\"2026-11-01T00:00:07.000Z\"}",
+        "status": "active",
+        "kind": "preference",
+        "scope": "user",
+        "legacy_scope": "user-memory",
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:07.000Z",
+        "created_at": "2026-11-01T00:00:07.000Z",
+        "audience": null,
+        "tags": "[]",
+        "owner_session_id": null,
+        "canonical_text": "the user prefers concise english explanations with bun commands.",
+        "unicode_text": null
+      },
+      {
+        "_rowid": 7,
+        "id": "<id:successor>",
+        "data": "{\"id\":\"<id:successor>\",\"revision\":1,\"text\":\"Use bun run for all repository scripts, including CI workflows.\",\"kind\":\"convention\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[\"tooling\"],\"anchors\":[{\"type\":\"file\",\"path\":\"src/app.ts\"}],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.8,\"freshness\":1,\"supersedes\":[\"<id:convention>\"],\"createdAt\":\"2026-11-01T00:00:08.000Z\",\"updatedAt\":\"2026-11-01T00:00:08.000Z\"}",
+        "status": "active",
+        "kind": "convention",
+        "scope": "project",
+        "legacy_scope": "project-memory",
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:08.000Z",
+        "created_at": "2026-11-01T00:00:08.000Z",
+        "audience": null,
+        "tags": "[\"tooling\"]",
+        "owner_session_id": null,
+        "canonical_text": "use bun run for all repository scripts, including ci workflows.",
+        "unicode_text": null
+      },
+      {
+        "_rowid": 8,
+        "id": "<id:toDelete>",
+        "data": "{\"id\":\"<id:toDelete>\",\"revision\":2,\"text\":\"Temporary workaround: pin the fixture clock to UTC midnight.\",\"kind\":\"warning\",\"scope\":\"project\",\"status\":\"deleted\",\"tags\":[],\"anchors\":[{\"type\":\"file\",\"path\":\"src/lib/util.ts\"}],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.8,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:09.000Z\",\"updatedAt\":\"2026-11-01T00:00:10.000Z\"}",
+        "status": "deleted",
+        "kind": "warning",
+        "scope": "project",
+        "legacy_scope": "project-memory",
+        "importance": 0.6,
+        "confidence": 0.8,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:10.000Z",
+        "created_at": "2026-11-01T00:00:09.000Z",
+        "audience": null,
+        "tags": "[]",
+        "owner_session_id": null,
+        "canonical_text": "temporary workaround: pin the fixture clock to utc midnight.",
+        "unicode_text": null
+      },
+      {
+        "_rowid": 9,
+        "id": "01LEGACYUNOWNEDSESSION0000",
+        "data": "{\"id\":\"01LEGACYUNOWNEDSESSION0000\",\"revision\":1,\"text\":\"Legacy unowned session memory about session cleanup behavior.\",\"kind\":\"fact\",\"scope\":\"session\",\"status\":\"active\",\"tags\":[],\"anchors\":[],\"sources\":[{\"type\":\"legacy_memory\"}],\"importance\":0.5,\"confidence\":0.6,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:30.000Z\",\"updatedAt\":\"2026-11-01T00:00:30.000Z\"}",
+        "status": "active",
+        "kind": "fact",
+        "scope": "session",
+        "legacy_scope": null,
+        "importance": 0.5,
+        "confidence": 0.6,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:30.000Z",
+        "created_at": "2026-11-01T00:00:30.000Z",
+        "audience": null,
+        "tags": "",
+        "owner_session_id": null,
+        "canonical_text": "legacy unowned session memory about session cleanup behavior.",
+        "unicode_text": null
+      }
+    ],
+    "schema_meta": [
+      {
+        "key": "fts_index_initialized",
+        "value": 1
+      },
+      {
+        "key": "hq_memory_sync_schema",
+        "value": 3
+      },
+      {
+        "key": "version",
+        "value": 5
+      }
+    ],
+    "ws_text_index_revisions": [],
+    "memories_fts_instances": [
+      {
+        "term": "tooling",
+        "_rowid": 1,
+        "col": "tags",
+        "offset": 0
+      },
+      {
+        "term": "bun",
+        "_rowid": 1,
+        "col": "tags",
+        "offset": 1
+      },
+      {
+        "term": "use",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 0
+      },
+      {
+        "term": "bun",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 1
+      },
+      {
+        "term": "run",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 2
+      },
+      {
+        "term": "for",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 3
+      },
+      {
+        "term": "repository",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 4
+      },
+      {
+        "term": "scripts",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 5
+      },
+      {
+        "term": "never",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 6
+      },
+      {
+        "term": "call",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 7
+      },
+      {
+        "term": "npm",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 8
+      },
+      {
+        "term": "directly",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 9
+      },
+      {
+        "term": "in",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 10
+      },
+      {
+        "term": "this",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 11
+      },
+      {
+        "term": "project",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 12
+      },
+      {
+        "term": "server",
+        "_rowid": 2,
+        "col": "tags",
+        "offset": 0
+      },
+      {
+        "term": "the",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 0
+      },
+      {
+        "term": "http",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 1
+      },
+      {
+        "term": "server",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 2
+      },
+      {
+        "term": "start",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 3
+      },
+      {
+        "term": "sequence",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 4
+      },
+      {
+        "term": "binds",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 5
+      },
+      {
+        "term": "the",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 6
+      },
+      {
+        "term": "port",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 7
+      },
+      {
+        "term": "before",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 8
+      },
+      {
+        "term": "loading",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 9
+      },
+      {
+        "term": "plugins",
+        "_rowid": 2,
+        "col": "text",
+        "offset": 10
+      },
+      {
+        "term": "testing",
+        "_rowid": 3,
+        "col": "tags",
+        "offset": 0
+      },
+      {
+        "term": "watch",
+        "_rowid": 3,
+        "col": "tags",
+        "offset": 1
+      },
+      {
+        "term": "run",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 0
+      },
+      {
+        "term": "the",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 1
+      },
+      {
+        "term": "watch",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 2
+      },
+      {
+        "term": "test",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 3
+      },
+      {
+        "term": "command",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 4
+      },
+      {
+        "term": "with",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 5
+      },
+      {
+        "term": "bun",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 6
+      },
+      {
+        "term": "run",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 7
+      },
+      {
+        "term": "test",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 8
+      },
+      {
+        "term": "watch",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 9
+      },
+      {
+        "term": "for",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 10
+      },
+      {
+        "term": "fast",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 11
+      },
+      {
+        "term": "feedback",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 12
+      },
+      {
+        "term": "roles",
+        "_rowid": 4,
+        "col": "audience",
+        "offset": 0
+      },
+      {
+        "term": "reviewer",
+        "_rowid": 4,
+        "col": "audience",
+        "offset": 1
+      },
+      {
+        "term": "tasktypes",
+        "_rowid": 4,
+        "col": "audience",
+        "offset": 2
+      },
+      {
+        "term": "review",
+        "_rowid": 4,
+        "col": "audience",
+        "offset": 3
+      },
+      {
+        "term": "reviewer",
+        "_rowid": 4,
+        "col": "text",
+        "offset": 0
+      },
+      {
+        "term": "guidance",
+        "_rowid": 4,
+        "col": "text",
+        "offset": 1
+      },
+      {
+        "term": "check",
+        "_rowid": 4,
+        "col": "text",
+        "offset": 2
+      },
+      {
+        "term": "error",
+        "_rowid": 4,
+        "col": "text",
+        "offset": 3
+      },
+      {
+        "term": "handling",
+        "_rowid": 4,
+        "col": "text",
+        "offset": 4
+      },
+      {
+        "term": "paths",
+        "_rowid": 4,
+        "col": "text",
+        "offset": 5
+      },
+      {
+        "term": "in",
+        "_rowid": 4,
+        "col": "text",
+        "offset": 6
+      },
+      {
+        "term": "every",
+        "_rowid": 4,
+        "col": "text",
+        "offset": 7
+      },
+      {
+        "term": "review",
+        "_rowid": 4,
+        "col": "text",
+        "offset": 8
+      },
+      {
+        "term": "session",
+        "_rowid": 5,
+        "col": "text",
+        "offset": 0
+      },
+      {
+        "term": "note",
+        "_rowid": 5,
+        "col": "text",
+        "offset": 1
+      },
+      {
+        "term": "the",
+        "_rowid": 5,
+        "col": "text",
+        "offset": 2
+      },
+      {
+        "term": "current",
+        "_rowid": 5,
+        "col": "text",
+        "offset": 3
+      },
+      {
+        "term": "session",
+        "_rowid": 5,
+        "col": "text",
+        "offset": 4
+      },
+      {
+        "term": "is",
+        "_rowid": 5,
+        "col": "text",
+        "offset": 5
+      },
+      {
+        "term": "investigating",
+        "_rowid": 5,
+        "col": "text",
+        "offset": 6
+      },
+      {
+        "term": "flaky",
+        "_rowid": 5,
+        "col": "text",
+        "offset": 7
+      },
+      {
+        "term": "retry",
+        "_rowid": 5,
+        "col": "text",
+        "offset": 8
+      },
+      {
+        "term": "timing",
+        "_rowid": 5,
+        "col": "text",
+        "offset": 9
+      },
+      {
+        "term": "the",
+        "_rowid": 6,
+        "col": "text",
+        "offset": 0
+      },
+      {
+        "term": "user",
+        "_rowid": 6,
+        "col": "text",
+        "offset": 1
+      },
+      {
+        "term": "prefers",
+        "_rowid": 6,
+        "col": "text",
+        "offset": 2
+      },
+      {
+        "term": "concise",
+        "_rowid": 6,
+        "col": "text",
+        "offset": 3
+      },
+      {
+        "term": "english",
+        "_rowid": 6,
+        "col": "text",
+        "offset": 4
+      },
+      {
+        "term": "explanations",
+        "_rowid": 6,
+        "col": "text",
+        "offset": 5
+      },
+      {
+        "term": "with",
+        "_rowid": 6,
+        "col": "text",
+        "offset": 6
+      },
+      {
+        "term": "bun",
+        "_rowid": 6,
+        "col": "text",
+        "offset": 7
+      },
+      {
+        "term": "commands",
+        "_rowid": 6,
+        "col": "text",
+        "offset": 8
+      },
+      {
+        "term": "tooling",
+        "_rowid": 7,
+        "col": "tags",
+        "offset": 0
+      },
+      {
+        "term": "use",
+        "_rowid": 7,
+        "col": "text",
+        "offset": 0
+      },
+      {
+        "term": "bun",
+        "_rowid": 7,
+        "col": "text",
+        "offset": 1
+      },
+      {
+        "term": "run",
+        "_rowid": 7,
+        "col": "text",
+        "offset": 2
+      },
+      {
+        "term": "for",
+        "_rowid": 7,
+        "col": "text",
+        "offset": 3
+      },
+      {
+        "term": "all",
+        "_rowid": 7,
+        "col": "text",
+        "offset": 4
+      },
+      {
+        "term": "repository",
+        "_rowid": 7,
+        "col": "text",
+        "offset": 5
+      },
+      {
+        "term": "scripts",
+        "_rowid": 7,
+        "col": "text",
+        "offset": 6
+      },
+      {
+        "term": "including",
+        "_rowid": 7,
+        "col": "text",
+        "offset": 7
+      },
+      {
+        "term": "ci",
+        "_rowid": 7,
+        "col": "text",
+        "offset": 8
+      },
+      {
+        "term": "workflows",
+        "_rowid": 7,
+        "col": "text",
+        "offset": 9
+      },
+      {
+        "term": "temporary",
+        "_rowid": 8,
+        "col": "text",
+        "offset": 0
+      },
+      {
+        "term": "workaround",
+        "_rowid": 8,
+        "col": "text",
+        "offset": 1
+      },
+      {
+        "term": "pin",
+        "_rowid": 8,
+        "col": "text",
+        "offset": 2
+      },
+      {
+        "term": "the",
+        "_rowid": 8,
+        "col": "text",
+        "offset": 3
+      },
+      {
+        "term": "fixture",
+        "_rowid": 8,
+        "col": "text",
+        "offset": 4
+      },
+      {
+        "term": "clock",
+        "_rowid": 8,
+        "col": "text",
+        "offset": 5
+      },
+      {
+        "term": "to",
+        "_rowid": 8,
+        "col": "text",
+        "offset": 6
+      },
+      {
+        "term": "utc",
+        "_rowid": 8,
+        "col": "text",
+        "offset": 7
+      },
+      {
+        "term": "midnight",
+        "_rowid": 8,
+        "col": "text",
+        "offset": 8
+      },
+      {
+        "term": "legacy",
+        "_rowid": 9,
+        "col": "text",
+        "offset": 0
+      },
+      {
+        "term": "unowned",
+        "_rowid": 9,
+        "col": "text",
+        "offset": 1
+      },
+      {
+        "term": "session",
+        "_rowid": 9,
+        "col": "text",
+        "offset": 2
+      },
+      {
+        "term": "memory",
+        "_rowid": 9,
+        "col": "text",
+        "offset": 3
+      },
+      {
+        "term": "about",
+        "_rowid": 9,
+        "col": "text",
+        "offset": 4
+      },
+      {
+        "term": "session",
+        "_rowid": 9,
+        "col": "text",
+        "offset": 5
+      },
+      {
+        "term": "cleanup",
+        "_rowid": 9,
+        "col": "text",
+        "offset": 6
+      },
+      {
+        "term": "behavior",
+        "_rowid": 9,
+        "col": "text",
+        "offset": 7
+      }
+    ]
+  }
+}

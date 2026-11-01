@@ -1,0 +1,13 @@
+{
+  "fixture": "unicode",
+  "note": "Volatile: real ids/hash of this build of sage.db; regenerated with the db.",
+  "sageDbSha256": "1884230637482b3a99bc76779c1a5e73571732799b1e58a36dd5a17cdc017023",
+  "ids": {
+    "turkish": "01M6A6FVYG1PF42WZ7MKB783PT",
+    "nfkc": "01M6A6FWXRBHEWH3NJ4DDM5906",
+    "astral": "01M6A6FXX05JP8C9AZWF6NJX00",
+    "crlf": "01M6A6FYW8CYBGCXNH8W7SHKT6",
+    "bom": "01M6A6FZVGBBM4M9E4GCZA5028",
+    "german": "01M6A6G0TRZ3CQZZG4MAQDWHTQ"
+  }
+}

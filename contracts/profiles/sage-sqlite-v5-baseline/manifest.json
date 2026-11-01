@@ -1,0 +1,747 @@
+{
+  "schema": "wrongmemory.storage-profile/1",
+  "profileId": "sage-sqlite-v5-baseline",
+  "source": {
+    "repository": "https://github.com/WrongStack/WrongStack",
+    "commit": "222d23a90ae9c67c2433d7734c6966be7ee4e696",
+    "oracle": {
+      "archiveSha256": "f2157e10169533da1872e9d919959d1095e3721083ef98463421e4528003aaf2",
+      "distSha256": {
+        "primitives": "252d64d809a1e0f0f0639177a3ae3e4056d79527221091f43973dd4a5b92a73b",
+        "persistence": "7543d00d1b280af1646e22156226b6c77c6acb2fa6ce024188d9be04a2e22d21",
+        "kanban": "e667d845da2a728df62b84112b8748b1e99caed192c7f1e7074f8be9de879bca",
+        "contracts": "11793450d427b638ce036011ce12a7a643acdda125af4ee05c800a1f00b822d9",
+        "agent-catalog": "567b0934fad5111d7b10d2ee9b718e28eef06bb6f51efccdb79718f9675f756d",
+        "core": "a2fecfdb03fa418930bf2b835d000b94d4386eaa06a43513f979ef68c55720c0",
+        "coordination": "984d42a11868c64ddb4b4085826cf24ac9f998fbbe756b95560d50d0f45e5fc9",
+        "hq": "f681ee19c71a62342fcc4c87d0f2625d163475fb0db76209cd03b1f664957225"
+      },
+      "bunLockSha256": "3ef4accd50bb3a3923b41b5121fce060abee7035e6ffd438a6f5925d9517c7d5"
+    }
+  },
+  "ddlFingerprint": {
+    "algorithm": "sha256(JSON of [{type,name,tbl_name,sql whitespace-collapsed}] ORDER BY type,name)",
+    "value": "d8e36f922b43a6565dd78547acd18b8c435b9ad04ae705b05cd00fa33617090b"
+  },
+  "sqliteSchemaVersion": 5,
+  "recordSchemaVersion": 1,
+  "textIndex": {
+    "table": "memories",
+    "key": "id",
+    "source": "data",
+    "field": "text",
+    "column": "unicode_text",
+    "revision": "nfkc-lower-v1"
+  },
+  "schemaMeta": {
+    "fts_index_initialized": 1,
+    "hq_memory_sync_schema": 3,
+    "version": 5
+  },
+  "textIndexRevisions": [],
+  "tables": [
+    "audit_log",
+    "candidates",
+    "edges",
+    "hq_memory_sync",
+    "hq_memory_sync_clock",
+    "memories",
+    "memories_fts",
+    "memories_fts_config",
+    "memories_fts_data",
+    "memories_fts_docsize",
+    "memories_fts_idx",
+    "schema_meta",
+    "ws_text_index_revisions"
+  ],
+  "indexes": [
+    {
+      "name": "idx_candidates_status_canonical",
+      "table": "candidates",
+      "autoIndex": false
+    },
+    {
+      "name": "idx_candidates_status_created",
+      "table": "candidates",
+      "autoIndex": false
+    },
+    {
+      "name": "idx_canonical_text",
+      "table": "memories",
+      "autoIndex": false
+    },
+    {
+      "name": "idx_edge_from",
+      "table": "edges",
+      "autoIndex": false
+    },
+    {
+      "name": "idx_edge_to",
+      "table": "edges",
+      "autoIndex": false
+    },
+    {
+      "name": "idx_edge_to_relation",
+      "table": "edges",
+      "autoIndex": false
+    },
+    {
+      "name": "idx_importance",
+      "table": "memories",
+      "autoIndex": false
+    },
+    {
+      "name": "idx_kind",
+      "table": "memories",
+      "autoIndex": false
+    },
+    {
+      "name": "idx_legacy_scope",
+      "table": "memories",
+      "autoIndex": false
+    },
+    {
+      "name": "idx_memories_unicode_text_pending",
+      "table": "memories",
+      "autoIndex": false
+    },
+    {
+      "name": "idx_owner_session",
+      "table": "memories",
+      "autoIndex": false
+    },
+    {
+      "name": "idx_scope",
+      "table": "memories",
+      "autoIndex": false
+    },
+    {
+      "name": "idx_status",
+      "table": "memories",
+      "autoIndex": false
+    },
+    {
+      "name": "idx_status_importance_updated",
+      "table": "memories",
+      "autoIndex": false
+    },
+    {
+      "name": "idx_status_scope_canonical",
+      "table": "memories",
+      "autoIndex": false
+    },
+    {
+      "name": "idx_status_updated_id",
+      "table": "memories",
+      "autoIndex": false
+    },
+    {
+      "name": "idx_updated",
+      "table": "memories",
+      "autoIndex": false
+    }
+  ],
+  "triggers": [
+    {
+      "name": "memories_ad",
+      "table": "memories"
+    },
+    {
+      "name": "memories_ai",
+      "table": "memories"
+    },
+    {
+      "name": "memories_au",
+      "table": "memories"
+    },
+    {
+      "name": "memories_unicode_text_invalidate",
+      "table": "memories"
+    },
+    {
+      "name": "sage_hq_clock_delete",
+      "table": "hq_memory_sync"
+    },
+    {
+      "name": "sage_hq_clock_insert",
+      "table": "hq_memory_sync"
+    },
+    {
+      "name": "sage_hq_clock_update",
+      "table": "hq_memory_sync"
+    },
+    {
+      "name": "sage_hq_delete",
+      "table": "memories"
+    },
+    {
+      "name": "sage_hq_insert",
+      "table": "memories"
+    },
+    {
+      "name": "sage_hq_update",
+      "table": "memories"
+    }
+  ],
+  "columns": {
+    "audit_log": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": false,
+        "default": null,
+        "pk": 1,
+        "hidden": 0
+      },
+      {
+        "name": "event",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "at",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "trace_id",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "data",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      }
+    ],
+    "candidates": [
+      {
+        "name": "id",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 1,
+        "hidden": 0
+      },
+      {
+        "name": "data",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "status",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "canonical_text",
+        "type": "TEXT",
+        "notnull": true,
+        "default": "''",
+        "pk": 0,
+        "hidden": 0
+      }
+    ],
+    "edges": [
+      {
+        "name": "from_node",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 1,
+        "hidden": 0
+      },
+      {
+        "name": "to_node",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 2,
+        "hidden": 0
+      },
+      {
+        "name": "relation",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 3,
+        "hidden": 0
+      },
+      {
+        "name": "weight",
+        "type": "REAL",
+        "notnull": true,
+        "default": "1",
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      }
+    ],
+    "hq_memory_sync": [
+      {
+        "name": "id",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 1,
+        "hidden": 0
+      },
+      {
+        "name": "revision",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "change_id",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "data",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      }
+    ],
+    "hq_memory_sync_clock": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": false,
+        "default": null,
+        "pk": 1,
+        "hidden": 0
+      },
+      {
+        "name": "epoch",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "revision",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      }
+    ],
+    "memories": [
+      {
+        "name": "id",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 1,
+        "hidden": 0
+      },
+      {
+        "name": "data",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "status",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "kind",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "scope",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "legacy_scope",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "importance",
+        "type": "REAL",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "confidence",
+        "type": "REAL",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "freshness",
+        "type": "REAL",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "audience",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "tags",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "owner_session_id",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "canonical_text",
+        "type": "TEXT",
+        "notnull": true,
+        "default": "''",
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "unicode_text",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      }
+    ],
+    "memories_fts": [
+      {
+        "name": "text",
+        "type": "",
+        "notnull": false,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "tags",
+        "type": "",
+        "notnull": false,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "audience",
+        "type": "",
+        "notnull": false,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      },
+      {
+        "name": "memories_fts",
+        "type": "",
+        "notnull": false,
+        "default": null,
+        "pk": 0,
+        "hidden": 1
+      },
+      {
+        "name": "rank",
+        "type": "",
+        "notnull": false,
+        "default": null,
+        "pk": 0,
+        "hidden": 1
+      }
+    ],
+    "memories_fts_config": [
+      {
+        "name": "k",
+        "type": "",
+        "notnull": true,
+        "default": null,
+        "pk": 1,
+        "hidden": 0
+      },
+      {
+        "name": "v",
+        "type": "",
+        "notnull": false,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      }
+    ],
+    "memories_fts_data": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": false,
+        "default": null,
+        "pk": 1,
+        "hidden": 0
+      },
+      {
+        "name": "block",
+        "type": "BLOB",
+        "notnull": false,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      }
+    ],
+    "memories_fts_docsize": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": false,
+        "default": null,
+        "pk": 1,
+        "hidden": 0
+      },
+      {
+        "name": "sz",
+        "type": "BLOB",
+        "notnull": false,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      }
+    ],
+    "memories_fts_idx": [
+      {
+        "name": "segid",
+        "type": "",
+        "notnull": true,
+        "default": null,
+        "pk": 1,
+        "hidden": 0
+      },
+      {
+        "name": "term",
+        "type": "",
+        "notnull": true,
+        "default": null,
+        "pk": 2,
+        "hidden": 0
+      },
+      {
+        "name": "pgno",
+        "type": "",
+        "notnull": false,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      }
+    ],
+    "schema_meta": [
+      {
+        "name": "key",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 1,
+        "hidden": 0
+      },
+      {
+        "name": "value",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      }
+    ],
+    "ws_text_index_revisions": [
+      {
+        "name": "name",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 1,
+        "hidden": 0
+      },
+      {
+        "name": "revision",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0,
+        "hidden": 0
+      }
+    ]
+  },
+  "pragmasObservedOnFile": {
+    "journal_mode": "wal",
+    "user_version": 0,
+    "application_id": 0,
+    "page_size": 4096,
+    "auto_vacuum": 0,
+    "encoding": "UTF-8"
+  },
+  "connectionPragmasSetByStore": {
+    "journal_mode": "WAL",
+    "synchronous": "NORMAL",
+    "busy_timeout": 30000,
+    "temp_store": "MEMORY",
+    "foreign_keys": "ON",
+    "cache_size": "SageCachePragmas() (negative KiB)",
+    "mmap_size": "SageCachePragmas() bytes"
+  },
+  "auditLog": {
+    "maxRows": 1000,
+    "pruneInterval": 256
+  },
+  "runtime": {
+    "bun": "1.4.4",
+    "sqliteVersion": "3.53.4",
+    "compileOptions": [
+      "ATOMIC_INTRINSICS=1",
+      "COMPILER=clang-23.1.1",
+      "DEFAULT_AUTOVACUUM",
+      "DEFAULT_CACHE_SIZE=-2000",
+      "DEFAULT_FILE_FORMAT=4",
+      "DEFAULT_JOURNAL_SIZE_LIMIT=-1",
+      "DEFAULT_MMAP_SIZE=0",
+      "DEFAULT_PAGE_SIZE=4096",
+      "DEFAULT_PCACHE_INITSZ=20",
+      "DEFAULT_RECURSIVE_TRIGGERS",
+      "DEFAULT_SECTOR_SIZE=4096",
+      "DEFAULT_SYNCHRONOUS=2",
+      "DEFAULT_WAL_AUTOCHECKPOINT=1000",
+      "DEFAULT_WAL_SYNCHRONOUS=2",
+      "DEFAULT_WORKER_THREADS=0",
+      "DIRECT_OVERFLOW_READ",
+      "ENABLE_COLUMN_METADATA",
+      "ENABLE_DBSTAT_VTAB",
+      "ENABLE_FTS3",
+      "ENABLE_FTS3_PARENTHESIS",
+      "ENABLE_FTS5",
+      "ENABLE_GEOPOLY",
+      "ENABLE_MATH_FUNCTIONS",
+      "ENABLE_PERCENTILE",
+      "ENABLE_PREUPDATE_HOOK",
+      "ENABLE_RBU",
+      "ENABLE_RTREE",
+      "ENABLE_SESSION",
+      "ENABLE_UPDATE_DELETE_LIMIT",
+      "MALLOC_SOFT_LIMIT=1024",
+      "MAX_ATTACHED=10",
+      "MAX_COLUMN=2000",
+      "MAX_COMPOUND_SELECT=500",
+      "MAX_DEFAULT_PAGE_SIZE=8192",
+      "MAX_EXPR_DEPTH=1000",
+      "MAX_FUNCTION_ARG=1000",
+      "MAX_LENGTH=1000000000",
+      "MAX_LIKE_PATTERN_LENGTH=50000",
+      "MAX_MMAP_SIZE=0x7fff0000",
+      "MAX_PAGE_COUNT=0xfffffffe",
+      "MAX_PAGE_SIZE=65536",
+      "MAX_SQL_LENGTH=1000000000",
+      "MAX_TRIGGER_DEPTH=1000",
+      "MAX_VARIABLE_NUMBER=250000",
+      "MAX_VDBE_OP=250000000",
+      "MAX_WORKER_THREADS=8",
+      "MUTEX_W32",
+      "SYSTEM_MALLOC",
+      "TEMP_STORE=1",
+      "THREADSAFE=1"
+    ]
+  }
+}

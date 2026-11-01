@@ -1,0 +1,207 @@
+{
+  "fixture": "corrupt-row",
+  "idLabels": [
+    "valid"
+  ],
+  "tables": {
+    "audit_log": [],
+    "candidates": [
+      {
+        "id": "01CORRUPTCAND0000000000000",
+        "data": "{\"broken\": ",
+        "status": "pending",
+        "created_at": "2026-11-01T00:00:10.000Z",
+        "updated_at": "2026-11-01T00:00:10.000Z",
+        "canonical_text": ""
+      }
+    ],
+    "edges": [],
+    "hq_memory_sync": [
+      {
+        "id": "01CORRUPTSHAPE000000000000",
+        "revision": 1,
+        "change_id": "<volatile>",
+        "data": "{\"id\":\"01CORRUPTSHAPE000000000000\",\"text\":\"shape-invalid sibling memory\",\"scope\":\"project\",\"kind\":\"fact\",\"status\":\"active\"}"
+      },
+      {
+        "id": "<id:valid>",
+        "revision": 1,
+        "change_id": "<volatile>",
+        "data": "{\"id\":\"<id:valid>\",\"revision\":1,\"text\":\"A valid memory beside a corrupt sibling row.\",\"kind\":\"fact\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[\"sibling\"],\"anchors\":[],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.75,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:02.000Z\",\"updatedAt\":\"2026-11-01T00:00:02.000Z\"}"
+      }
+    ],
+    "hq_memory_sync_clock": [
+      {
+        "id": 1,
+        "epoch": "<volatile>",
+        "revision": 2
+      }
+    ],
+    "memories": [
+      {
+        "_rowid": 1,
+        "id": "<id:valid>",
+        "data": "{\"id\":\"<id:valid>\",\"revision\":1,\"text\":\"A valid memory beside a corrupt sibling row.\",\"kind\":\"fact\",\"scope\":\"project\",\"status\":\"active\",\"tags\":[\"sibling\"],\"anchors\":[],\"sources\":[{\"type\":\"user\"}],\"importance\":0.6,\"confidence\":0.75,\"freshness\":1,\"createdAt\":\"2026-11-01T00:00:02.000Z\",\"updatedAt\":\"2026-11-01T00:00:02.000Z\"}",
+        "status": "active",
+        "kind": "fact",
+        "scope": "project",
+        "legacy_scope": "project-memory",
+        "importance": 0.6,
+        "confidence": 0.75,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:02.000Z",
+        "created_at": "2026-11-01T00:00:02.000Z",
+        "audience": null,
+        "tags": "[\"sibling\"]",
+        "owner_session_id": null,
+        "canonical_text": "a valid memory beside a corrupt sibling row.",
+        "unicode_text": null
+      },
+      {
+        "_rowid": 2,
+        "id": "01CORRUPTJSON0000000000000",
+        "data": "{\"id\":\"01CORRUPTJSON0000000000000\",\"text\":\"corrupt sibling memory",
+        "status": "active",
+        "kind": "fact",
+        "scope": "project",
+        "legacy_scope": null,
+        "importance": 0.5,
+        "confidence": 0.5,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:10.000Z",
+        "created_at": "2026-11-01T00:00:10.000Z",
+        "audience": null,
+        "tags": "sibling",
+        "owner_session_id": null,
+        "canonical_text": "corrupt sibling memory",
+        "unicode_text": null
+      },
+      {
+        "_rowid": 3,
+        "id": "01CORRUPTSHAPE000000000000",
+        "data": "{\"id\":\"01CORRUPTSHAPE000000000000\",\"text\":\"shape-invalid sibling memory\",\"scope\":\"project\",\"kind\":\"fact\",\"status\":\"active\"}",
+        "status": "active",
+        "kind": "fact",
+        "scope": "project",
+        "legacy_scope": null,
+        "importance": 0.5,
+        "confidence": 0.5,
+        "freshness": 1,
+        "updated_at": "2026-11-01T00:00:10.000Z",
+        "created_at": "2026-11-01T00:00:10.000Z",
+        "audience": null,
+        "tags": "sibling",
+        "owner_session_id": null,
+        "canonical_text": "shape-invalid sibling memory",
+        "unicode_text": null
+      }
+    ],
+    "schema_meta": [
+      {
+        "key": "fts_index_initialized",
+        "value": 1
+      },
+      {
+        "key": "hq_memory_sync_schema",
+        "value": 3
+      },
+      {
+        "key": "version",
+        "value": 5
+      }
+    ],
+    "ws_text_index_revisions": [],
+    "memories_fts_instances": [
+      {
+        "term": "sibling",
+        "_rowid": 1,
+        "col": "tags",
+        "offset": 0
+      },
+      {
+        "term": "a",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 0
+      },
+      {
+        "term": "valid",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 1
+      },
+      {
+        "term": "memory",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 2
+      },
+      {
+        "term": "beside",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 3
+      },
+      {
+        "term": "a",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 4
+      },
+      {
+        "term": "corrupt",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 5
+      },
+      {
+        "term": "sibling",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 6
+      },
+      {
+        "term": "row",
+        "_rowid": 1,
+        "col": "text",
+        "offset": 7
+      },
+      {
+        "term": "sibling",
+        "_rowid": 2,
+        "col": "tags",
+        "offset": 0
+      },
+      {
+        "term": "sibling",
+        "_rowid": 3,
+        "col": "tags",
+        "offset": 0
+      },
+      {
+        "term": "shape",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 0
+      },
+      {
+        "term": "invalid",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 1
+      },
+      {
+        "term": "sibling",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 2
+      },
+      {
+        "term": "memory",
+        "_rowid": 3,
+        "col": "text",
+        "offset": 3
+      }
+    ]
+  }
+}

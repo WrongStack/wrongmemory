@@ -1,0 +1,1545 @@
+{
+  "fixture": "unicode",
+  "queryClock": "2026-11-01T01:00:00.000Z",
+  "warnings": [],
+  "results": [
+    {
+      "name": "searchSage(\"bun\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"Bun scripts\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"server start\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"START\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"nonexistentterm\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:german>",
+            "revision": 1,
+            "text": "Straße und STRASSE: German sharp s folding check.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:07.000Z",
+            "updatedAt": "2026-11-01T00:00:07.000Z"
+          },
+          {
+            "id": "<id:bom>",
+            "revision": 1,
+            "text": "BOM leading marker text in memory body",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:06.000Z",
+            "updatedAt": "2026-11-01T00:00:06.000Z"
+          },
+          {
+            "id": "<id:crlf>",
+            "revision": 1,
+            "text": "line one line two with tab and spaces",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:05.000Z",
+            "updatedAt": "2026-11-01T00:00:05.000Z"
+          },
+          {
+            "id": "<id:astral>",
+            "revision": 1,
+            "text": "Rocket 🚀 launch notes with math 𝒜𝒷𝒸 letters and 𝟙𝟚𝟛 digits.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:04.000Z",
+            "updatedAt": "2026-11-01T00:00:04.000Z"
+          },
+          {
+            "id": "<id:nfkc>",
+            "revision": 1,
+            "text": "The ﬁle ligature and Ｆｕｌｌｗｉｄｔｈ text fold under NFKC ①.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:03.000Z",
+            "updatedAt": "2026-11-01T00:00:03.000Z"
+          },
+          {
+            "id": "<id:turkish>",
+            "revision": 1,
+            "text": "İstanbul ŞEHİR çalışma dizini: Iğdır ve ığdır farklı yazılır.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "türkçe"
+            ],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"AND OR NOT\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:astral>",
+            "revision": 1,
+            "text": "Rocket 🚀 launch notes with math 𝒜𝒷𝒸 letters and 𝟙𝟚𝟛 digits.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:04.000Z",
+            "updatedAt": "2026-11-01T00:00:04.000Z"
+          },
+          {
+            "id": "<id:crlf>",
+            "revision": 1,
+            "text": "line one line two with tab and spaces",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:05.000Z",
+            "updatedAt": "2026-11-01T00:00:05.000Z"
+          },
+          {
+            "id": "<id:nfkc>",
+            "revision": 1,
+            "text": "The ﬁle ligature and Ｆｕｌｌｗｉｄｔｈ text fold under NFKC ①.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:03.000Z",
+            "updatedAt": "2026-11-01T00:00:03.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"a\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:german>",
+            "revision": 1,
+            "text": "Straße und STRASSE: German sharp s folding check.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:07.000Z",
+            "updatedAt": "2026-11-01T00:00:07.000Z"
+          },
+          {
+            "id": "<id:bom>",
+            "revision": 1,
+            "text": "BOM leading marker text in memory body",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:06.000Z",
+            "updatedAt": "2026-11-01T00:00:06.000Z"
+          },
+          {
+            "id": "<id:crlf>",
+            "revision": 1,
+            "text": "line one line two with tab and spaces",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:05.000Z",
+            "updatedAt": "2026-11-01T00:00:05.000Z"
+          },
+          {
+            "id": "<id:astral>",
+            "revision": 1,
+            "text": "Rocket 🚀 launch notes with math 𝒜𝒷𝒸 letters and 𝟙𝟚𝟛 digits.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:04.000Z",
+            "updatedAt": "2026-11-01T00:00:04.000Z"
+          },
+          {
+            "id": "<id:nfkc>",
+            "revision": 1,
+            "text": "The ﬁle ligature and Ｆｕｌｌｗｉｄｔｈ text fold under NFKC ①.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:03.000Z",
+            "updatedAt": "2026-11-01T00:00:03.000Z"
+          },
+          {
+            "id": "<id:turkish>",
+            "revision": 1,
+            "text": "İstanbul ŞEHİR çalışma dizini: Iğdır ve ığdır farklı yazılır.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "türkçe"
+            ],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"session\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"review\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"session\", sessionId=sess-A)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"session\", sessionId=sess-B)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"session\", includeAllSessions)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"\", includeStatuses=all, includeAllSessions)",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:german>",
+            "revision": 1,
+            "text": "Straße und STRASSE: German sharp s folding check.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:07.000Z",
+            "updatedAt": "2026-11-01T00:00:07.000Z"
+          },
+          {
+            "id": "<id:bom>",
+            "revision": 1,
+            "text": "BOM leading marker text in memory body",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:06.000Z",
+            "updatedAt": "2026-11-01T00:00:06.000Z"
+          },
+          {
+            "id": "<id:crlf>",
+            "revision": 1,
+            "text": "line one line two with tab and spaces",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:05.000Z",
+            "updatedAt": "2026-11-01T00:00:05.000Z"
+          },
+          {
+            "id": "<id:astral>",
+            "revision": 1,
+            "text": "Rocket 🚀 launch notes with math 𝒜𝒷𝒸 letters and 𝟙𝟚𝟛 digits.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:04.000Z",
+            "updatedAt": "2026-11-01T00:00:04.000Z"
+          },
+          {
+            "id": "<id:nfkc>",
+            "revision": 1,
+            "text": "The ﬁle ligature and Ｆｕｌｌｗｉｄｔｈ text fold under NFKC ①.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:03.000Z",
+            "updatedAt": "2026-11-01T00:00:03.000Z"
+          },
+          {
+            "id": "<id:turkish>",
+            "revision": 1,
+            "text": "İstanbul ŞEHİR çalışma dizini: Iğdır ve ığdır farklı yazılır.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "türkçe"
+            ],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"reviewer\", includeAudienceScoped=false)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"bun\", limit=1)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"convention scripts\", requireAllTerms)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"bun\", scope=user)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "retrieveForPath([src/app.ts])",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "retrieveForPath([src/app.ts], sessionId=sess-A)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "retrieveForPath([src/lib/util.ts])",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "retrieveForPath([docs/none.md])",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "listCandidates(false)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "listCandidates(true)",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "listSagePage()",
+      "result": {
+        "ok": {
+          "memories": [
+            {
+              "id": "<id:german>",
+              "revision": 1,
+              "text": "Straße und STRASSE: German sharp s folding check.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:07.000Z",
+              "updatedAt": "2026-11-01T00:00:07.000Z"
+            },
+            {
+              "id": "<id:bom>",
+              "revision": 1,
+              "text": "BOM leading marker text in memory body",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:06.000Z",
+              "updatedAt": "2026-11-01T00:00:06.000Z"
+            },
+            {
+              "id": "<id:crlf>",
+              "revision": 1,
+              "text": "line one line two with tab and spaces",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:05.000Z",
+              "updatedAt": "2026-11-01T00:00:05.000Z"
+            },
+            {
+              "id": "<id:astral>",
+              "revision": 1,
+              "text": "Rocket 🚀 launch notes with math 𝒜𝒷𝒸 letters and 𝟙𝟚𝟛 digits.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:04.000Z",
+              "updatedAt": "2026-11-01T00:00:04.000Z"
+            },
+            {
+              "id": "<id:nfkc>",
+              "revision": 1,
+              "text": "The ﬁle ligature and Ｆｕｌｌｗｉｄｔｈ text fold under NFKC ①.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:03.000Z",
+              "updatedAt": "2026-11-01T00:00:03.000Z"
+            },
+            {
+              "id": "<id:turkish>",
+              "revision": 1,
+              "text": "İstanbul ŞEHİR çalışma dizini: Iğdır ve ığdır farklı yazılır.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "türkçe"
+              ],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:02.000Z",
+              "updatedAt": "2026-11-01T00:00:02.000Z"
+            }
+          ],
+          "nextCursor": null,
+          "total": 6,
+          "statusCounts": {
+            "active": 6
+          }
+        }
+      }
+    },
+    {
+      "name": "listSagePage(statuses=[deleted])",
+      "result": {
+        "ok": {
+          "memories": [],
+          "nextCursor": null,
+          "total": 0,
+          "statusCounts": {
+            "active": 6
+          }
+        }
+      }
+    },
+    {
+      "name": "listSagePage(limit=2)",
+      "result": {
+        "ok": {
+          "memories": [
+            {
+              "id": "<id:german>",
+              "revision": 1,
+              "text": "Straße und STRASSE: German sharp s folding check.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:07.000Z",
+              "updatedAt": "2026-11-01T00:00:07.000Z"
+            },
+            {
+              "id": "<id:bom>",
+              "revision": 1,
+              "text": "BOM leading marker text in memory body",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:06.000Z",
+              "updatedAt": "2026-11-01T00:00:06.000Z"
+            }
+          ],
+          "nextCursor": "<cursor:{\"u\":\"2026-11-01T00:00:06.000Z\",\"i\":\"<id:bom>\"}>",
+          "total": 6,
+          "statusCounts": {
+            "active": 6
+          }
+        }
+      }
+    },
+    {
+      "name": "listSagePage(sessionId=sess-A)",
+      "result": {
+        "ok": {
+          "memories": [
+            {
+              "id": "<id:german>",
+              "revision": 1,
+              "text": "Straße und STRASSE: German sharp s folding check.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:07.000Z",
+              "updatedAt": "2026-11-01T00:00:07.000Z"
+            },
+            {
+              "id": "<id:bom>",
+              "revision": 1,
+              "text": "BOM leading marker text in memory body",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:06.000Z",
+              "updatedAt": "2026-11-01T00:00:06.000Z"
+            },
+            {
+              "id": "<id:crlf>",
+              "revision": 1,
+              "text": "line one line two with tab and spaces",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:05.000Z",
+              "updatedAt": "2026-11-01T00:00:05.000Z"
+            },
+            {
+              "id": "<id:astral>",
+              "revision": 1,
+              "text": "Rocket 🚀 launch notes with math 𝒜𝒷𝒸 letters and 𝟙𝟚𝟛 digits.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:04.000Z",
+              "updatedAt": "2026-11-01T00:00:04.000Z"
+            },
+            {
+              "id": "<id:nfkc>",
+              "revision": 1,
+              "text": "The ﬁle ligature and Ｆｕｌｌｗｉｄｔｈ text fold under NFKC ①.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:03.000Z",
+              "updatedAt": "2026-11-01T00:00:03.000Z"
+            },
+            {
+              "id": "<id:turkish>",
+              "revision": 1,
+              "text": "İstanbul ŞEHİR çalışma dizini: Iğdır ve ığdır farklı yazılır.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "türkçe"
+              ],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:02.000Z",
+              "updatedAt": "2026-11-01T00:00:02.000Z"
+            }
+          ],
+          "nextCursor": null,
+          "total": 6,
+          "statusCounts": {
+            "active": 6
+          }
+        }
+      }
+    },
+    {
+      "name": "getSage(unknown)",
+      "result": {
+        "ok": null
+      }
+    },
+    {
+      "name": "getStats()",
+      "result": {
+        "ok": {
+          "total": 6,
+          "byStatus": {
+            "active": 6,
+            "stale": 0,
+            "superseded": 0,
+            "contradicted": 0,
+            "archived": 0,
+            "deleted": 0
+          },
+          "byKind": {
+            "fact": 6
+          },
+          "edges": 0
+        }
+      }
+    },
+    {
+      "name": "graphFor(\"src/app.ts\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"istanbul\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:turkish>",
+            "revision": 1,
+            "text": "İstanbul ŞEHİR çalışma dizini: Iğdır ve ığdır farklı yazılır.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "türkçe"
+            ],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"İstanbul\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:turkish>",
+            "revision": 1,
+            "text": "İstanbul ŞEHİR çalışma dizini: Iğdır ve ığdır farklı yazılır.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "türkçe"
+            ],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"şehir\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:turkish>",
+            "revision": 1,
+            "text": "İstanbul ŞEHİR çalışma dizini: Iğdır ve ığdır farklı yazılır.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "türkçe"
+            ],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"ŞEHİR\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:turkish>",
+            "revision": 1,
+            "text": "İstanbul ŞEHİR çalışma dizini: Iğdır ve ığdır farklı yazılır.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "türkçe"
+            ],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"çalışma\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:turkish>",
+            "revision": 1,
+            "text": "İstanbul ŞEHİR çalışma dizini: Iğdır ve ığdır farklı yazılır.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [
+              "türkçe"
+            ],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:02.000Z",
+            "updatedAt": "2026-11-01T00:00:02.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"file\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"fullwidth\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"Ｆｕｌｌ\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:nfkc>",
+            "revision": 1,
+            "text": "The ﬁle ligature and Ｆｕｌｌｗｉｄｔｈ text fold under NFKC ①.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:03.000Z",
+            "updatedAt": "2026-11-01T00:00:03.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"🚀\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:astral>",
+            "revision": 1,
+            "text": "Rocket 🚀 launch notes with math 𝒜𝒷𝒸 letters and 𝟙𝟚𝟛 digits.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:04.000Z",
+            "updatedAt": "2026-11-01T00:00:04.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"abc\")",
+      "result": {
+        "ok": []
+      }
+    },
+    {
+      "name": "searchSage(\"𝒜𝒷𝒸\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:astral>",
+            "revision": 1,
+            "text": "Rocket 🚀 launch notes with math 𝒜𝒷𝒸 letters and 𝟙𝟚𝟛 digits.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:04.000Z",
+            "updatedAt": "2026-11-01T00:00:04.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"line two\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:crlf>",
+            "revision": 1,
+            "text": "line one line two with tab and spaces",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:05.000Z",
+            "updatedAt": "2026-11-01T00:00:05.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"straße\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:german>",
+            "revision": 1,
+            "text": "Straße und STRASSE: German sharp s folding check.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:07.000Z",
+            "updatedAt": "2026-11-01T00:00:07.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"strasse\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:german>",
+            "revision": 1,
+            "text": "Straße und STRASSE: German sharp s folding check.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:07.000Z",
+            "updatedAt": "2026-11-01T00:00:07.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"BOM\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:bom>",
+            "revision": 1,
+            "text": "BOM leading marker text in memory body",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:06.000Z",
+            "updatedAt": "2026-11-01T00:00:06.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"①\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:astral>",
+            "revision": 1,
+            "text": "Rocket 🚀 launch notes with math 𝒜𝒷𝒸 letters and 𝟙𝟚𝟛 digits.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:04.000Z",
+            "updatedAt": "2026-11-01T00:00:04.000Z"
+          },
+          {
+            "id": "<id:nfkc>",
+            "revision": 1,
+            "text": "The ﬁle ligature and Ｆｕｌｌｗｉｄｔｈ text fold under NFKC ①.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:03.000Z",
+            "updatedAt": "2026-11-01T00:00:03.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "searchSage(\"1\")",
+      "result": {
+        "ok": [
+          {
+            "id": "<id:astral>",
+            "revision": 1,
+            "text": "Rocket 🚀 launch notes with math 𝒜𝒷𝒸 letters and 𝟙𝟚𝟛 digits.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:04.000Z",
+            "updatedAt": "2026-11-01T00:00:04.000Z"
+          },
+          {
+            "id": "<id:nfkc>",
+            "revision": 1,
+            "text": "The ﬁle ligature and Ｆｕｌｌｗｉｄｔｈ text fold under NFKC ①.",
+            "kind": "fact",
+            "scope": "project",
+            "status": "active",
+            "tags": [],
+            "anchors": [],
+            "sources": [
+              {
+                "type": "user"
+              }
+            ],
+            "importance": 0.6,
+            "confidence": 0.75,
+            "freshness": 1,
+            "createdAt": "2026-11-01T00:00:03.000Z",
+            "updatedAt": "2026-11-01T00:00:03.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getSage(each)",
+      "result": {
+        "ok": [
+          [
+            "turkish",
+            {
+              "id": "<id:turkish>",
+              "revision": 1,
+              "text": "İstanbul ŞEHİR çalışma dizini: Iğdır ve ığdır farklı yazılır.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [
+                "türkçe"
+              ],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:02.000Z",
+              "updatedAt": "2026-11-01T00:00:02.000Z"
+            }
+          ],
+          [
+            "nfkc",
+            {
+              "id": "<id:nfkc>",
+              "revision": 1,
+              "text": "The ﬁle ligature and Ｆｕｌｌｗｉｄｔｈ text fold under NFKC ①.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:03.000Z",
+              "updatedAt": "2026-11-01T00:00:03.000Z"
+            }
+          ],
+          [
+            "astral",
+            {
+              "id": "<id:astral>",
+              "revision": 1,
+              "text": "Rocket 🚀 launch notes with math 𝒜𝒷𝒸 letters and 𝟙𝟚𝟛 digits.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:04.000Z",
+              "updatedAt": "2026-11-01T00:00:04.000Z"
+            }
+          ],
+          [
+            "crlf",
+            {
+              "id": "<id:crlf>",
+              "revision": 1,
+              "text": "line one line two with tab and spaces",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:05.000Z",
+              "updatedAt": "2026-11-01T00:00:05.000Z"
+            }
+          ],
+          [
+            "bom",
+            {
+              "id": "<id:bom>",
+              "revision": 1,
+              "text": "BOM leading marker text in memory body",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:06.000Z",
+              "updatedAt": "2026-11-01T00:00:06.000Z"
+            }
+          ],
+          [
+            "german",
+            {
+              "id": "<id:german>",
+              "revision": 1,
+              "text": "Straße und STRASSE: German sharp s folding check.",
+              "kind": "fact",
+              "scope": "project",
+              "status": "active",
+              "tags": [],
+              "anchors": [],
+              "sources": [
+                {
+                  "type": "user"
+                }
+              ],
+              "importance": 0.6,
+              "confidence": 0.75,
+              "freshness": 1,
+              "createdAt": "2026-11-01T00:00:07.000Z",
+              "updatedAt": "2026-11-01T00:00:07.000Z"
+            }
+          ]
+        ]
+      }
+    }
+  ]
+}

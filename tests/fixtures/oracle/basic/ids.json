@@ -1,0 +1,17 @@
+{
+  "fixture": "basic",
+  "note": "Volatile: real ids/hash of this build of sage.db; regenerated with the db.",
+  "sageDbSha256": "1139ce6df745b80b8c37f9760b0b5552ac41181a18fadd1dc61369f0d99bc225",
+  "ids": {
+    "convention": "01M6A6FVYGQ303HX99B9E8FYMV",
+    "decision": "01M6A6FWXR9MCMGY8GJJEHJ9J7",
+    "command": "01M6A6FXX0RJH9D84AJAESJVSZ",
+    "audience": "01M6A6FYW8W9TJAKEESMD52EY4",
+    "sessionA": "01M6A6FZVGM63069HM2J7P7NMY",
+    "user": "01M6A6G0TRD06AYXWP5ECV0N0P",
+    "successor": "01M6A6G1T010N9NC1KBWVNEJDP",
+    "toDelete": "01M6A6G2S8XRN34Q4ZZVKTS75Q",
+    "candidate": "candidate_01M6A6G6P8AK6YHTZ5X4FNC36Y",
+    "reviewCandidate": "candidate_01M6A6G7NGVZHZNMHQ13KY5HS0"
+  }
+}

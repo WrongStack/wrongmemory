@@ -1,0 +1,8 @@
+{
+  "fixture": "corrupt-row",
+  "note": "Volatile: real ids/hash of this build of sage.db; regenerated with the db.",
+  "sageDbSha256": "19c0ad4f15ba705aff46a08221199f205503a927cd3bfc3d283b942404f9187d",
+  "ids": {
+    "valid": "01M6A6FVYGXJ71J35B8Z785DJ6"
+  }
+}
