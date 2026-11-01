@@ -208,3 +208,102 @@ fn bridge_serves_scoped_tools_and_exits_on_eof() {
     let out = wm(&home).args(["daemon", "stop"]).output().unwrap();
     assert!(out.status.success());
 }
+
+/// Processes whose command line mentions `needle`: (image name, pid).
+fn processes_mentioning(needle: &str) -> Vec<(String, u32)> {
+    let script = format!(
+        "Get-CimInstance Win32_Process | Where-Object {{ $_.CommandLine -and $_.CommandLine.Contains('{}') }} | ForEach-Object {{ \"$($_.Name)|$($_.ProcessId)\" }}",
+        needle.replace('\'', "''")
+    );
+    let out = Command::new("powershell")
+        .args(["-NoProfile", "-Command", &script])
+        .output()
+        .unwrap();
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter_map(|l| {
+            let (name, pid) = l.trim().split_once('|')?;
+            Some((name.to_lowercase(), pid.parse().ok()?))
+        })
+        .filter(|(name, _)| name != "powershell.exe")
+        .collect()
+}
+
+/// WM-606: several MCP clients starting at once (each bridge spawns the
+/// daemon on demand) end up served by exactly ONE native daemon; the
+/// bridges are the only other processes, and no Bun/Node engine is involved.
+#[test]
+fn concurrent_bridges_share_one_native_daemon() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let proj = tmp.path().join("proj");
+    std::fs::create_dir_all(&proj).unwrap();
+    let reg = run_json(
+        &home,
+        &["project", "add", proj.to_str().unwrap(), "--managed"],
+    );
+    let project = reg["project"]["projectId"].as_str().unwrap().to_string();
+    run_json(&home, &["remember", &project, "Bridges share one daemon"]);
+    let g = run_json(
+        &home,
+        &[
+            "grants",
+            "create",
+            "--label",
+            "agent",
+            "--project",
+            &project,
+        ],
+    );
+    let grant = g["grant"]["grantId"].as_str().unwrap().to_string();
+    // Cold start: no daemon running when the bridges launch.
+    run_json(&home, &["daemon", "stop"]);
+
+    let mut bridges: Vec<Mcp> = (0..3)
+        .map(|_| Mcp::start(&home, &project, &grant))
+        .collect();
+    for b in &mut bridges {
+        let init = b.send(
+            "initialize",
+            json!({"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "0"}}),
+        );
+        assert!(init.get("result").is_some(), "{init}");
+        b.notify("notifications/initialized");
+        let r = b.tool("memory_search", json!({"query": "bridges daemon"}));
+        assert_eq!(r["isError"], false, "{r}");
+    }
+
+    let procs = processes_mentioning(&home.to_string_lossy());
+    let daemons: Vec<_> = procs
+        .iter()
+        .filter(|(n, _)| n == "wrongmemoryd.exe")
+        .collect();
+    let bridge_procs: Vec<_> = procs
+        .iter()
+        .filter(|(n, _)| n == "wrongmemory.exe")
+        .collect();
+    assert_eq!(daemons.len(), 1, "exactly one daemon: {procs:?}");
+    assert_eq!(bridge_procs.len(), 3, "the three bridges: {procs:?}");
+    assert!(
+        procs
+            .iter()
+            .all(|(n, _)| n == "wrongmemoryd.exe" || n == "wrongmemory.exe"),
+        "no other engine (Bun/Node) in the tree: {procs:?}"
+    );
+
+    // Bridges exit on EOF; the shared daemon stays up for the next client.
+    for mut b in bridges {
+        drop(b.stdin.take());
+        assert!(b.child.wait().unwrap().success());
+    }
+    let after = processes_mentioning(&home.to_string_lossy());
+    assert_eq!(
+        after
+            .iter()
+            .filter(|(n, _)| n == "wrongmemoryd.exe")
+            .count(),
+        1,
+        "{after:?}"
+    );
+    run_json(&home, &["daemon", "stop"]);
+}
