@@ -125,6 +125,7 @@ fn draft(change: &str) -> ChangeEvent {
         revision: None,
         telemetry: false,
         at_ms: now_ms(),
+        origin: None,
     }
 }
 

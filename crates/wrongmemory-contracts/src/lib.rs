@@ -290,6 +290,11 @@ pub struct Hello {
     pub capabilities: Vec<String>,
     pub limits: Limits,
     pub principal: PrincipalInfo,
+    /// This connection's id (not a credential). Change events committed
+    /// through it carry it as `origin`, so a client can tell its own changes
+    /// from other clients'.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub connection_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -816,6 +821,10 @@ pub struct ChangeEvent {
     #[serde(default)]
     pub telemetry: bool,
     pub at_ms: i64,
+    /// `connectionId` of the connection that committed the change; absent
+    /// for daemon-originated changes (scheduled maintenance).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub origin: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

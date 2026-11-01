@@ -790,3 +790,69 @@ async fn maintenance_pass_self_heals_structural_defects() {
     drop(h);
     d.stop(&home).await;
 }
+
+/// Change events carry the committing connection's `connectionId` (from
+/// its hello) as `origin`, so a client can skip its own changes; scheduled
+/// maintenance has no origin.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn change_events_carry_their_origin_connection() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let d = Daemon::start(&home, &[]).await;
+    let mut a = host(&home).await;
+    let mut b = host(&home).await;
+    let (a_id, b_id) = (
+        a.hello().connection_id.clone(),
+        b.hello().connection_id.clone(),
+    );
+    assert!(a_id.starts_with("c_") && b_id.starts_with("c_") && a_id != b_id);
+    let proj = mkdir(tmp.path().join("proj"));
+    let (pid, _) = register(&mut a, &proj).await;
+    let base = call(
+        &mut b,
+        method::EVENTS_SINCE,
+        Some(&pid),
+        json!({"generation": 0}),
+    )
+    .await;
+    let generation = base["generation"].as_u64().unwrap();
+    let mem = remember(&mut a, &pid, "Origin-tagged change", json!({})).await;
+    let feed = call(
+        &mut b,
+        method::EVENTS_SINCE,
+        Some(&pid),
+        json!({"generation": generation}),
+    )
+    .await;
+    let ev = feed["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["memoryId"] == mem.as_str())
+        .unwrap_or_else(|| panic!("{feed}"));
+    assert_eq!(ev["origin"], a_id.as_str(), "{ev}");
+
+    let generation = feed["generation"].as_u64().unwrap();
+    let run = call(&mut b, method::MAINTENANCE_RUN, Some(&pid), json!({})).await;
+    let job = run["job"]["jobId"].as_str().unwrap().to_string();
+    wait_for(&mut b, method::JOBS_GET, None, json!({"jobId": job}), |v| {
+        v["state"] == "succeeded"
+    })
+    .await;
+    let after = wait_for(
+        &mut b,
+        method::EVENTS_SINCE,
+        Some(&pid),
+        json!({"generation": generation}),
+        |v| !v["events"].as_array().unwrap().is_empty(),
+    )
+    .await;
+    for e in after["events"].as_array().unwrap() {
+        assert!(
+            e.get("origin").is_none(),
+            "maintenance event has an origin: {e}"
+        );
+    }
+    drop((a, b));
+    d.stop(&home).await;
+}

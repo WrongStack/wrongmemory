@@ -109,6 +109,8 @@ impl Principal {
 }
 
 struct Conn {
+    /// Per-connection id, echoed as change-event `origin` (not a secret).
+    connection_id: String,
     principal: Principal,
     /// Daemon-issued or trusted-host-bound session (WM-INV-03).
     session: Option<String>,
@@ -174,6 +176,7 @@ impl Shared {
                 max_inflight: 1,
             },
             principal: principal.info(),
+            connection_id: String::new(),
         }
     }
 }
@@ -419,10 +422,12 @@ where
     // session-scoped rows of other sessions (and legacy unowned ones) stay
     // hidden; they cannot name a session (WM-INV-03).
     let mut state = Conn {
+        connection_id: format!("c_{}", uuid::Uuid::new_v4().simple()),
         session: principal.grant.as_ref().map(|_| new_session_id()),
         principal,
     };
-    let hello = shared.hello(&state.principal);
+    let mut hello = shared.hello(&state.principal);
+    hello.connection_id = state.connection_id.clone();
     if write_frame(
         conn.get_mut(),
         &AuthResponse::Ok {
@@ -731,7 +736,11 @@ async fn dispatch(
     if let Some(pid) = pid {
         match &result {
             Ok(v) if m.starts_with("memory.") || m.starts_with("candidate.") => {
-                shared.events.publish(&pid, events::drafts_for(&m, v));
+                let mut drafts = events::drafts_for(&m, v);
+                for d in &mut drafts {
+                    d.event.origin = Some(state.connection_id.clone());
+                }
+                shared.events.publish(&pid, drafts);
             }
             Err(e) if invalidates_handle(e) => {
                 warn!("store_unavailable", {"projectId": pid, "code": e.code.as_str()});

@@ -140,6 +140,8 @@ export interface Hello {
   capabilities: string[];
   limits: Limits;
   principal: PrincipalInfo;
+  /** This connection's id (not a credential); change events carry it as `origin`. */
+  connectionId?: string;
 }
 
 export type AuthResponse = { status: 'ok'; hello: Hello } | { status: 'error'; error: ErrorBody };
