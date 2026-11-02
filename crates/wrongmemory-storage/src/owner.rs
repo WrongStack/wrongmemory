@@ -86,6 +86,11 @@ fn marker_path(store: &Path) -> io::Result<PathBuf> {
 }
 
 /// Write (or refresh) the adoption marker atomically.
+///
+/// The content goes to a fresh, uniquely named file created exclusively
+/// (`create_new`), so a file or symlink planted in the project directory is
+/// never followed or overwritten; the rename then replaces the marker entry
+/// itself.
 pub fn write_adoption_marker(store: &Path, project_id: &str, data_root: &Path) -> io::Result<()> {
     let path = marker_path(store)?;
     let body = serde_json::json!({
@@ -93,9 +98,23 @@ pub fn write_adoption_marker(store: &Path, project_id: &str, data_root: &Path) -
         "projectId": project_id,
         "dataRoot": data_root.display().to_string(),
     });
-    let tmp = path.with_extension("json.tmp");
-    std::fs::write(&tmp, format!("{body}\n"))?;
-    std::fs::rename(&tmp, &path)
+    let tmp = path.with_file_name(format!(
+        ".{ADOPTION_MARKER_FILE}.{}.tmp",
+        ulid::Ulid::generate()
+    ));
+    let written = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&tmp)
+        .and_then(|mut file| {
+            file.write_all(format!("{body}\n").as_bytes())?;
+            file.sync_all()
+        })
+        .and_then(|()| std::fs::rename(&tmp, &path));
+    if written.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    written
 }
 
 /// Remove the adoption marker; a missing marker is not an error.
@@ -119,5 +138,41 @@ mod tests {
         assert_eq!(err.kind(), io::ErrorKind::WouldBlock);
         drop(a);
         let _b = OwnerGuard::acquire(&store, 2, "b").unwrap();
+    }
+
+    #[test]
+    fn adoption_marker_is_written_refreshed_and_removed() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = tmp.path().join("sage.db");
+        let marker = tmp.path().join(ADOPTION_MARKER_FILE);
+        write_adoption_marker(&store, "p_1", Path::new("D:/root-a")).unwrap();
+        write_adoption_marker(&store, "p_1", Path::new("D:/root-b")).unwrap();
+        let value: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&marker).unwrap()).unwrap();
+        assert_eq!(value["projectId"], "p_1");
+        assert_eq!(value["dataRoot"], "D:/root-b");
+        let names: Vec<_> = std::fs::read_dir(tmp.path())
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
+        assert_eq!(names, vec![std::ffi::OsString::from(ADOPTION_MARKER_FILE)]);
+        remove_adoption_marker(&store).unwrap();
+        remove_adoption_marker(&store).unwrap();
+        assert!(!marker.exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn adoption_marker_never_writes_through_a_planted_symlink() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tmp.path().join("outside.txt");
+        std::fs::write(&outside, "keep").unwrap();
+        let dir = tmp.path().join("memories");
+        std::fs::create_dir(&dir).unwrap();
+        std::os::unix::fs::symlink(&outside, dir.join(ADOPTION_MARKER_FILE)).unwrap();
+        write_adoption_marker(&dir.join("sage.db"), "p_1", Path::new("/root")).unwrap();
+        assert_eq!(std::fs::read_to_string(&outside).unwrap(), "keep");
+        let meta = std::fs::symlink_metadata(dir.join(ADOPTION_MARKER_FILE)).unwrap();
+        assert!(meta.file_type().is_file());
     }
 }
