@@ -3,6 +3,7 @@
 //! stderr; exit codes follow `wrongmemory_contracts::exit_code`.
 
 mod connect;
+mod http;
 mod mcp;
 mod ops;
 mod spawn;
@@ -112,6 +113,11 @@ enum Cmd {
         #[arg(long, default_value = "mcp-client")]
         client: String,
     },
+    /// Optional loopback MCP over Streamable HTTP (127.0.0.1 only).
+    Http {
+        #[command(subcommand)]
+        cmd: HttpCmd,
+    },
     /// Add the owned `wrongmemory` MCP entry to a client configuration.
     Connect(connect::ConnectArgs),
     /// Remove the owned MCP entry and guidance block.
@@ -142,6 +148,26 @@ enum Cmd {
     Install(ops::InstallArgs),
     /// Stop the daemon and remove installed binaries and autostart.
     Uninstall(ops::UninstallArgs),
+}
+
+/// `wrongmemory http`.
+#[derive(Debug, Subcommand)]
+enum HttpCmd {
+    /// Serve MCP at http://127.0.0.1:<port>/mcp/<project-id> until Ctrl+C.
+    Serve {
+        /// Loopback port (default: a free one, printed on stdout).
+        #[arg(long, default_value_t = 0)]
+        port: u16,
+        /// Attributed client label (not proof of identity).
+        #[arg(long, default_value = "mcp-http")]
+        client: String,
+    },
+    /// Print the `Authorization` header for a grant, for a client's header
+    /// helper. The value is a credential: do not store it in a config file.
+    Header {
+        #[arg(long)]
+        grant: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -719,6 +745,27 @@ async fn run(cli: Cli, root: DataRoot) -> i32 {
                 return exit_code::SERVICE_UNAVAILABLE;
             }
         }
+        Cmd::Http { cmd } => match cmd {
+            HttpCmd::Serve { port, client } => {
+                if let Err(e) = http::serve(root, port, client).await {
+                    eprintln!("wrongmemory http: {e:#}");
+                    return exit_code::SERVICE_UNAVAILABLE;
+                }
+            }
+            HttpCmd::Header { grant } => match http::authorization(&root, &grant) {
+                Ok(v) => {
+                    if j {
+                        println!("{}", serde_json::json!({ "Authorization": v }));
+                    } else {
+                        println!("Authorization: {v}");
+                    }
+                }
+                Err(e) => {
+                    eprintln!("wrongmemory http: {e:#}");
+                    return exit_code::SERVICE_UNAVAILABLE;
+                }
+            },
+        },
         Cmd::Connect(args) => {
             return connect::run_connect(&root, cli.data_root.as_deref(), j, args).await;
         }

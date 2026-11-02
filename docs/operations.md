@@ -101,6 +101,24 @@ wrongmemory grants list | grants revoke <grant-id>
 - The grant secret stays in `<data-root>\grants\` and never leaves it.
 - The default grant profile is `read-propose`.
 
+### Optional loopback HTTP (WM-308)
+
+Stdio (`wrongmemory mcp`) is the default and recommended transport. For a tool that only speaks MCP over HTTP:
+
+```text
+wrongmemory http serve [--port <port>]        # stays in the foreground; Ctrl+C stops it
+wrongmemory http header --grant <grant-id>    # prints the Authorization header for that grant
+```
+
+- The endpoint is `http://127.0.0.1:<port>/mcp/<project-id>`. It listens on loopback only and is off unless you run it.
+- Every request needs `Authorization: Bearer <grant-id>.<token>`. The token is derived from the grant secret (HMAC). The secret itself is never sent over HTTP. Revoking the grant, or re-issuing its secret, rejects the token on the next request.
+- The token is a credential. Do not put it in a client config file. Use the client's header-helper mechanism to run `wrongmemory --json http header --grant <id>` when it connects, for example Claude Code's `headersHelper`.
+- The grant decides which projects can be reached. Changing the project id in the URL does not widen it, and an unknown project gets the same refusal as a forbidden one.
+- Requests with a foreign `Host` or with any browser `Origin` are refused.
+- Bodies over 1 MiB are refused. At most 64 requests are served at once. Each grant gets 600 requests per minute.
+- Both MCP 2026-07-28 and older revisions are served without transport sessions; no `Mcp-Session-Id` is issued.
+- The listener is a CLI process in front of the daemon, not part of the daemon.
+
 ## Diagnostics
 
 - `wrongmemory doctor` is a read-only health and store inspection.

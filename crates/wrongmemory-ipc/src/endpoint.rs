@@ -398,15 +398,30 @@ pub const SERVER_PROOF_CONTEXT: &str = "wrongmemory-server-proof-v1";
 /// credential after checking this proof against the owner-private token, so
 /// a squatted pipe name never receives a grant secret or host token.
 pub fn server_proof(token: &str, nonce: &str) -> String {
+    hmac_sha256_hex(token, &format!("{SERVER_PROOF_CONTEXT}:{nonce}"))
+}
+
+/// Domain separator for [`http_token`].
+const HTTP_TOKEN_CONTEXT: &str = "wrongmemory-http-bearer-v1";
+
+/// The loopback HTTP bearer token of a grant (WM-308): an HMAC of the grant
+/// secret under a fixed context. A different audience from the IPC
+/// credential, so the grant secret itself never travels over HTTP, and a new
+/// secret (revoke + re-issue) invalidates every derived token.
+pub fn http_token(grant_secret: &str) -> String {
+    hmac_sha256_hex(grant_secret, HTTP_TOKEN_CONTEXT)
+}
+
+/// HMAC-SHA256 (RFC 2104) as lowercase hex.
+pub fn hmac_sha256_hex(key: &str, msg: &str) -> String {
     const B: usize = 64;
-    let mut key = token.as_bytes().to_vec();
+    let mut key = key.as_bytes().to_vec();
     if key.len() > B {
         key = Sha256::digest(&key).to_vec();
     }
     key.resize(B, 0);
     let ipad: Vec<u8> = key.iter().map(|b| b ^ 0x36).collect();
     let opad: Vec<u8> = key.iter().map(|b| b ^ 0x5c).collect();
-    let msg = format!("{SERVER_PROOF_CONTEXT}:{nonce}");
     let inner = Sha256::new()
         .chain_update(&ipad)
         .chain_update(msg.as_bytes())
@@ -417,6 +432,11 @@ pub fn server_proof(token: &str, nonce: &str) -> String {
             .chain_update(inner)
             .finalize(),
     )
+}
+
+/// Constant-time byte comparison (length is not secret).
+pub fn ct_eq(a: &[u8], b: &[u8]) -> bool {
+    a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 
 #[cfg(test)]
@@ -446,6 +466,15 @@ mod proof_tests {
             mac,
             "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843"
         );
+        assert_eq!(
+            hmac_sha256_hex("Jefe", "what do ya want for nothing?"),
+            "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843"
+        );
+        assert_ne!(
+            http_token("s"),
+            hmac_sha256_hex("s", "wrongmemory-server-proof")
+        );
+        assert!(ct_eq(b"abc", b"abc") && !ct_eq(b"abc", b"abd") && !ct_eq(b"ab", b"abc"));
         assert_ne!(server_proof("a", "n"), server_proof("b", "n"));
         assert_eq!(server_proof("a", "n").len(), 64);
     }

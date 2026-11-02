@@ -29,7 +29,13 @@ clap = { version = "=4.6.7", features = ["derive"] }
 getrandom = "=0.3.4"
 fancy-regex = "=0.20.0"
 hex = "=0.4.3"
-rmcp = { version = "=3.8.0", default-features = false, features = ["server", "transport-io"] }
+http = "=1.5.0"
+http-body-util = "=0.1.5"
+hyper = { version = "=1.12.0", features = ["server", "http1"] }
+hyper-util = { version = "=0.1.21", features = ["tokio"] }
+bytes = "=1.12.1"
+tower-service = "=0.3.3"
+rmcp = { version = "=3.8.0", default-features = false, features = ["server", "transport-io", "transport-streamable-http-server"] }
 rusqlite = { version = "=0.41.1", features = ["bundled", "backup"] }
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = { version = "=1.0.154", features = ["preserve_order"] }
