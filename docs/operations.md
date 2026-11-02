@@ -37,7 +37,7 @@ wstack sage service status
 ```
 
 - `install` downloads `wrongmemory-windows-x64.exe` and `wrongmemoryd-windows-x64.exe` from the release. It checks both against `SHA256SUMS` and against the digest GitHub recorded for the asset. It then runs this `install` command, so the binaries end up in the same directory. `--from <dir>` installs from a local build instead.
-- WrongStack finds the binaries in this order: `Sage.service.daemonPath`, then `WRONGMEMORYD_PATH`, then `%LOCALAPPDATA%\WrongMemoryin`, then next to the WrongStack executable, then `PATH`.
+- WrongStack finds the binaries in this order: `Sage.service.daemonPath`, then `WRONGMEMORYD_PATH`, then `%LOCALAPPDATA%\WrongMemory\bin`, then next to the WrongStack executable, then `PATH`.
 - `Sage.service.mode` is a profile setting, so it applies to every project of that profile.
   - Run `use wrongmemory` in a project to back up and hand over its existing store.
   - Other projects are registered the first time they are used.
