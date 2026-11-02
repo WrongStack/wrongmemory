@@ -962,3 +962,70 @@ async fn adopted_store_carries_a_durable_marker_until_detach() {
     drop(c);
     d.stop(&home).await;
 }
+
+/// An unmodified SAGE project server ignores the owner lock: while one runs
+/// on an adopted store (its `server.json` names a live pid), the daemon does
+/// not open that store for writing. A stale `server.json` does not block.
+#[tokio::test]
+async fn adopted_store_is_not_written_next_to_a_live_sage_server() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let proj = mkdir(tmp.path().join("proj"));
+    let d = Daemon::start(&home, &[]).await;
+    let mut c = host(&home).await;
+    let (managed, _) = register(&mut c, &proj).await;
+    remember(&mut c, &managed, "Legacy owner test fact", json!({})).await;
+    call(
+        &mut c,
+        method::PROJECT_EXPORT,
+        None,
+        json!({"projectId": managed}),
+    )
+    .await;
+    let memories = proj.join(".wrongstack").join("memories");
+    let server_json = memories.join("server.json");
+    // A live process stands in for the SAGE server: this test.
+    std::fs::write(
+        &server_json,
+        json!({"pid": std::process::id(), "projectRoot": proj}).to_string(),
+    )
+    .unwrap();
+    let rw = call(
+        &mut c,
+        method::PROJECT_REGISTER,
+        None,
+        json!({"root": proj.display().to_string(), "storeKind": "adopted", "write": true, "forceOwner": true}),
+    )
+    .await;
+    let pid = rw["project"]["projectId"].as_str().unwrap().to_string();
+    assert_eq!(rw["project"]["admission"], "read-write");
+    let code = call_err(
+        &mut c,
+        method::MEMORY_SEARCH,
+        Some(&pid),
+        json!({"query": "legacy"}),
+    )
+    .await;
+    assert_eq!(code, ErrorCode::OwnerConflict);
+    assert!(!memories.join("wrongmemory-adopted.json").exists());
+
+    // The server is gone (its pid no longer runs): the store opens.
+    let mut gone = std::process::Command::new("cargo")
+        .arg("--version")
+        .stdout(std::process::Stdio::null())
+        .spawn()
+        .unwrap();
+    let dead = gone.id();
+    gone.wait().unwrap();
+    std::fs::write(&server_json, json!({"pid": dead}).to_string()).unwrap();
+    call(
+        &mut c,
+        method::MEMORY_SEARCH,
+        Some(&pid),
+        json!({"query": "legacy"}),
+    )
+    .await;
+    assert!(memories.join("wrongmemory-adopted.json").exists());
+    drop(c);
+    d.stop(&home).await;
+}

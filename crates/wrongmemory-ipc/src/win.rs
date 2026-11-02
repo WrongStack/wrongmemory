@@ -23,8 +23,8 @@ use tokio::net::windows::named_pipe::{
     ClientOptions, NamedPipeClient, NamedPipeServer, ServerOptions,
 };
 use windows_sys::Win32::Foundation::{
-    CloseHandle, ERROR_INSUFFICIENT_BUFFER, ERROR_PIPE_BUSY, GENERIC_WRITE, HANDLE,
-    INVALID_HANDLE_VALUE, LocalFree,
+    CloseHandle, ERROR_ACCESS_DENIED, ERROR_INSUFFICIENT_BUFFER, ERROR_PIPE_BUSY, GENERIC_WRITE,
+    HANDLE, INVALID_HANDLE_VALUE, LocalFree, STILL_ACTIVE,
 };
 use windows_sys::Win32::Security::Authorization::{
     ConvertSidToStringSidW, ConvertStringSecurityDescriptorToSecurityDescriptorW,
@@ -42,7 +42,8 @@ use windows_sys::Win32::Storage::FileSystem::{
 };
 use windows_sys::Win32::System::Pipes::GetNamedPipeServerProcessId;
 use windows_sys::Win32::System::Threading::{
-    GetCurrentProcess, OpenProcess, OpenProcessToken, PROCESS_QUERY_LIMITED_INFORMATION,
+    GetCurrentProcess, GetExitCodeProcess, OpenProcess, OpenProcessToken,
+    PROCESS_QUERY_LIMITED_INFORMATION,
 };
 
 fn wide(s: &str) -> Vec<u16> {
@@ -155,6 +156,22 @@ pub fn current_user_sid() -> io::Result<String> {
         let r = token_user_sid(token);
         CloseHandle(token);
         r
+    }
+}
+
+/// Whether process `pid` is running. A process this user may not query
+/// counts as running (conservative).
+pub fn process_alive(pid: u32) -> bool {
+    // SAFETY: the handle is checked and closed on every path.
+    unsafe {
+        let process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if process.is_null() {
+            return io::Error::last_os_error().raw_os_error() == Some(ERROR_ACCESS_DENIED as i32);
+        }
+        let mut code = 0u32;
+        let ok = GetExitCodeProcess(process, &mut code);
+        CloseHandle(process);
+        ok != 0 && code == STILL_ACTIVE as u32
     }
 }
 

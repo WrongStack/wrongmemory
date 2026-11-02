@@ -117,6 +117,15 @@ pub fn write_adoption_marker(store: &Path, project_id: &str, data_root: &Path) -
     written
 }
 
+/// The pid recorded in SAGE's project-server metadata (`server.json`) next
+/// to `store`, if the file exists and names one. Whether that process still
+/// runs is the caller's question.
+pub fn legacy_server_pid(store: &Path) -> Option<u32> {
+    let raw = std::fs::read_to_string(store.parent()?.join("server.json")).ok()?;
+    let value: serde_json::Value = serde_json::from_str(&raw).ok()?;
+    value.get("pid")?.as_u64()?.try_into().ok()
+}
+
 /// Remove the adoption marker; a missing marker is not an error.
 pub fn remove_adoption_marker(store: &Path) -> io::Result<()> {
     match std::fs::remove_file(marker_path(store)?) {

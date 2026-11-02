@@ -292,6 +292,16 @@ fn missing_store(path: &Path) -> ErrorBody {
     )
 }
 
+#[cfg(windows)]
+fn process_alive(pid: u32) -> bool {
+    wrongmemory_ipc::win::process_alive(pid)
+}
+
+#[cfg(not(windows))]
+fn process_alive(pid: u32) -> bool {
+    Path::new(&format!("/proc/{pid}")).exists()
+}
+
 fn open_handle(
     registry: &Mutex<Registry>,
     instance_id: &str,
@@ -321,6 +331,23 @@ fn open_handle(
             Ok(handle(store, None))
         }
         Admission::ReadWrite => {
+            // An unmodified SAGE project server ignores the owner lock and
+            // the adoption marker. While one runs on this store, writing
+            // next to it would make WrongMemory the second writer.
+            if info.store_kind == StoreKind::Adopted
+                && let Some(pid) = wrongmemory_storage::owner::legacy_server_pid(&store_path)
+                && pid != std::process::id()
+                && process_alive(pid)
+            {
+                return Err(ErrorBody::new(
+                    ErrorCode::OwnerConflict,
+                    format!(
+                        "a WrongStack SAGE project server (pid {pid}, server.json) has this store \
+                         open; WrongMemory will not write next to it. Close that WrongStack \
+                         session and retry, or delete server.json if no such server runs"
+                    ),
+                ));
+            }
             let epoch_next = info.owner_epoch + 1;
             // A restart can elect this daemon while its predecessor (same
             // data root) is still draining and holds the owner lock. Wait,
