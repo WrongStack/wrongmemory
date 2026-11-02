@@ -53,6 +53,36 @@ fn visible_edges_sql(viewer: &Viewer) -> (String, Vec<rusqlite::types::Value>) {
     )
 }
 
+/// Whether a structural node's whole subtree is referenced only by memories
+/// the viewer cannot see. `CROSS JOIN` pins the join order (SQLite never
+/// reorders it): the walk starts from the subtree and reaches edges and
+/// memories by key. Left to the planner, the memory references were found by
+/// scanning every `mem:*` edge per node, about 50 ms per node on a store with
+/// 20k edges (`structural_visibility_walks_from_the_subtree` checks the plan).
+fn structural_hidden_sql(node: &str, viewer: &Viewer) -> (String, Vec<rusqlite::types::Value>) {
+    let mut args: Vec<rusqlite::types::Value> = vec![node.to_string().into()];
+    let visible = session_sql("m.", viewer, &mut args);
+    (
+        format!(
+            "WITH RECURSIVE sub(node) AS (
+               SELECT ?1
+               UNION
+               SELECT e.from_node FROM sub CROSS JOIN edges e ON e.to_node = sub.node
+                WHERE e.from_node NOT GLOB 'mem:*'
+             ),
+             refs AS (
+               SELECT COALESCE({visible}, 0) AS ok FROM sub
+                 CROSS JOIN edges e ON e.to_node = sub.node
+                 CROSS JOIN memories m ON m.id = substr(e.from_node, 5)
+                WHERE e.from_node GLOB 'mem:*'
+             )
+             SELECT EXISTS(SELECT 1 FROM refs WHERE ok = 0)
+                AND NOT EXISTS(SELECT 1 FROM refs WHERE ok = 1)"
+        ),
+        args,
+    )
+}
+
 fn session_sql(prefix: &str, viewer: &Viewer, args: &mut Vec<rusqlite::types::Value>) -> String {
     args.push(viewer.session_id.clone().into());
     let n = args.len();
@@ -675,23 +705,7 @@ impl SageStore {
     }
 
     fn structural_node_hidden(&self, node: &str, viewer: &Viewer) -> StoreResult<bool> {
-        let mut args: Vec<rusqlite::types::Value> = vec![node.to_string().into()];
-        let visible = session_sql("m.", viewer, &mut args);
-        let sql = format!(
-            "WITH RECURSIVE sub(node) AS (
-               SELECT ?1
-               UNION
-               SELECT e.from_node FROM edges e JOIN sub ON e.to_node = sub.node
-                WHERE e.from_node NOT GLOB 'mem:*'
-             ),
-             refs AS (
-               SELECT COALESCE({visible}, 0) AS ok FROM edges e
-                 JOIN sub ON e.to_node = sub.node
-                 JOIN memories m ON e.from_node GLOB 'mem:*' AND m.id = substr(e.from_node, 5)
-             )
-             SELECT EXISTS(SELECT 1 FROM refs WHERE ok = 0)
-                AND NOT EXISTS(SELECT 1 FROM refs WHERE ok = 1)"
-        );
+        let (sql, args) = structural_hidden_sql(node, viewer);
         self.conn
             .query_row(&sql, params_from_iter(args), |r| r.get::<_, bool>(0))
             .map_err(sql_err)
@@ -1204,6 +1218,41 @@ mod tests {
             assert!(
                 plan.iter().filter(|d| d.starts_with("SEARCH m")).count() >= 2,
                 "memories not looked up by key: {plan:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn structural_visibility_walks_from_the_subtree() {
+        let tmp = tempfile::tempdir().unwrap();
+        let db = tmp.path().join("sage.db");
+        SageStore::create_managed(&db, "2026-11-01T00:00:00.000Z").unwrap();
+        let (store, _) = SageStore::open(&db, true, None, "2026-11-01T00:00:00.000Z").unwrap();
+        for viewer in [
+            Viewer::default(),
+            Viewer {
+                session_id: Some("s1".into()),
+            },
+        ] {
+            let (sql, args) = structural_hidden_sql("dir:src", &viewer);
+            let mut stmt = store
+                .conn
+                .prepare(&format!("EXPLAIN QUERY PLAN {sql}"))
+                .unwrap();
+            let plan: Vec<String> = stmt
+                .query_map(params_from_iter(args), |r| r.get::<_, String>(3))
+                .unwrap()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            assert!(
+                !plan
+                    .iter()
+                    .any(|d| d.starts_with("SCAN e") || d.contains("from_node>?")),
+                "edges scanned per node: {plan:?}"
+            );
+            assert!(
+                !plan.iter().any(|d| d.starts_with("SCAN m")),
+                "memories scanned: {plan:?}"
             );
         }
     }
