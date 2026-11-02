@@ -119,13 +119,10 @@ pub struct Stores {
     /// the owner lock to the first: OWNER_CONFLICT against this very daemon
     /// (found by the WM-604 soak). Cache hits never take it.
     opening: Mutex<()>,
+    /// The daemon's data root, recorded in the adoption marker of an adopted
+    /// store so a host knows which WrongMemory serves it.
+    data_root: PathBuf,
     max_open: usize,
-}
-
-impl Default for Stores {
-    fn default() -> Self {
-        Self::new(DEFAULT_MAX_OPEN_STORES)
-    }
 }
 
 fn internal(e: impl std::fmt::Display) -> ErrorBody {
@@ -169,11 +166,12 @@ pub fn adopted_store_path(root: &Path) -> PathBuf {
 }
 
 impl Stores {
-    pub fn new(max_open: usize) -> Self {
+    pub fn new(max_open: usize, data_root: PathBuf) -> Self {
         Self {
             open: Mutex::new(HashMap::new()),
             opening: Mutex::new(()),
             max_open: max_open.max(1),
+            data_root,
         }
     }
 
@@ -212,7 +210,7 @@ impl Stores {
         // Make room first so the owner guard of an evicted store is released
         // before another may be acquired.
         self.evict_to(self.max_open - 1, registry, instance_id)?;
-        let handle = Arc::new(open_handle(registry, instance_id, info)?);
+        let handle = Arc::new(open_handle(registry, instance_id, info, &self.data_root)?);
         let mut open = self.open.lock().map_err(internal)?;
         Ok(open.entry(project_id.to_string()).or_insert(handle).clone())
     }
@@ -298,6 +296,7 @@ fn open_handle(
     registry: &Mutex<Registry>,
     instance_id: &str,
     info: ProjectInfo,
+    data_root: &Path,
 ) -> Result<ProjectHandle, ErrorBody> {
     let store_path = PathBuf::from(&info.store_path);
     let root = PathBuf::from(&info.root);
@@ -351,6 +350,19 @@ fn open_handle(
                 }
             };
             let (store, _) = SageStore::open(&store_path, true, Some(root), &now_iso())?;
+            if info.store_kind == StoreKind::Adopted
+                && let Err(e) = wrongmemory_storage::owner::write_adoption_marker(
+                    &store_path,
+                    &info.project_id,
+                    data_root,
+                )
+            {
+                // The lock still guards the store while this daemon runs.
+                crate::warn!("adoption_marker_failed", {
+                    "projectId": info.project_id,
+                    "error": e.to_string(),
+                });
+            }
             let epoch = registry
                 .lock()
                 .map_err(internal)?

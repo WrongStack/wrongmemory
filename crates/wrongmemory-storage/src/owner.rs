@@ -67,6 +67,45 @@ impl Drop for OwnerGuard {
     }
 }
 
+/// Durable record, next to an adopted store, that WrongMemory serves it.
+///
+/// The owner lock lasts only as long as the daemon holds the store: a daemon
+/// that stops (or is killed) releases it, and a host that reads only the
+/// lock would then open the store locally as a second, uncoordinated writer.
+/// The marker survives the daemon and tells a cooperating host to reach the
+/// store through WrongMemory (starting the daemon on demand) instead. It is
+/// written whenever the store is opened writable and removed only when the
+/// project is detached. Its content names the project and the data root.
+pub const ADOPTION_MARKER_FILE: &str = "wrongmemory-adopted.json";
+
+fn marker_path(store: &Path) -> io::Result<PathBuf> {
+    store
+        .parent()
+        .map(|d| d.join(ADOPTION_MARKER_FILE))
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "store has no parent"))
+}
+
+/// Write (or refresh) the adoption marker atomically.
+pub fn write_adoption_marker(store: &Path, project_id: &str, data_root: &Path) -> io::Result<()> {
+    let path = marker_path(store)?;
+    let body = serde_json::json!({
+        "schemaVersion": 1,
+        "projectId": project_id,
+        "dataRoot": data_root.display().to_string(),
+    });
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, format!("{body}\n"))?;
+    std::fs::rename(&tmp, &path)
+}
+
+/// Remove the adoption marker; a missing marker is not an error.
+pub fn remove_adoption_marker(store: &Path) -> io::Result<()> {
+    match std::fs::remove_file(marker_path(store)?) {
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
+        other => other,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

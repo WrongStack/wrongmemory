@@ -223,7 +223,7 @@ pub async fn run(cfg: Config) -> Result<(), StartError> {
     let shared = Arc::new(Shared {
         root: cfg.root.clone(),
         registry: Arc::new(Mutex::new(registry)),
-        stores: Stores::new(cfg.max_open_stores),
+        stores: Stores::new(cfg.max_open_stores, cfg.root.path().to_path_buf()),
         instance_id: instance_id.clone(),
         host_token: generate_token()?,
         started_at_ms,
@@ -940,9 +940,24 @@ async fn dispatch_inner(
             let instance = shared.instance_id.clone();
             let detached = shared
                 .blocking(move |s| {
+                    let adopted_store = s
+                        .reg(|r| r.get_project(&id))?
+                        .filter(|p| p.store_kind == StoreKind::Adopted)
+                        .map(|p| std::path::PathBuf::from(p.store_path));
                     s.stores.invalidate(&id, &s.registry, &instance, "detached");
                     s.semantic.drop_project(&s.root, &id);
-                    s.reg(|r| r.detach_project(&id))
+                    let detached = s.reg(|r| r.detach_project(&id))?;
+                    // Released: a host may open the store locally again.
+                    if detached
+                        && let Some(store) = adopted_store
+                        && let Err(e) = wrongmemory_storage::owner::remove_adoption_marker(&store)
+                    {
+                        warn!("adoption_marker_remove_failed", {
+                            "projectId": id,
+                            "error": e.to_string(),
+                        });
+                    }
+                    Ok(detached)
                 })
                 .await?;
             to_value(json!({ "detached": detached }))

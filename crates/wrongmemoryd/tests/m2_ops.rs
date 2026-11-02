@@ -856,3 +856,109 @@ async fn change_events_carry_their_origin_connection() {
     drop((a, b));
     d.stop(&home).await;
 }
+
+/// An adopted writable store carries a durable adoption marker next to it
+/// (`wrongmemory-adopted.json`): written when the daemon opens the store,
+/// kept when the daemon dies (the owner lock does not survive it), removed
+/// only by detach. A read-only adoption never writes one.
+#[tokio::test(flavor = "multi_thread")]
+async fn adopted_store_carries_a_durable_marker_until_detach() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let proj = mkdir(tmp.path().join("proj"));
+    let d = Daemon::start(&home, &[]).await;
+    let mut c = host(&home).await;
+    // A real SAGE store at the project's legacy location, via export.
+    let (managed, _) = register(&mut c, &proj).await;
+    remember(&mut c, &managed, "Marker test keeps this fact", json!({})).await;
+    call(
+        &mut c,
+        method::PROJECT_EXPORT,
+        None,
+        json!({"projectId": managed}),
+    )
+    .await;
+    let memories = proj.join(".wrongstack").join("memories");
+    let marker = memories.join("wrongmemory-adopted.json");
+    let lock = memories.join("wrongmemory-owner.lock");
+
+    // Read-only adoption: no marker.
+    let ro = call(
+        &mut c,
+        method::PROJECT_REGISTER,
+        None,
+        json!({"root": proj.display().to_string(), "storeKind": "adopted", "write": false}),
+    )
+    .await;
+    let ro_id = ro["project"]["projectId"].as_str().unwrap().to_string();
+    call(
+        &mut c,
+        method::MEMORY_SEARCH,
+        Some(&ro_id),
+        json!({"query": "marker"}),
+    )
+    .await;
+    assert!(!marker.exists(), "read-only adoption wrote a marker");
+    call(
+        &mut c,
+        method::PROJECT_DETACH,
+        None,
+        json!({"projectId": ro_id}),
+    )
+    .await;
+
+    // Writable adoption: the first open writes the marker.
+    let rw = call(
+        &mut c,
+        method::PROJECT_REGISTER,
+        None,
+        json!({"root": proj.display().to_string(), "storeKind": "adopted", "write": true}),
+    )
+    .await;
+    let pid = rw["project"]["projectId"].as_str().unwrap().to_string();
+    assert_eq!(rw["project"]["admission"], "read-write");
+    call(
+        &mut c,
+        method::MEMORY_SEARCH,
+        Some(&pid),
+        json!({"query": "marker"}),
+    )
+    .await;
+    let body: Value = serde_json::from_str(&std::fs::read_to_string(&marker).unwrap()).unwrap();
+    assert_eq!(body["projectId"], pid.as_str());
+    assert_eq!(
+        Path::new(body["dataRoot"].as_str().unwrap()),
+        dr(&home).path()
+    );
+
+    // The daemon dies without draining: the lock is released, the marker stays.
+    drop(c);
+    drop(d);
+    assert!(
+        std::fs::read_to_string(&lock).is_ok(),
+        "lock still held after kill"
+    );
+    assert!(marker.exists(), "marker lost with the daemon");
+
+    // Detach (on a fresh daemon) removes it.
+    let d = Daemon::start(&home, &[]).await;
+    let mut c = host(&home).await;
+    call(
+        &mut c,
+        method::MEMORY_SEARCH,
+        Some(&pid),
+        json!({"query": "marker"}),
+    )
+    .await;
+    assert!(marker.exists());
+    call(
+        &mut c,
+        method::PROJECT_DETACH,
+        None,
+        json!({"projectId": pid}),
+    )
+    .await;
+    assert!(!marker.exists(), "detach left the marker behind");
+    drop(c);
+    d.stop(&home).await;
+}
