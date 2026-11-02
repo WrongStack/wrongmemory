@@ -36,6 +36,7 @@ jobs:
           name: dist
           path: |
             dist/*.zip
+            dist/*.exe
             dist/SHA256SUMS
           if-no-files-found: error
 
@@ -56,6 +57,7 @@ jobs:
         with:
           subject-path: |
             dist/*.zip
+            dist/*.exe
             dist/SHA256SUMS
       - name: Draft release
         shell: bash
@@ -71,4 +73,4 @@ jobs:
           - Install: unzip, then \`bin\\wrongmemory.exe install\`. See docs/operations.md.
           - Scope and verification status: docs/status.md.
           EOF
-          gh release create "$GITHUB_REF_NAME" dist/*.zip dist/SHA256SUMS --draft --title "WrongMemory $GITHUB_REF_NAME" --notes-file notes.md
+          gh release create "$GITHUB_REF_NAME" dist/*.zip dist/*.exe dist/SHA256SUMS --draft --title "WrongMemory $GITHUB_REF_NAME" --notes-file notes.md

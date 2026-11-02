@@ -25,6 +25,23 @@ All commands accept `--data-root <dir>` (default `WRONGMEMORY_HOME`, else `%USER
 
 The installed runtime needs no Bun, Node, or source checkout.
 
+### From WrongStack
+
+WrongStack can install WrongMemory and switch a profile to it:
+
+```text
+wstack sage service install [--release <v>] [--from <dir>] [--stop-daemon]
+wstack sage service use wrongmemory [--yes]    # back up, hand the store off, set the mode
+wstack sage service use local [--yes]          # release the store again
+wstack sage service status
+```
+
+- `install` downloads `wrongmemory-windows-x64.exe` and `wrongmemoryd-windows-x64.exe` from the release. It checks both against `SHA256SUMS` and against the digest GitHub recorded for the asset. It then runs this `install` command, so the binaries end up in the same directory. `--from <dir>` installs from a local build instead.
+- WrongStack finds the binaries in this order: `Sage.service.daemonPath`, then `WRONGMEMORYD_PATH`, then `%LOCALAPPDATA%\WrongMemoryin`, then next to the WrongStack executable, then `PATH`.
+- `Sage.service.mode` is a profile setting, so it applies to every project of that profile.
+  - Run `use wrongmemory` in a project to back up and hand over its existing store.
+  - Other projects are registered the first time they are used.
+
 ## Update and rollback
 
 - `wrongmemory install --stop-daemon` (run from the new version's `bin`) drains and stops the running daemon, then replaces both binaries atomically. The previous binaries are kept as `*.exe.old`. Without `--stop-daemon`, install refuses with exit 6 while a daemon is running.

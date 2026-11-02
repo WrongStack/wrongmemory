@@ -70,5 +70,13 @@ run([
   '-Command',
   `Compress-Archive -Path '${stage}\\*' -DestinationPath '${zip}' -CompressionLevel Optimal`,
 ]);
-writeFileSync(join(dist, 'SHA256SUMS'), `${sha(zip)}  ${name}.zip\n`);
+// The two executables also ship as bare assets, so an installer (WrongStack's
+// `wstack sage service install`) can verify and stage them without unzipping.
+const bare: string[] = [];
+for (const exe of ['wrongmemory', 'wrongmemoryd']) {
+  const asset = `${exe}-windows-x64.exe`;
+  cpSync(join(stage, 'bin', `${exe}.exe`), join(dist, asset));
+  bare.push(`${sha(join(dist, asset))}  ${asset}\n`);
+}
+writeFileSync(join(dist, 'SHA256SUMS'), `${sha(zip)}  ${name}.zip\n${bare.join('')}`);
 console.log(`${zip}\n${readFileSync(join(dist, 'SHA256SUMS'), 'utf8').trim()}`);
