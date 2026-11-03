@@ -11,7 +11,7 @@ All commands accept `--data-root <dir>` (default `WRONGMEMORY_HOME`, else `%USER
 | 2 | Invalid input (bad argument, output exists, unknown project or id) |
 | 3 | Service unavailable (daemon not running or not reachable) |
 | 4 | Unsupported (profile, method, or platform) |
-| 5 | Denied (credential, grant profile, or read-only store) |
+| 5 | Denied (credential, grant profile, or read-only store). `wrongmemory mcp` exits 5 when its grant has no secret in the data root (revoked, or created under another data root) |
 | 6 | Conflict (revision, idempotency key, owner, store identity, or running daemon) |
 | 7 | Timeout |
 | 70 | Internal error |
@@ -41,6 +41,8 @@ wstack sage service status
 - `Sage.service.mode` is a profile setting, so it applies to every project of that profile.
   - Run `use wrongmemory` in a project to back up and hand over its existing store.
   - Other projects are registered the first time they are used.
+  - A linked Git worktree uses its main checkout's project and store, as local SAGE does.
+- `use local` detaches the project. A later `use wrongmemory` registers it again under a **new project id**: reconnect external clients (`wrongmemory connect … --create-grant`), since their entries carry the old id.
 
 ## Update and rollback
 
@@ -63,7 +65,7 @@ wstack sage service status
 |---|---|
 | `wrongmemory project add <root> --managed` | Creates a service-managed store for a project with no SAGE store |
 | `wrongmemory project add <root>` | Adopts the existing SAGE store **read-only**; no bytes change |
-| `wrongmemory project add <root> --write` | Requests write ownership. It stays read-only while `server.json` shows a possibly running WrongStack SAGE daemon; stop that daemon and add `--force-owner` |
+| `wrongmemory project add <root> --write` | Requests write ownership. It stays read-only while the SAGE project server named in `server.json` still runs; a `server.json` whose pid no longer runs does not block. Run the same command again once that server is gone (or add `--force-owner` after stopping it) to upgrade a registration held read-only for this reason |
 | `wrongmemory project list` / `project show <id>` | Shows the store path, kind, admission, and owner epoch |
 | `wrongmemory project detach <id>` | Releases ownership and disables the registration. The store file is kept |
 | `wrongmemory project export <id>` | Managed stores only: copies the store to `<root>\.wrongstack\memories\sage.db` and detaches the project (rollback to in-process SAGE). Refuses an occupied location |
@@ -114,7 +116,7 @@ wrongmemory disconnect <client> --project <id> [--revoke]
 wrongmemory grants list | grants revoke <grant-id>
 ```
 
-- Client configuration contains only the executable path, the project id, and the grant id.
+- Client configuration contains only the executable path, the project id, the grant id, and the data root when it is not the default (`--data-root` or `WRONGMEMORY_HOME`; the client starts the bridge from its own environment, which may not have that variable).
 - The grant secret stays in `<data-root>\grants\` and never leaves it.
 - The default grant profile is `read-propose`.
 

@@ -62,6 +62,46 @@ fn read_json(p: &Path) -> Value {
     serde_json::from_str(&std::fs::read_to_string(p).unwrap()).unwrap()
 }
 
+/// A data root set only through `WRONGMEMORY_HOME` must reach the entry: the
+/// client launches the bridge from its own environment, which does not have it.
+#[test]
+fn connect_writes_a_data_root_that_came_from_the_environment() {
+    let e = env();
+    let out = Command::new(env!("CARGO_BIN_EXE_wrongmemory"))
+        .env("WRONGMEMORY_CONFIG_HOME_OVERRIDE", &e.home)
+        .env("WRONGMEMORY_HOME", &e.data)
+        .args([
+            "connect",
+            "claude-code",
+            "--project",
+            "p_1",
+            "--grant",
+            "g_1",
+        ])
+        .arg("--project-root")
+        .arg(&e.project)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let v = read_json(&e.project.join(".mcp.json"));
+    let args: Vec<&str> = v["mcpServers"]["wrongmemory"]["args"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|a| a.as_str().unwrap())
+        .collect();
+    let at = args
+        .iter()
+        .position(|a| *a == "--data-root")
+        .unwrap_or_else(|| panic!("no --data-root in {args:?}"));
+    let want = e.data.display().to_string().replace('\\', "/");
+    assert_eq!(args[at + 1].to_lowercase(), want.to_lowercase());
+}
+
 #[test]
 fn claude_project_add_idempotent_remove_preserves_unrelated() {
     let e = env();
@@ -364,5 +404,15 @@ fn create_grant_doctor_and_revoke_with_real_daemon() {
         !grants["grants"][0]["revokedAtMs"].is_null(),
         "grant revoked"
     );
+    // The client's bridge now fails as a credential problem: exit DENIED and
+    // a message about the grant, not "service is not running" (the daemon is
+    // up) and not a daemon start.
+    let grant = grants["grants"][0]["grantId"].as_str().unwrap();
+    let bridge = e.cmd(&["mcp", "--project", &project, "--grant", grant]);
+    let stderr = String::from_utf8_lossy(&bridge.stderr);
+    assert_eq!(bridge.status.code(), Some(5), "{stderr}");
+    assert!(stderr.contains(&format!("grant {grant}")), "{stderr}");
+    assert!(stderr.contains("revoked"), "{stderr}");
+    assert!(!stderr.contains("not running"), "{stderr}");
     e.ok(&["daemon", "stop"]);
 }

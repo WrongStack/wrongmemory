@@ -902,7 +902,20 @@ async fn dispatch_inner(
         method::PROJECT_REGISTER => {
             let p: RegisterProjectParams = parse(req.params)?;
             let result = shared
-                .blocking(move |s| projects::register(&s.root, &s.registry, &p))
+                .blocking(move |s| {
+                    let (result, upgraded) = projects::register(&s.root, &s.registry, &p)?;
+                    if upgraded {
+                        // A read-only handle opened before the upgrade would
+                        // keep refusing writes; the next call reopens it.
+                        s.stores.invalidate(
+                            &result.project.project_id,
+                            &s.registry,
+                            &s.instance_id,
+                            "admission_upgraded",
+                        );
+                    }
+                    Ok(result)
+                })
                 .await?;
             info!("project_registered", {
                 "projectId": result.project.project_id,

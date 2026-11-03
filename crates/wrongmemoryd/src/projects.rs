@@ -302,6 +302,25 @@ fn process_alive(pid: u32) -> bool {
     Path::new(&format!("/proc/{pid}")).exists()
 }
 
+/// Admission reason of an adopted store held read-only because a legacy SAGE
+/// project server may own it. Such a registration is upgraded once that
+/// server is gone (see `register`); registrations are recognized by the
+/// prefix, which every daemon version has written.
+const LEGACY_OWNER_REASON_PREFIX: &str = "legacy SAGE project-server metadata (server.json)";
+const LEGACY_OWNER_REASON: &str = "legacy SAGE project-server metadata (server.json) present; an \
+     unmodified SAGE owner ignores WrongMemory's owner guard. Stop it and re-register with \
+     force_owner to acknowledge.";
+
+/// Whether the SAGE project server named by the `server.json` next to `store`
+/// may still run. Metadata whose pid no longer runs is stale (the server
+/// exited without cleaning up); unreadable metadata counts as running.
+fn legacy_server_may_run(store: &Path) -> bool {
+    match wrongmemory_storage::owner::legacy_server_pid(store) {
+        Some(pid) => pid != std::process::id() && process_alive(pid),
+        None => true,
+    }
+}
+
 fn open_handle(
     registry: &Mutex<Registry>,
     instance_id: &str,
@@ -402,18 +421,24 @@ fn open_handle(
     }
 }
 
-/// `project.register`. Blocking.
+/// `project.register`. Blocking. The flag is true when an existing
+/// registration was upgraded to read-write; the caller then drops any
+/// read-only handle it holds for that project.
 pub fn register(
     data_root: &DataRoot,
     registry: &Mutex<Registry>,
     p: &RegisterProjectParams,
-) -> Result<RegisterProjectResult, ErrorBody> {
+) -> Result<(RegisterProjectResult, bool), ErrorBody> {
     let root = canonical_dir(Path::new(&p.root))?;
-    let display = p.display_name.clone().unwrap_or_else(|| {
-        root.file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_else(|| root.display().to_string())
-    });
+    // Named after the root the project is registered under (the main
+    // checkout when `p.root` is a linked worktree).
+    let display_for = |root: &Path| {
+        p.display_name.clone().unwrap_or_else(|| {
+            root.file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| root.display().to_string())
+        })
+    };
     let mut reg = registry.lock().map_err(internal)?;
     match p.store_kind {
         StoreKind::Adopted => {
@@ -421,12 +446,50 @@ pub fn register(
             // linked worktree shares its main checkout's store (WM-INV-14).
             let root =
                 PathBuf::from(wrongmemory_storage::wrongstack_paths::canonical_project_root(&root));
+            let display = display_for(&root);
             let store = adopted_store_path(&root);
             if let Some(existing) = reg.find_project_by_store(&store).map_err(ErrorBody::from)? {
-                return Ok(RegisterProjectResult {
-                    project: existing,
-                    created: false,
-                });
+                // Held read-only only because a legacy SAGE server might own
+                // the store: a write request upgrades it once that server is
+                // gone, or when the operator acknowledges it (`force_owner`).
+                // The open-time check still refuses a writable open while the
+                // server named in `server.json` runs.
+                if p.write
+                    && existing.admission == Admission::ReadOnly
+                    && existing
+                        .admission_reason
+                        .starts_with(LEGACY_OWNER_REASON_PREFIX)
+                    && (p.force_owner || !legacy_server_may_run(&store))
+                    && inspect(&store).verdict.writable()
+                {
+                    reg.set_admission(
+                        &existing.project_id,
+                        Admission::ReadWrite,
+                        "service owner",
+                        existing.storage_profile_id.as_deref(),
+                    )
+                    .map_err(ErrorBody::from)?;
+                    let project = reg
+                        .get_project(&existing.project_id)
+                        .map_err(ErrorBody::from)?
+                        .ok_or_else(|| {
+                            ErrorBody::new(ErrorCode::ProjectNotFound, "project not found")
+                        })?;
+                    return Ok((
+                        RegisterProjectResult {
+                            project,
+                            created: false,
+                        },
+                        true,
+                    ));
+                }
+                return Ok((
+                    RegisterProjectResult {
+                        project: existing,
+                        created: false,
+                    },
+                    false,
+                ));
             }
             if let Some(other) = reg.find_project_by_root(&root).map_err(ErrorBody::from)? {
                 return Err(ErrorBody::new(
@@ -456,14 +519,9 @@ pub fn register(
                     Admission::ReadOnly,
                     format!("store not writable by this build: {}", insp.detail),
                 )
-            } else if insp.legacy_owner_metadata && !p.force_owner {
-                (
-                    Admission::ReadOnly,
-                    "legacy SAGE project-server metadata (server.json) present; an unmodified \
-                     SAGE owner ignores WrongMemory's owner guard. Stop it and re-register with \
-                     force_owner to acknowledge."
-                        .to_string(),
-                )
+            } else if insp.legacy_owner_metadata && !p.force_owner && legacy_server_may_run(&store)
+            {
+                (Admission::ReadOnly, LEGACY_OWNER_REASON.to_string())
             } else {
                 (Admission::ReadWrite, "service owner".to_string())
             };
@@ -479,18 +537,48 @@ pub fn register(
                     storage_profile_id: Some(STORAGE_PROFILE_ID),
                 })
                 .map_err(ErrorBody::from)?;
-            Ok(RegisterProjectResult {
-                project: info,
-                created: true,
-            })
+            Ok((
+                RegisterProjectResult {
+                    project: info,
+                    created: true,
+                },
+                false,
+            ))
         }
         StoreKind::Managed => {
+            // A linked worktree shares its main checkout's memory identity
+            // (WM-INV-14), as SAGE does. A host that looks for a project-local
+            // store only in the worktree asks for `managed` (WrongStack
+            // 1.4.0): answer with the main checkout's project, whatever its
+            // store kind, and never create a second memory for the worktree.
+            let root = match wrongmemory_storage::wrongstack_paths::linked_worktree_main(&root) {
+                Some(main) => {
+                    let main = canonical_dir(&main)?;
+                    if let Some(existing) =
+                        reg.find_project_by_root(&main).map_err(ErrorBody::from)?
+                    {
+                        return Ok((
+                            RegisterProjectResult {
+                                project: existing,
+                                created: false,
+                            },
+                            false,
+                        ));
+                    }
+                    main
+                }
+                None => root,
+            };
+            let display = display_for(&root);
             if let Some(existing) = reg.find_project_by_root(&root).map_err(ErrorBody::from)? {
                 if existing.store_kind == StoreKind::Managed {
-                    return Ok(RegisterProjectResult {
-                        project: existing,
-                        created: false,
-                    });
+                    return Ok((
+                        RegisterProjectResult {
+                            project: existing,
+                            created: false,
+                        },
+                        false,
+                    ));
                 }
                 return Err(ErrorBody::new(
                     ErrorCode::StoreIdentityConflict,
@@ -532,10 +620,13 @@ pub fn register(
                     },
                 )
                 .map_err(ErrorBody::from)?;
-            Ok(RegisterProjectResult {
-                project: info,
-                created: true,
-            })
+            Ok((
+                RegisterProjectResult {
+                    project: info,
+                    created: true,
+                },
+                false,
+            ))
         }
     }
 }

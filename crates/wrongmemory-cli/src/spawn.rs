@@ -170,21 +170,16 @@ pub async fn connect_host(
     }
 }
 
-/// Prefix of the error `Client::connect_grant` returns when the grant's
-/// secret is not in the data root.
-const GRANT_SECRET_MISSING: &str = "cannot read credential for grant";
-
 /// Whether a failed connect means "no ready daemon here (yet)" and the
 /// start-and-wait path should run. Unavailable covers a missing endpoint and
 /// a stale discovery record whose token a freshly bound daemon cannot prove
 /// (another client is starting it right now). Transport/Protocol cover a
 /// draining daemon that closed the connection mid-handshake. A missing
-/// grant secret and remote (authentication) errors are final.
+/// grant secret (`Credential`) and remote (authentication) errors are final.
 fn startable(e: &CallError) -> bool {
     match e {
-        CallError::Unavailable(m) => !m.starts_with(GRANT_SECRET_MISSING),
-        CallError::Transport(_) | CallError::Protocol(_) => true,
-        CallError::Remote(_) => false,
+        CallError::Unavailable(_) | CallError::Transport(_) | CallError::Protocol(_) => true,
+        CallError::Credential(_) | CallError::Remote(_) => false,
     }
 }
 

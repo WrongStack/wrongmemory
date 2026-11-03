@@ -314,6 +314,7 @@ fn fail(e: &CallError) -> i32 {
     match e {
         CallError::Remote(b) => b.code.exit_code(),
         CallError::Unavailable(_) => exit_code::SERVICE_UNAVAILABLE,
+        CallError::Credential(_) => exit_code::DENIED,
         _ => exit_code::FAILED,
     }
 }
@@ -742,7 +743,12 @@ async fn run(cli: Cli, root: DataRoot) -> i32 {
         } => {
             if let Err(e) = mcp::serve(root, project, grant, client).await {
                 eprintln!("wrongmemory mcp: {e:#}");
-                return exit_code::SERVICE_UNAVAILABLE;
+                // A revoked or foreign grant is a credential problem, not an
+                // unavailable service.
+                return match e.downcast_ref::<CallError>() {
+                    Some(CallError::Credential(_)) => exit_code::DENIED,
+                    _ => exit_code::SERVICE_UNAVAILABLE,
+                };
             }
         }
         Cmd::Http { cmd } => match cmd {
@@ -767,7 +773,14 @@ async fn run(cli: Cli, root: DataRoot) -> i32 {
             },
         },
         Cmd::Connect(args) => {
-            return connect::run_connect(&root, cli.data_root.as_deref(), j, args).await;
+            // A data root chosen through WRONGMEMORY_HOME exists only in this
+            // shell's environment, and the client starts the bridge from its
+            // own. Write it into the entry like an explicit --data-root.
+            let from_env = std::env::var_os(wrongmemory_ipc::endpoint::DATA_ROOT_ENV)
+                .filter(|v| !v.is_empty())
+                .and_then(|_| std::path::absolute(root.path()).ok());
+            let data_root_arg = cli.data_root.clone().or(from_env);
+            return connect::run_connect(&root, data_root_arg.as_deref(), j, args).await;
         }
         Cmd::Disconnect(args) => return connect::run_disconnect(&root, j, args).await,
         Cmd::Client {

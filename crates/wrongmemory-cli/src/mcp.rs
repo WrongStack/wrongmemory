@@ -428,6 +428,7 @@ fn tool_error(e: CallError) -> CallToolResult {
             json!({"code": b.code.as_str(), "message": b.message, "retryable": b.retryable})
         }
         CallError::Unavailable(m) => json!({"code": "UNAVAILABLE", "message": m}),
+        CallError::Credential(m) => json!({"code": "UNAUTHENTICATED", "message": m}),
         other => json!({"code": "TRANSPORT", "message": other.to_string()}),
     };
     CallToolResult::error(vec![ContentBlock::text(body.to_string())])
@@ -677,9 +678,10 @@ impl Bridge {
         grant_id: String,
         label: String,
     ) -> anyhow::Result<(Bridge, String)> {
+        // Keep the typed error: `main` maps a credential failure to DENIED.
         let client = spawn::connect_grant(&root, &grant_id, &label, true)
             .await
-            .map_err(|e| anyhow::anyhow!("{e}"))?;
+            .map_err(anyhow::Error::new)?;
         let hello = client.hello().clone();
         if let Some(projects) = &hello.principal.projects
             && !projects.contains(&project_id)

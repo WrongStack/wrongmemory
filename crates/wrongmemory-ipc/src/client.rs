@@ -19,6 +19,11 @@ pub enum CallError {
     /// No daemon is reachable for this data root (missing/stale discovery).
     #[error("WrongMemory service is not running: {0}")]
     Unavailable(String),
+    /// The grant's secret is not readable in this data root: the grant was
+    /// revoked, or belongs to another data root. Starting a daemon cannot
+    /// help, and the daemon is not at fault.
+    #[error("grant credential unavailable: {0}")]
+    Credential(String),
     #[error("transport: {0}")]
     Transport(#[from] FrameError),
     #[error("{0}")]
@@ -71,7 +76,13 @@ impl Client {
         client_name: &str,
     ) -> Result<Self, CallError> {
         let secret = root.read_grant_secret(grant_id).map_err(|e| {
-            CallError::Unavailable(format!("cannot read credential for grant {grant_id}: {e}"))
+            CallError::Credential(if e.kind() == std::io::ErrorKind::NotFound {
+                format!(
+                    "grant {grant_id} has no secret in this data root (revoked, or created under another data root)"
+                )
+            } else {
+                format!("cannot read the secret of grant {grant_id}: {e}")
+            })
         })?;
         let discovery = load_discovery(root)?;
         let cred = Credential::Grant {

@@ -1029,3 +1029,99 @@ async fn adopted_store_is_not_written_next_to_a_live_sage_server() {
     drop(c);
     d.stop(&home).await;
 }
+
+/// A `server.json` left behind by a SAGE server that is gone does not hold an
+/// adopted store read-only. With the server running, a write request is held
+/// read-only; once it is gone, registering again upgrades the registration
+/// (and the read-only handle already open) to read-write. A new adoption next
+/// to stale metadata is read-write at once.
+#[tokio::test]
+async fn stale_legacy_metadata_does_not_hold_an_adopted_store_read_only() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let d = Daemon::start(&home, &[]).await;
+    let mut c = host(&home).await;
+    // A pid that no longer runs.
+    let dead = {
+        let mut gone = std::process::Command::new("cargo")
+            .arg("--version")
+            .stdout(std::process::Stdio::null())
+            .spawn()
+            .unwrap();
+        let id = gone.id();
+        gone.wait().unwrap();
+        id
+    };
+    // Two projects whose SAGE stores sit in their checkouts.
+    let mut exported = Vec::new();
+    for name in ["live", "stale"] {
+        let proj = mkdir(tmp.path().join(name));
+        let (managed, _) = register(&mut c, &proj).await;
+        remember(
+            &mut c,
+            &managed,
+            &format!("{name} legacy owner fact"),
+            json!({}),
+        )
+        .await;
+        call(
+            &mut c,
+            method::PROJECT_EXPORT,
+            None,
+            json!({"projectId": managed}),
+        )
+        .await;
+        exported.push(proj);
+    }
+    let adopt = |root: &Path| json!({"root": root.display().to_string(), "storeKind": "adopted", "write": true});
+
+    // 1. The legacy server runs (this test stands in for it): read-only.
+    let live = &exported[0];
+    let memories = live.join(".wrongstack").join("memories");
+    let server_json = memories.join("server.json");
+    std::fs::write(&server_json, json!({"pid": std::process::id()}).to_string()).unwrap();
+    let held = call(&mut c, method::PROJECT_REGISTER, None, adopt(live)).await;
+    let pid = held["project"]["projectId"].as_str().unwrap().to_string();
+    assert_eq!(held["project"]["admission"], "read-only");
+    call(
+        &mut c,
+        method::MEMORY_SEARCH,
+        Some(&pid),
+        json!({"query": "legacy"}),
+    )
+    .await;
+    let refused = call_err(
+        &mut c,
+        method::MEMORY_REMEMBER,
+        Some(&pid),
+        json!({"text": "written while held", "kind": "fact"}),
+    )
+    .await;
+    assert_eq!(refused, ErrorCode::ReadOnly);
+
+    // 2. The server is gone: registering again upgrades the same project, and
+    //    the read-only handle opened above no longer refuses writes.
+    std::fs::write(&server_json, json!({"pid": dead}).to_string()).unwrap();
+    let upgraded = call(&mut c, method::PROJECT_REGISTER, None, adopt(live)).await;
+    assert_eq!(upgraded["created"], false);
+    assert_eq!(upgraded["project"]["projectId"], pid.as_str());
+    assert_eq!(upgraded["project"]["admission"], "read-write");
+    remember(&mut c, &pid, "written after the upgrade", json!({})).await;
+    assert!(memories.join("wrongmemory-adopted.json").exists());
+
+    // 3. A new adoption next to stale metadata is read-write at once.
+    let stale = &exported[1];
+    std::fs::write(
+        stale
+            .join(".wrongstack")
+            .join("memories")
+            .join("server.json"),
+        json!({"pid": dead}).to_string(),
+    )
+    .unwrap();
+    let fresh = call(&mut c, method::PROJECT_REGISTER, None, adopt(stale)).await;
+    assert_eq!(fresh["created"], true);
+    assert_eq!(fresh["project"]["admission"], "read-write");
+    drop(c);
+    d.stop(&home).await;
+}

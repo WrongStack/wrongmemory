@@ -825,6 +825,7 @@ fn call_fail(e: &CallError) -> i32 {
     match e {
         CallError::Remote(b) => fail(e, b.code.exit_code()),
         CallError::Unavailable(_) => fail(e, exit_code::SERVICE_UNAVAILABLE),
+        CallError::Credential(_) => fail(e, exit_code::DENIED),
         _ => fail(e, exit_code::FAILED),
     }
 }

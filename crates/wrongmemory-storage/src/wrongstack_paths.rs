@@ -171,6 +171,14 @@ pub fn canonical_project_root(abs_root: &Path) -> String {
     on_disk_case(&git_identity_root(&resolved).to_string_lossy())
 }
 
+/// The main checkout a linked Git worktree belongs to (`gitIdentityRoot`),
+/// or `None` when `checkout` is not a linked worktree.
+pub fn linked_worktree_main(checkout: &Path) -> Option<PathBuf> {
+    let resolved = node_resolve(checkout);
+    let main = git_identity_root(&resolved);
+    (main != resolved).then(|| PathBuf::from(on_disk_case(&main.to_string_lossy())))
+}
+
 /// `wstackGlobalRoot`: `WRONGSTACK_HOME` (trimmed, resolved) or `~/.wrongstack`.
 pub fn wstack_global_root() -> Option<PathBuf> {
     if let Ok(v) = std::env::var("WRONGSTACK_HOME")
