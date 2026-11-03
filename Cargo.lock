@@ -1434,7 +1434,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "wrongmemory-bench"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "clap",
@@ -1447,7 +1447,7 @@ dependencies = [
 
 [[package]]
 name = "wrongmemory-cli"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1472,7 +1472,7 @@ dependencies = [
 
 [[package]]
 name = "wrongmemory-contracts"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "serde",
  "serde_json",
@@ -1480,7 +1480,7 @@ dependencies = [
 
 [[package]]
 name = "wrongmemory-ipc"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "getrandom 0.3.4",
  "hex",
@@ -1496,7 +1496,7 @@ dependencies = [
 
 [[package]]
 name = "wrongmemory-registry"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "hex",
  "rusqlite",
@@ -1511,7 +1511,7 @@ dependencies = [
 
 [[package]]
 name = "wrongmemory-storage"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "fancy-regex",
  "hex",
@@ -1529,7 +1529,7 @@ dependencies = [
 
 [[package]]
 name = "wrongmemoryd"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "clap",
