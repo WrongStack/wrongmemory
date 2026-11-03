@@ -54,6 +54,12 @@ struct Args {
     /// Soak: concurrent client connections.
     #[arg(long, default_value_t = 8)]
     soak_clients: usize,
+    /// Soak: total operations per second across all clients (0 = flat out).
+    #[arg(long, default_value_t = 0.0)]
+    soak_rate: f64,
+    /// Soak: idle seconds after the load, to measure the daemon's idle CPU.
+    #[arg(long, default_value_t = 0)]
+    soak_idle_secs: u64,
 }
 
 /// SplitMix64: deterministic, dependency-free.
@@ -236,14 +242,14 @@ async fn main() -> anyhow::Result<()> {
             .join(format!("wrongmemoryd{}", std::env::consts::EXE_SUFFIX)),
     };
     if args.soak_secs > 0 {
-        return soak::run(
-            &exe,
-            args.soak_secs,
-            args.soak_projects,
-            args.soak_clients,
-            args.out.as_deref(),
-        )
-        .await;
+        let o = soak::Options {
+            secs: args.soak_secs,
+            projects: args.soak_projects,
+            clients: args.soak_clients,
+            rate: args.soak_rate,
+            idle_secs: args.soak_idle_secs,
+        };
+        return soak::run(&exe, &o, args.out.as_deref()).await;
     }
     let tmp = tempfile::tempdir()?;
     let home = tmp.path().join("home");

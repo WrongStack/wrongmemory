@@ -1,14 +1,19 @@
 //! Soak mode (WM-604): a mixed read/write load over many projects and
 //! concurrent connections for a fixed duration. Reports throughput, error
-//! count, per-operation latency, and the daemon's RSS and handle count
-//! after seeding and at the end (leak indicators). Long runs also sample
-//! RSS, handles, open stores and total WAL size every `SAMPLE_EVERY`, so a
-//! slow trend shows up, not only the two end points.
+//! count, per-operation latency, and the daemon's RSS, handle and thread
+//! count after seeding and at the end (leak indicators). Long runs also
+//! sample RSS, handles, threads, CPU time, open stores, total WAL size and
+//! total data size every `SAMPLE_EVERY`, so a slow trend shows up, not only
+//! the two end points.
+//!
+//! `rate` paces the load to a total number of operations per second (0 runs
+//! flat out). `idle_secs` adds an idle phase after the load: the daemon keeps
+//! its stores open and the report gives its average CPU use over that phase.
 
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::process::Command;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::bail;
 use serde_json::{Map, Value, json};
@@ -40,17 +45,53 @@ fn wal_bytes(dir: &Path) -> u64 {
         .sum()
 }
 
-/// Open handle count of a process (Windows), via PowerShell.
-fn handle_count(pid: u32) -> Option<u64> {
+/// Total size of every file under `dir` (stores, WAL, registry, logs).
+fn data_bytes(dir: &Path) -> u64 {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return 0;
+    };
+    entries
+        .filter_map(Result::ok)
+        .map(|e| match e.file_type() {
+            Ok(t) if t.is_dir() => data_bytes(&e.path()),
+            Ok(_) => e.metadata().map_or(0, |m| m.len()),
+            _ => 0,
+        })
+        .sum()
+}
+
+/// Handle count, thread count and total CPU seconds of a process.
+#[derive(Clone, Copy)]
+struct ProcStats {
+    handles: u64,
+    threads: u64,
+    cpu_secs: f64,
+}
+
+/// Reads `ProcStats` (Windows) with one PowerShell call.
+fn proc_stats(pid: u32) -> Option<ProcStats> {
+    let script = format!(
+        "$p = Get-Process -Id {pid}; $c = [cultureinfo]::InvariantCulture; \
+         '{{0}} {{1}} {{2}}' -f $p.HandleCount, $p.Threads.Count, \
+         $p.TotalProcessorTime.TotalSeconds.ToString($c)"
+    );
     let out = Command::new("powershell")
-        .args([
-            "-NoProfile",
-            "-Command",
-            &format!("(Get-Process -Id {pid}).HandleCount"),
-        ])
+        .args(["-NoProfile", "-Command", &script])
         .output()
         .ok()?;
-    String::from_utf8_lossy(&out.stdout).trim().parse().ok()
+    let text = String::from_utf8_lossy(&out.stdout);
+    let mut it = text.split_whitespace();
+    Some(ProcStats {
+        handles: it.next()?.parse().ok()?,
+        threads: it.next()?.parse().ok()?,
+        cpu_secs: it.next()?.parse().ok()?,
+    })
+}
+
+fn unix_secs() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs())
 }
 
 type Lat = BTreeMap<&'static str, Vec<f64>>;
@@ -60,13 +101,22 @@ async fn worker(
     projects: Vec<String>,
     w: usize,
     deadline: Instant,
+    every: Option<Duration>,
 ) -> anyhow::Result<(Lat, Vec<String>, usize)> {
     let mut c = Client::connect_host(&root, "soak").await?;
     let mut rng = Rng(0xC11E + w as u64);
     let mut lat: Lat = BTreeMap::new();
     let mut errors = Vec::new();
     let mut n = 0usize;
+    let paced_from = tokio::time::Instant::now();
     while Instant::now() < deadline {
+        if let Some(every) = every {
+            // Fixed schedule: a slow call is not made up for by a burst.
+            let due = paced_from + every.mul_f64(n as f64);
+            if due > tokio::time::Instant::now() {
+                tokio::time::sleep_until(due).await;
+            }
+        }
         let p = &projects[(rng.next() as usize) % projects.len()];
         let roll = rng.next() % 100;
         let unique = code_token(1_000_000 + w * 100_000 + n);
@@ -120,13 +170,20 @@ async fn worker(
     Ok((lat, errors, n))
 }
 
-pub async fn run(
-    exe: &Path,
-    secs: u64,
-    project_count: usize,
-    clients: usize,
-    out: Option<&Path>,
-) -> anyhow::Result<()> {
+pub struct Options {
+    pub secs: u64,
+    pub projects: usize,
+    pub clients: usize,
+    /// Total operations per second across all clients; 0 runs flat out.
+    pub rate: f64,
+    /// Idle phase after the load, for the daemon's idle CPU use.
+    pub idle_secs: u64,
+}
+
+pub async fn run(exe: &Path, o: &Options, out: Option<&Path>) -> anyhow::Result<()> {
+    let (secs, project_count, clients) = (o.secs, o.projects, o.clients);
+    // Each client makes one call every `clients / rate` seconds.
+    let every = (o.rate > 0.0).then(|| Duration::from_secs_f64(clients as f64 / o.rate));
     let tmp = tempfile::tempdir()?;
     let home = tmp.path().join("home");
     let (daemon, mut c) = start(exe, &home).await?;
@@ -159,12 +216,13 @@ pub async fn run(
         projects.push(p);
     }
     let rss0 = rss_bytes(pid);
-    let handles0 = handle_count(pid);
+    let stats0 = proc_stats(pid);
     let started = Instant::now();
+    let started_unix = unix_secs();
     let deadline = started + Duration::from_secs(secs);
     let root = DataRoot::resolve(Some(&home))?;
     let tasks: Vec<_> = (0..clients)
-        .map(|w| tokio::spawn(worker(root.clone(), projects.clone(), w, deadline)))
+        .map(|w| tokio::spawn(worker(root.clone(), projects.clone(), w, deadline, every)))
         .collect();
     let mut samples = Vec::new();
     while Instant::now() + SAMPLE_EVERY <= deadline {
@@ -173,12 +231,17 @@ pub async fn run(
             .call_raw(method::DAEMON_HEALTH, None, json!({}), None)
             .await
             .unwrap_or(Value::Null);
+        let stats = proc_stats(pid);
         samples.push(json!({
             "elapsedSecs": started.elapsed().as_secs(),
+            "unixSecs": unix_secs(),
             "rssBytes": rss_bytes(pid),
-            "handles": handle_count(pid),
+            "handles": stats.map(|s| s.handles),
+            "threads": stats.map(|s| s.threads),
+            "cpuSecs": stats.map(|s| s.cpu_secs),
             "openStores": health["openStores"],
             "walBytes": wal_bytes(&home),
+            "dataBytes": data_bytes(&home),
         }));
     }
     let mut all: Lat = BTreeMap::new();
@@ -197,20 +260,48 @@ pub async fn run(
     let health = c
         .call_raw(method::DAEMON_HEALTH, None, json!({}), None)
         .await?;
+    let stats_end = proc_stats(pid);
+    let rss_end = rss_bytes(pid);
+    let idle = if o.idle_secs > 0 {
+        let before = proc_stats(pid);
+        let t = Instant::now();
+        tokio::time::sleep(Duration::from_secs(o.idle_secs)).await;
+        let after = proc_stats(pid);
+        let wall = t.elapsed().as_secs_f64();
+        let cpu = before.zip(after).map(|(b, a)| a.cpu_secs - b.cpu_secs);
+        let open = c
+            .call_raw(method::DAEMON_HEALTH, None, json!({}), None)
+            .await
+            .unwrap_or(Value::Null);
+        json!({
+            "seconds": wall,
+            "cpuSecs": cpu,
+            "cpuPercentOfOneCore": cpu.map(|c| 100.0 * c / wall),
+            "rssBytesAtEnd": rss_bytes(pid),
+            "openStoresAtEnd": open["openStores"],
+        })
+    } else {
+        Value::Null
+    };
     let report = json!({
-        "schema": "wrongmemory/soak@2",
+        "schema": "wrongmemory/soak@3",
+        "startedUnixSecs": started_unix,
         "seconds": elapsed,
         "projects": project_count,
         "clients": clients,
+        "targetRate": o.rate,
         "ops": ops,
         "opsPerSecond": ops as f64 / elapsed,
         "errors": error_count,
         "firstErrors": errors,
         "latencyMs": all.into_iter().map(|(k, v)| (k.to_string(), dist(v))).collect::<Map<_, _>>(),
-        "rssBytes": {"afterSeed": rss0, "end": rss_bytes(pid)},
-        "handles": {"afterSeed": handles0, "end": handle_count(pid)},
+        "rssBytes": {"afterSeed": rss0, "end": rss_end},
+        "handles": {"afterSeed": stats0.map(|s| s.handles), "end": stats_end.map(|s| s.handles)},
+        "threads": {"afterSeed": stats0.map(|s| s.threads), "end": stats_end.map(|s| s.threads)},
         "openStoresAtEnd": health["openStores"],
         "walBytesAtEnd": wal_bytes(&home),
+        "dataBytesAtEnd": data_bytes(&home),
+        "idle": idle,
         "samples": samples,
         "machine": {
             "os": std::env::consts::OS,
