@@ -123,7 +123,10 @@ wrongmemory grants list | grants revoke <grant-id>
 - Client configuration contains only the executable path, the project id, the grant id, and the data root when it is not the default (`--data-root` or `WRONGMEMORY_HOME`; the client starts the bridge from its own environment, which may not have that variable).
 - The grant secret stays in `<data-root>\grants\` and never leaves it.
 - The default grant profile is `read-propose`.
-- `--with-guidance` adds a short recall/propose rule to `CLAUDE.md` or `AGENTS.md`. In the WM-309 evaluation (`docs/evidence/wm-309-agent-eval-2026-11-03.md`), Codex without it never called a memory tool. With it, both Claude Code and Codex recalled more and proposed revisions.
+- `--with-guidance` adds a short recall/propose rule to `CLAUDE.md` or `AGENTS.md`. When a recalled warning or decision conflicts with the request, the rule asks the agent to do what the user asked, and to name the record and its stated risk in its reply. The MCP server instructions say the same. In the WM-309 evaluation (`docs/evidence/wm-309-agent-eval-2026-11-03.md`), Codex without guidance never called a memory tool (0 of 4 runs). With guidance, every Claude Code and Codex run:
+  - recalled;
+  - proposed revisions rather than duplicates;
+  - with the current wording, told the user about the conflicting warning and its risk.
 - Codex asks before every MCP tool that is not read-only, and `codex exec` refuses such a call instead of asking. Proposals therefore fail in non-interactive Codex runs unless approved. `--approve-proposals` (Codex only, read-propose grants only) writes `approval_mode = "approve"` for `memory_candidates` and `memory_feedback`. The daemon still limits the grant to listing, proposing and feedback.
 
 ### Optional loopback HTTP (WM-308)
