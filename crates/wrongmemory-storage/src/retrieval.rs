@@ -53,8 +53,11 @@ fn visible_edges_sql(viewer: &Viewer) -> (String, Vec<rusqlite::types::Value>) {
     )
 }
 
-/// Whether a structural node's whole subtree is referenced only by memories
-/// the viewer cannot see. `CROSS JOIN` pins the join order (SQLite never
+/// Whether no memory the viewer can see references the structural node's
+/// subtree: either only hidden memories do, or none does. Retiring a memory
+/// drops its own edges but leaves the file/dir/symbol structure its anchors
+/// created, so orphan structure can name a session-private memory's paths and
+/// symbols; it is hidden too (WM-603). `CROSS JOIN` pins the join order (SQLite never
 /// reorders it): the walk starts from the subtree and reaches edges and
 /// memories by key. Left to the planner, the memory references were found by
 /// scanning every `mem:*` edge per node, about 50 ms per node on a store with
@@ -76,8 +79,7 @@ fn structural_hidden_sql(node: &str, viewer: &Viewer) -> (String, Vec<rusqlite::
                  CROSS JOIN memories m ON m.id = substr(e.from_node, 5)
                 WHERE e.from_node GLOB 'mem:*'
              )
-             SELECT EXISTS(SELECT 1 FROM refs WHERE ok = 0)
-                AND NOT EXISTS(SELECT 1 FROM refs WHERE ok = 1)"
+             SELECT NOT EXISTS(SELECT 1 FROM refs WHERE ok = 1)"
         ),
         args,
     )
@@ -670,8 +672,9 @@ impl SageStore {
         // but are derived from their anchors. A node whose whole subtree is
         // referenced only by memories this viewer cannot see would disclose a
         // hidden anchor (e.g. a private symbol name), so it is hidden too
-        // (WM-603). Orphan structure and anything a visible memory supports
-        // stays visible, so stores without hidden rows traverse unchanged.
+        // (WM-603). So is orphan structure left behind by retired memories,
+        // which can name a private memory's paths. Anything a visible memory
+        // supports stays visible.
         for n in nodes {
             if n.starts_with("mem:") || hidden.contains(n) || allowed.contains(n) {
                 continue;
@@ -1417,6 +1420,103 @@ impl SageStore {
             memories: matched,
             truncated,
         })
+    }
+}
+
+#[cfg(test)]
+mod orphan_structure_tests {
+    use super::*;
+    use crate::MutationCtx;
+    use wrongmemory_contracts::{MemoryAnchor, RememberParams};
+
+    fn ctx(session: Option<&str>) -> MutationCtx {
+        MutationCtx {
+            principal_id: "host".into(),
+            client_label: "t".into(),
+            session_id: session.map(str::to_string),
+            idempotency_key: None,
+            now_iso: "2026-11-03T00:00:01.000Z".into(),
+        }
+    }
+
+    fn anchor(kind: &str, path: &str, symbol: Option<&str>) -> MemoryAnchor {
+        MemoryAnchor {
+            kind: kind.into(),
+            path: Some(path.into()),
+            symbol: symbol.map(str::to_string),
+            ..Default::default()
+        }
+    }
+
+    /// WM-603 gap: retiring a memory removes its own edges but leaves the
+    /// file/dir/symbol structure its anchors created. That orphan structure
+    /// named a session-private memory's paths and symbols to every viewer.
+    /// Structure no visible memory supports is now hidden; structure a
+    /// visible memory supports stays.
+    #[test]
+    fn orphan_structure_of_a_retired_private_memory_is_not_disclosed() {
+        let tmp = tempfile::tempdir().unwrap();
+        let db = tmp.path().join("sage.db");
+        SageStore::create_managed(&db, "2026-11-03T00:00:00.000Z").unwrap();
+        let (mut store, _) = SageStore::open(&db, true, None, "2026-11-03T00:00:00.000Z").unwrap();
+        let public = RememberParams {
+            text: "The service entry point lives in src/app.rs.".into(),
+            anchors: vec![anchor("file", "src/app.rs", None)],
+            ..Default::default()
+        };
+        store.remember(&public, &ctx(None)).unwrap();
+        let private = RememberParams {
+            text: "Session scratch: orion vault key rotation notes.".into(),
+            scope: Some("session".into()),
+            anchors: vec![
+                anchor("directory", "vault-orion/keys", None),
+                anchor(
+                    "symbol",
+                    "vault-orion/keys/rotate.rs",
+                    Some("rotate_orion_master"),
+                ),
+            ],
+            ..Default::default()
+        };
+        let owner = ctx(Some("sess-a"));
+        let id = store.remember(&private, &owner).unwrap().id;
+        store
+            .delete(&id, "done with it", true, false, &owner, true)
+            .unwrap();
+
+        for viewer in [
+            Viewer::default(),
+            Viewer {
+                session_id: Some("sess-b".into()),
+            },
+            Viewer {
+                session_id: Some("sess-a".into()),
+            },
+        ] {
+            for query in [
+                "vault-orion",
+                "vault-orion/keys",
+                "vault-orion/keys/rotate.rs",
+                "dir:vault-orion",
+                "symbol:vault-orion/keys/rotate.rs#rotate_orion_master",
+            ] {
+                let g = store.graph_for(query, 4, 100, &viewer).unwrap();
+                let shown = serde_json::to_string(&g.edges).unwrap();
+                assert!(
+                    !shown.contains("vault-orion") && !shown.contains("rotate_orion"),
+                    "{viewer:?} {query}: {shown}"
+                );
+            }
+        }
+        // Structure a visible memory supports is still traversed.
+        let g = store
+            .graph_for("src/app.rs", 2, 100, &Viewer::default())
+            .unwrap();
+        let shown = serde_json::to_string(&g.edges).unwrap();
+        assert!(
+            shown.contains("file:src/app.rs") && shown.contains("dir:src"),
+            "{shown}"
+        );
     }
 }
 
