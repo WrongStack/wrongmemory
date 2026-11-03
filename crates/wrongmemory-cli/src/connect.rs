@@ -92,6 +92,13 @@ pub struct ConnectArgs {
     /// Also write the owned guidance block / rule file.
     #[arg(long)]
     pub with_guidance: bool,
+    /// Codex only, with a read-propose grant: approve the proposal tools
+    /// (`memory_candidates`, `memory_feedback`) without a prompt. Codex asks
+    /// before every tool that is not read-only, and a non-interactive run
+    /// (`codex exec`) refuses it instead. The daemon still enforces the grant,
+    /// so a read-propose grant can only list, propose and give feedback.
+    #[arg(long)]
+    pub approve_proposals: bool,
     /// Attributed client label passed to the bridge (default: target name).
     #[arg(long)]
     pub client: Option<String>,
@@ -234,7 +241,13 @@ pub fn layout(
 pub struct Launch {
     pub command: String,
     pub args: Vec<String>,
+    /// Codex: approve the proposal tools without a prompt (`--approve-proposals`).
+    pub approve_proposals: bool,
 }
+
+/// Tools a read-propose grant uses to propose and give feedback. With
+/// `--approve-proposals`, Codex runs them without asking.
+pub const PROPOSAL_TOOLS: [&str; 2] = ["memory_candidates", "memory_feedback"];
 
 fn slash(p: &Path) -> String {
     p.display().to_string().replace('\\', "/")
@@ -263,6 +276,7 @@ pub fn launch(
     Launch {
         command: slash(exe),
         args,
+        approve_proposals: false,
     }
 }
 
@@ -410,10 +424,24 @@ fn toml_owned(doc: &toml_edit::DocumentMut, path: &Path) -> anyhow::Result<Optio
     Ok(Some(json!({"command": command, "args": args})))
 }
 
+/// Whether the owned entry approves every proposal tool without a prompt.
+fn toml_approves_proposals(doc: &toml_edit::DocumentMut) -> bool {
+    PROPOSAL_TOOLS.iter().all(|tool| {
+        doc.get("mcp_servers")
+            .and_then(|s| s.get(SERVER_NAME))
+            .and_then(|e| e.get("tools"))
+            .and_then(|t| t.get(tool))
+            .and_then(|t| t.get("approval_mode"))
+            .and_then(|m| m.as_str())
+            == Some("approve")
+    })
+}
+
 pub fn toml_set(content: Option<&str>, l: &Launch, path: &Path) -> anyhow::Result<String> {
     let mut doc = parse_toml(content, path)?;
     let desired = json_entry(l);
     if toml_owned(&doc, path)? == Some(desired)
+        && toml_approves_proposals(&doc) == l.approve_proposals
         && let Some(c) = content
     {
         return Ok(c.to_string());
@@ -434,6 +462,16 @@ pub fn toml_set(content: Option<&str>, l: &Launch, path: &Path) -> anyhow::Resul
     entry.insert("args", toml_edit::value(arr));
     entry.insert("startup_timeout_sec", toml_edit::value(15));
     entry.insert("tool_timeout_sec", toml_edit::value(30));
+    if l.approve_proposals {
+        let mut tools = toml_edit::Table::new();
+        tools.set_implicit(true);
+        for tool in PROPOSAL_TOOLS {
+            let mut t = toml_edit::Table::new();
+            t.insert("approval_mode", toml_edit::value("approve"));
+            tools.insert(tool, toml_edit::Item::Table(t));
+        }
+        entry.insert("tools", toml_edit::Item::Table(tools));
+    }
     servers.insert(SERVER_NAME, toml_edit::Item::Table(entry));
     Ok(doc.to_string())
 }
@@ -851,6 +889,22 @@ pub async fn run_connect(
         .client
         .clone()
         .unwrap_or_else(|| a.target.as_str().to_string());
+    // Checked before anything is created, so a refused call leaves no grant.
+    if a.approve_proposals {
+        let codex_config = a.target == Target::Codex
+            || (a.target == Target::Print && a.format == PrintFormat::Toml);
+        if !codex_config {
+            return fail(
+                "--approve-proposals applies to Codex only (other clients keep their own tool permission settings)",
+                exit_code::INVALID_INPUT,
+            );
+        }
+        if let Some(g) = &a.grant
+            && let Err(code) = require_read_propose(root, g).await
+        {
+            return code;
+        }
+    }
     let grant =
         match (&a.grant, a.create_grant) {
             (Some(g), _) => g.clone(),
@@ -881,7 +935,8 @@ pub async fn run_connect(
                 );
             }
         };
-    let l = launch(&exe, &a.project, &grant, &client, data_root_arg);
+    let mut l = launch(&exe, &a.project, &grant, &client, data_root_arg);
+    l.approve_proposals = a.approve_proposals;
     if a.target == Target::Print {
         match a.format {
             PrintFormat::Json => println!(
@@ -919,6 +974,36 @@ pub async fn run_connect(
         }
         Err(e @ ApplyError::Concurrent(_)) => fail(e, exit_code::CONFLICT),
         Err(e) => fail(e, exit_code::FAILED),
+    }
+}
+
+/// `--approve-proposals` with an existing grant: only a read-propose grant,
+/// whose `memory_candidates` calls can at most propose. Approving a curator
+/// grant's accept or reject without a prompt is not what the flag is for.
+async fn require_read_propose(root: &DataRoot, grant: &str) -> Result<(), i32> {
+    let mut c = match crate::spawn::connect_host(root, "wrongmemory-connect", true).await {
+        Ok(c) => c,
+        Err(e) => return Err(call_fail(&e)),
+    };
+    let grants = match c.call_raw(method::GRANT_LIST, None, json!({}), None).await {
+        Ok(v) => v,
+        Err(e) => return Err(call_fail(&e)),
+    };
+    let profile = grants["grants"].as_array().and_then(|gs| {
+        gs.iter()
+            .find(|x| x["grantId"] == grant && x["revokedAtMs"].is_null())
+            .and_then(|x| x["profile"].as_str().map(str::to_string))
+    });
+    match profile.as_deref() {
+        Some("read-propose") => Ok(()),
+        Some(other) => Err(fail(
+            format!("--approve-proposals needs a read-propose grant; {grant} is {other}"),
+            exit_code::INVALID_INPUT,
+        )),
+        None => Err(fail(
+            format!("grant {grant} is unknown or revoked"),
+            exit_code::INVALID_INPUT,
+        )),
     }
 }
 
@@ -1159,6 +1244,7 @@ mod tests {
         let l = Launch {
             command: "C:/w m/wrongmemory.exe".into(),
             args: vec!["mcp".into()],
+            approve_proposals: false,
         };
         let out = toml_set(Some(src), &l, Path::new("c.toml")).unwrap();
         assert!(
@@ -1172,5 +1258,39 @@ mod tests {
                 && back.contains("[mcp_servers.other]")
                 && back.contains("# keep")
         );
+    }
+
+    #[test]
+    fn toml_approves_only_the_proposal_tools_on_request() {
+        let path = Path::new("c.toml");
+        let mut l = Launch {
+            command: "wm.exe".into(),
+            args: vec!["mcp".into()],
+            approve_proposals: false,
+        };
+        let plain = toml_set(None, &l, path).unwrap();
+        assert!(!plain.contains("approval_mode"), "{plain}");
+
+        l.approve_proposals = true;
+        let approved = toml_set(Some(&plain), &l, path).unwrap();
+        let doc = approved.parse::<toml_edit::DocumentMut>().unwrap();
+        let tools = doc["mcp_servers"]["wrongmemory"]["tools"]
+            .as_table()
+            .unwrap();
+        let named: Vec<&str> = tools.iter().map(|(k, _)| k).collect();
+        assert_eq!(named, PROPOSAL_TOOLS, "{approved}");
+        for tool in PROPOSAL_TOOLS {
+            assert_eq!(tools[tool]["approval_mode"].as_str(), Some("approve"));
+        }
+        assert_eq!(
+            toml_set(Some(&approved), &l, path).unwrap(),
+            approved,
+            "idempotent"
+        );
+
+        // Dropping the flag removes the approvals; disconnect removes all of it.
+        l.approve_proposals = false;
+        assert_eq!(toml_set(Some(&approved), &l, path).unwrap(), plain);
+        assert_eq!(toml_remove(&approved, path).unwrap().trim(), "");
     }
 }

@@ -416,3 +416,90 @@ fn create_grant_doctor_and_revoke_with_real_daemon() {
     assert!(!stderr.contains("not running"), "{stderr}");
     e.ok(&["daemon", "stop"]);
 }
+
+/// Codex refuses tools that are not read-only in a non-interactive run, so a
+/// proposal needs `--approve-proposals`. It is Codex-only, and refused for a
+/// grant that could do more than propose; a refusal creates nothing.
+#[test]
+fn approve_proposals_is_codex_only_and_read_propose_only() {
+    let e = env();
+    let reg: Value = serde_json::from_str(&e.ok(&[
+        "--json",
+        "project",
+        "add",
+        e.project.to_str().unwrap(),
+        "--managed",
+    ]))
+    .unwrap();
+    let project = reg["project"]["projectId"].as_str().unwrap().to_string();
+    let grant_count = |e: &Env| -> usize {
+        let v: Value = serde_json::from_str(&e.ok(&["--json", "grants", "list"])).unwrap();
+        v["grants"].as_array().unwrap().len()
+    };
+
+    let claude = e.cmd(&[
+        "connect",
+        "claude-code",
+        "--project",
+        &project,
+        "--create-grant",
+        "--approve-proposals",
+    ]);
+    assert!(!claude.status.success());
+    assert!(!e.project.join(".mcp.json").exists());
+    assert_eq!(grant_count(&e), 0, "a refused connect created a grant");
+
+    let curator: Value = serde_json::from_str(&e.ok(&[
+        "--json",
+        "grants",
+        "create",
+        "--label",
+        "cur",
+        "--profile",
+        "curator",
+        "--project",
+        &project,
+    ]))
+    .unwrap();
+    let curator = curator["grant"]["grantId"].as_str().unwrap().to_string();
+    let refused = e.cmd(&[
+        "connect",
+        "codex",
+        "--project",
+        &project,
+        "--grant",
+        &curator,
+        "--approve-proposals",
+    ]);
+    assert!(!refused.status.success());
+    assert!(
+        String::from_utf8_lossy(&refused.stderr).contains("read-propose"),
+        "{}",
+        String::from_utf8_lossy(&refused.stderr)
+    );
+    let config = e.project.join(".codex").join("config.toml");
+    assert!(!config.exists());
+
+    e.ok(&[
+        "connect",
+        "codex",
+        "--project",
+        &project,
+        "--create-grant",
+        "--approve-proposals",
+    ]);
+    let doc: toml_edit::DocumentMut = std::fs::read_to_string(&config).unwrap().parse().unwrap();
+    for tool in ["memory_candidates", "memory_feedback"] {
+        assert_eq!(
+            doc["mcp_servers"]["wrongmemory"]["tools"][tool]["approval_mode"].as_str(),
+            Some("approve"),
+            "{doc}"
+        );
+    }
+    assert!(
+        doc["mcp_servers"]["wrongmemory"]["tools"]
+            .get("memory_search")
+            .is_none()
+    );
+    e.ok(&["daemon", "stop"]);
+}

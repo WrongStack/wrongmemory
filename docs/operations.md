@@ -113,6 +113,7 @@ Run `wrongmemory migrate inspect <store>` before adopting. It is read-only and p
 
 ```text
 wrongmemory connect <claude-code|codex|cursor|antigravity> --project <id> --create-grant [--scope project|user] [--dry-run] [--with-guidance]
+wrongmemory connect codex --project <id> --create-grant --approve-proposals
 wrongmemory connect print --project <id> --grant <grant-id> --format json|toml
 wrongmemory client doctor <client> --project <id>
 wrongmemory disconnect <client> --project <id> [--revoke]
@@ -122,6 +123,8 @@ wrongmemory grants list | grants revoke <grant-id>
 - Client configuration contains only the executable path, the project id, the grant id, and the data root when it is not the default (`--data-root` or `WRONGMEMORY_HOME`; the client starts the bridge from its own environment, which may not have that variable).
 - The grant secret stays in `<data-root>\grants\` and never leaves it.
 - The default grant profile is `read-propose`.
+- `--with-guidance` adds a short recall/propose rule to `CLAUDE.md` or `AGENTS.md`. In the WM-309 evaluation (`docs/evidence/wm-309-agent-eval-2026-11-03.md`), Codex without it never called a memory tool. With it, both Claude Code and Codex recalled more and proposed revisions.
+- Codex asks before every MCP tool that is not read-only, and `codex exec` refuses such a call instead of asking. Proposals therefore fail in non-interactive Codex runs unless approved. `--approve-proposals` (Codex only, read-propose grants only) writes `approval_mode = "approve"` for `memory_candidates` and `memory_feedback`. The daemon still limits the grant to listing, proposing and feedback.
 
 ### Optional loopback HTTP (WM-308)
 
