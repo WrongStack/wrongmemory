@@ -295,7 +295,7 @@ Findings from the M run:
 | WrongStack adapter (PR #433): `packages/sage` suite; real-daemon worktree test against the local 0.1.4 build | PASS 1,613/1,613; the real-daemon test fails without the binding |
 | WrongStack WebUI fix (PR #432): `webui-server` and `cli` suites | 3 failures, none caused by the change: `git-handlers` (link project) and `acp-leader-context` fail on clean `main`; `cli-dispatch-journeys` passes alone (timeout under load) |
 | WM-705 addendum with downloaded v0.1.3 (WebUI path, worktree) | see WM-705 |
-| WrongStack PRs #431, #432 and #433 after merging the current `main` (only generated reports conflicted) | CI on the PR heads: #431 and #433 every job green; #432 every required job green and `CI Gate` passed, one macOS plugin-guard job cancelled by the runner and re-run. All three are mergeable and wait for an admin merge. |
+| WrongStack PRs #431, #432 and #433 after merging the current `main` (only generated reports conflicted) | CI on the PR heads: #431 and #433 every job green; #432 every required job green and `CI Gate` passed, one macOS plugin-guard job cancelled by the runner, green on re-run. All three are mergeable and wait for an admin merge. |
 
 ## Verification run (2026-11-03, 0.1.3 fixes from WM-705)
 
