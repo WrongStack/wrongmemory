@@ -19,6 +19,20 @@
 //! and contradicted records must never be returned. There is no quality
 //! floor, because a floor set from these cases would stop them being held
 //! out. Set `WM_HELDOUT_OUT=<file>` to write the report as JSON.
+//!
+//! Set `WM_HELDOUT_BACKGROUND=<sage.db>` to add the corpus to a copy of a
+//! large store instead of an empty one, to see how ranking holds up at scale.
+//! Pass a consistent backup, never a live store: the harness writes to its
+//! copy only. Background records are not in the ground truth, so one that
+//! answers a task as well as the corpus memory pushes it down and counts
+//! against recall; the result is a lower bound, and precision is not
+//! meaningful in this mode. `WM_HELDOUT_DUMP=<file>` writes each task's
+//! lexical and path rankings with record excerpts, for reading what outranks
+//! the corpus. With a background store it holds that store's text: keep the
+//! file local. `WM_HELDOUT_AS_OF=<file>` maps each task's commit to its UTC
+//! commit time; background records created after it are dropped from that
+//! task's rankings, so a task sees roughly the store as it was then (records
+//! deleted or retired since are not restored).
 
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -142,6 +156,30 @@ fn ids(hits: &[SearchHit]) -> Vec<String> {
     hits.iter().map(|h| h.memory.id.clone()).collect()
 }
 
+/// One ranking for `WM_HELDOUT_DUMP`.
+fn dump_hits(
+    hits: &[SearchHit],
+    key_of: &HashMap<&String, &String>,
+    required: &HashSet<String>,
+) -> Value {
+    hits.iter()
+        .map(|h| {
+            let m = &h.memory;
+            json!({
+                "id": m.id,
+                "corpusKey": key_of.get(&m.id),
+                "required": required.contains(&m.id),
+                "kind": m.kind,
+                "status": m.status,
+                "createdAt": m.created_at,
+                "sources": m.sources.iter().map(|s| s.kind.clone()).collect::<Vec<_>>(),
+                "anchors": m.anchors.iter().filter_map(|a| a.path.clone()).collect::<Vec<_>>(),
+                "text": m.text.chars().take(240).collect::<String>(),
+            })
+        })
+        .collect()
+}
+
 #[test]
 fn heldout_real_task_recall_is_measured_without_leaks() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -149,8 +187,17 @@ fn heldout_real_task_recall_is_measured_without_leaks() {
     let corpus: Value = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
     let tmp = tempfile::tempdir().unwrap();
     let db = tmp.path().join("sage.db");
-    SageStore::create_managed(&db, "2026-11-03T00:00:00.000Z").unwrap();
+    let background = std::env::var_os("WM_HELDOUT_BACKGROUND");
+    match &background {
+        Some(src) => {
+            std::fs::copy(src, &db).unwrap();
+        }
+        None => SageStore::create_managed(&db, "2026-11-03T00:00:00.000Z").unwrap(),
+    }
     let (mut store, _) = SageStore::open(&db, true, None, "2026-11-03T00:00:00.000Z").unwrap();
+    let background_stats = background
+        .is_some()
+        .then(|| store.stats(&Viewer::default()).unwrap()["byStatus"].clone());
 
     let mut second = 0;
     let mut now = || {
@@ -208,31 +255,66 @@ fn heldout_real_task_recall_is_measured_without_leaks() {
         .map(|c| (c, Channel::default()))
         .collect();
     let mut leaks = Vec::new();
+    let key_of: HashMap<&String, &String> = by_key.iter().map(|(k, v)| (v, k)).collect();
+    let mut dump = Vec::new();
+    let as_of: Option<Value> = std::env::var("WM_HELDOUT_AS_OF")
+        .ok()
+        .map(|f| serde_json::from_str(&std::fs::read_to_string(f).unwrap()).unwrap());
+    // With a cutoff, fetch more so that dropping later records still leaves
+    // a full budget.
+    let fetch = if as_of.is_some() {
+        wrongmemory_contracts::MAX_PAGE_SIZE
+    } else {
+        BUDGET
+    };
     for task in tasks {
         let text = task["task"].as_str().unwrap();
         let required: HashSet<String> = strings(&task["required"])
             .iter()
             .map(|k| by_key[k].clone())
             .collect();
-        let lexical = ids(&store
-            .search(text, BUDGET, None, None, &viewer)
-            .unwrap()
-            .hits);
-        let hybrid = ids(&store
-            .hybrid_search(&mut cache, &provider, text, BUDGET, None, None, &viewer)
-            .unwrap()
-            .hits);
-        let path = ids(&store
-            .retrieve_for_paths(
-                &strings(&task["paths"]),
-                &PathOptions {
-                    limit: Some(BUDGET),
-                    ..Default::default()
-                },
-                &viewer,
-            )
-            .unwrap()
-            .hits);
+        // As of the commit: drop background records written after it.
+        let cutoff = as_of
+            .as_ref()
+            .map(|m| m[task["commit"].as_str().unwrap()].as_str().unwrap());
+        let known = |hits: Vec<SearchHit>| -> Vec<SearchHit> {
+            hits.into_iter()
+                .filter(|h| {
+                    key_of.contains_key(&h.memory.id)
+                        || cutoff.is_none_or(|c| h.memory.created_at.as_str() <= c)
+                })
+                .take(BUDGET)
+                .collect()
+        };
+        let lexical_hits = known(store.search(text, fetch, None, None, &viewer).unwrap().hits);
+        let lexical = ids(&lexical_hits);
+        let hybrid = ids(&known(
+            store
+                .hybrid_search(&mut cache, &provider, text, fetch, None, None, &viewer)
+                .unwrap()
+                .hits,
+        ));
+        let path_hits = known(
+            store
+                .retrieve_for_paths(
+                    &strings(&task["paths"]),
+                    &PathOptions {
+                        limit: Some(fetch),
+                        ..Default::default()
+                    },
+                    &viewer,
+                )
+                .unwrap()
+                .hits,
+        );
+        let path = ids(&path_hits);
+        dump.push(json!({
+            "commit": task["commit"],
+            "task": text.chars().take(300).collect::<String>(),
+            "required": task["required"],
+            "lexical": dump_hits(&lexical_hits, &key_of, &required),
+            "path": dump_hits(&path_hits, &key_of, &required),
+        }));
         let mut recipe: Vec<String> = lexical.iter().take(5).cloned().collect();
         for id in path.iter().take(5) {
             if !recipe.contains(id) {
@@ -258,11 +340,15 @@ fn heldout_real_task_recall_is_measured_without_leaks() {
             "requiredLinks": tasks.iter().map(|t| strings(&t["required"]).len()).sum::<usize>(),
             "mergedOnWrite": merged,
         },
+        "background": background_stats.map(|s| json!({"recordsByStatus": s, "asOfCommit": as_of.is_some()})),
         "budget": BUDGET,
         "channels": channels.iter().map(|(n, c)| (n.to_string(), c.report(tasks.len()))).collect::<Map<_, _>>(),
         "leaks": leaks,
     });
     println!("{}", serde_json::to_string_pretty(&report).unwrap());
+    if let Ok(out) = std::env::var("WM_HELDOUT_DUMP") {
+        std::fs::write(out, serde_json::to_string_pretty(&dump).unwrap()).unwrap();
+    }
     if let Ok(out) = std::env::var("WM_HELDOUT_OUT") {
         std::fs::write(out, serde_json::to_string_pretty(&report).unwrap() + "\n").unwrap();
     }
