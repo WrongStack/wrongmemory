@@ -1,0 +1,42 @@
+# WM-706: native 1.0 evidence matrix (2026-11-03)
+
+This maps every gate of the plan's release evidence matrix (`docs/plan/validation-and-operations.md` §13) to its evidence. It uses the plan's labels: PASS, FAIL, NOT RUN, UNSUPPORTED. "Not claimed" marks an optional increment (L4) this release does not claim. Details and commands live in `docs/status.md` (by task id) and in `docs/evidence/wm-705-demo-2026-11-03.md`.
+
+**Source.** `main` with the 0.1.4 changes (checkout evidence, WM-201). The last attested artifacts are v0.1.3 (draft, `f80bfe7`). The baseline is WrongStack `222d23a`, storage profile `sage-sqlite-v5-baseline`.
+
+## Verdict
+
+**Native 1.0 (L3) cannot be claimed yet.** The plan's acceptance for WM-706 is "no required NOT RUN or hidden unsupported behavior". These items keep it open:
+
+| Item | Gate | Why it is open | Who can close it |
+|---|---|---|---|
+| WrongStack changes merged and released | WrongStack integration | PRs WrongStack/WrongStack#431 (worktree back-link), #432 (WebUI ranked search) and #433 (checkout binding) are open. Merging needs an admin, and the agent's permission policy refused the admin merge. Released WrongStack 1.4.0 lacks all three. | Repository admin |
+| A host session in a linked worktree with checkout binding | WrongStack integration | The daemon side and the adapter are tested, including a real-daemon adapter test. The full host run needs a WrongStack build with #433. | After #433 |
+| Code signing | Artifacts | Binaries are unsigned; no certificate is available. Status: **unsigned**, with SLSA provenance on every asset. | Owner (certificate) |
+| Published release | Artifacts | v0.1.1–v0.1.3 are drafts. `wstack sage service install` without `--release` installs the latest published release, which is still v0.1.0. The agent's publish attempts were refused. | Repository owner |
+| External agent workflow evaluation (WM-309) | MCP | Only transport and tool calls were exercised. Whether agents use recall and proposals well is not measured. | Later work |
+| Held-out recall on real tasks | Quality/performance | Only a hand-written corpus (40 memories, recall@5 0.975) and synthetic benchmarks were run. | Later work |
+| Multi-hour soak | Quality/performance | Only a 5-minute soak (260,142 operations, 0 errors) was run. | Later work |
+
+## Matrix
+
+| Gate | Evidence | Result |
+|---|---|---|
+| **Source/profile identity** | The release tag names its commit, and the workflow builds from the tag. The storage profile `sage-sqlite-v5-baseline` and its DDL fingerprint are pinned (`managed_store_ddl_matches_oracle_fingerprint`). The MCP tool inventory and contract parity are checked: `check-contract-parity.ts`, 55 methods and 23 error codes. | PASS |
+| **Build** | Toolchain 1.93.0 is pinned, every dependency is exact, and CI uses `--locked`. The license inventory covers 143 crates, all permissive; CI fails on an unknown one. | PASS |
+| **Compatibility** | Oracle replays exist for every mutation scenario, and search order is identical to the oracle (WM-500..511). The surface matrix shows 46/46 baseline project-server operations COVERED. Deliberate deviations are listed in `docs/status.md`, for example verify on CR files, `stats.edges`, and legacy bulk operations limited to visible rows. HQ sync is ported and tested; a live HQ round trip is NOT RUN (WM-408). | PASS with listed deviations; live HQ NOT RUN |
+| **Isolation** | `tests/adversarial.rs` checks project substitution on every project-scoped method and session isolation across search, id, path, graph, counts, cursors, candidates and events. Hidden and absent records give the same reply. The WM-603 review fixed four leaks. **Open:** a directory node created only by a hidden memory's anchor can still appear by name in `memory.graph`. WebUI: session rows are absent from every WebUI memory message in `wrongmemory` mode, and a private id answers like a nonexistent one (WM-705 addendum). | PASS with one open gap (graph directory name) |
+| **WrongStack integration** | WrongStack 1.4.0 ships the adapter. Real host sessions passed in the WM-705 run: anchored records, recall, candidate review, maintenance scheduling, no competing owner, and handoff and rollback. Checkout evidence for worktrees is in the daemon and adapter #433, both tested. A full host session exercising every capture hook (WM-404) is NOT RUN. The ranked WebUI search is broken in released WrongStack in both modes; the fix is #432. | PARTIAL: see the open items |
+| **MCP** | Named clients, with versions: Claude Code 2.1.316/2.1.317, Codex 0.165.0/0.166.0, Antigravity 1.4.12, MCP Inspector 2.10.1. Each ran headless with temporary configs. Denied actions are enforced by the daemon, and WrongStack was closed during the client steps (WM-705 step 4). Loopback HTTP was checked with the Inspector only; other HTTP clients are NOT RUN. Cursor: a preset exists but has never been run, so it is **not claimed** (UNSUPPORTED until tested). WM-309 is NOT RUN. | PASS for the named clients; Cursor UNSUPPORTED; WM-309 NOT RUN |
+| **Resilience** | Debug-build fault points cover the crash after commit and before reply, the failure before commit, and a crash during accept. Receipt replay survives a restart. Revocation takes effect on the next request. Owner conflicts and a stale endpoint are recovered, and disk-full is typed (WM-208, WM-602). With the downloaded release binary, a hard kill followed by an idempotent retry returned the original id (WM-705 step 9). The exact after-commit window cannot be hit in a release binary, by design: fault injection is compiled out. | PASS (step 9 PARTIAL by design) |
+| **Quality/performance** | Synthetic benchmarks (WM-010) and a 5-minute soak across 40 projects with 8 clients (WM-604). On the hand-written corpus, recall@1/@5 is 0.975 and MRR 0.979. On a consistent copy of the live store (16,548 memories, release build), search takes 1–14 ms and stats 156 ms. Held-out real-task recall and multi-hour soaks are NOT RUN. | PARTIAL |
+| **Packaging** | Fresh install, autostart, update with `.old` rollback, an interrupted install rolled back, and uninstall (WM-700..702). The upgrade smoke passed 11/11. Install from inside WrongStack (`wstack sage service install`) passed with downloaded v0.1.2 and v0.1.3 assets. The live install was upgraded in place to 0.1.3 (`install --stop-daemon`). | PASS (Windows x64) |
+| **Artifacts** | `SHA256SUMS` and SLSA provenance v1 for every asset, checked with `gh attestation verify` for v0.1.2 and v0.1.3. Native smoke ran on the downloaded binaries (WM-705 and its addendum). Signing is NOT RUN (unsigned). The releases are drafts. | PASS for checksums and provenance; signing NOT RUN |
+| **Live proof** | The user's real WrongStack store (16,548 memories) was handed to WrongMemory on 2026-11-02 and is served by it, now on 0.1.3. In the WM-705 run, a pre-existing SAGE store created by local SAGE was adopted. WrongStack host sessions and Claude Code, Codex and Antigravity then used it. An external client on the user's own store is NOT RUN; that is the user's choice. | PASS (WrongStack on the live store; WrongStack plus external clients on an adopted pre-existing store) |
+| **Documentation** | `docs/operations.md` and `docs/runbooks.md` cover install, update, rollback, uninstall, client connect, worktrees and recovery. The commands were exercised in WM-701, WM-705 and the live handoff. | PASS |
+
+## Not claimed (optional increments, L4)
+
+- **Linux and macOS packages (WM-802).** The core is portable, but Unix endpoints and packaging are not built. The only check so far is the owner-guard tests passing on Linux (WSL).
+- **Desktop or tray GUI (WM-800).** A read-only browser dashboard exists (`wrongmemory ui`). Review actions and a desktop app are not built.
+- **Neural embedding model (WM-805).** The built-in `ngram-hash` provider is the only semantic provider.
