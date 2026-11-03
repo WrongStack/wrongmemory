@@ -19,6 +19,12 @@
 //! non-manual stale memory with `freshness: 1`, and a confirmation without a
 //! status change only stamps `lastVerifiedAt` (no revision bump). A row whose
 //! anchors changed since it was read is left alone.
+//!
+//! Checkout evidence (WM-INV-14): linked worktrees share one memory store but
+//! not their files. A caller bound to a linked worktree gets its anchors
+//! checked against that worktree, each result labeled with the checkout, and
+//! nothing is reconciled: a file missing on one branch is not evidence that
+//! the shared memory is stale.
 
 use std::path::{Path, PathBuf};
 
@@ -565,10 +571,13 @@ struct Update {
 
 impl SageStore {
     /// `verify(memoryId?)`: every visible non-deleted memory, or one.
+    /// `checkout` is a linked worktree the caller is bound to: evidence comes
+    /// from it and is reported only (see the module notes).
     pub fn verify(
         &mut self,
         memory_id: Option<&str>,
         ctx: &MutationCtx,
+        checkout: Option<&Path>,
     ) -> StoreResult<Vec<Value>> {
         let viewer = Viewer {
             session_id: ctx.session_id.clone(),
@@ -593,17 +602,21 @@ impl SageStore {
                     .collect()
             }
         };
-        self.reconcile(rows, ctx)
+        self.reconcile(rows, ctx, checkout)
     }
 
     /// `verifyForPaths(paths)`: memories whose file or symbol anchors point
-    /// at one of `paths` (outside-root paths are ignored).
+    /// at one of `paths` (paths outside the checked tree are ignored).
     pub fn verify_for_paths(
         &mut self,
         paths: &[String],
         ctx: &MutationCtx,
+        checkout: Option<&Path>,
     ) -> StoreResult<Vec<Value>> {
-        let Some(root) = self.project_root.clone() else {
+        let Some(root) = checkout
+            .map(Path::to_path_buf)
+            .or_else(|| self.project_root.clone())
+        else {
             return Ok(vec![]);
         };
         let mut rels: Vec<String> = Vec::new();
@@ -658,12 +671,21 @@ impl SageStore {
                 rows.push(Value::Object(m).to_string());
             }
         }
-        self.reconcile(rows, ctx)
+        self.reconcile(rows, ctx, checkout)
     }
 
-    /// `reconcileVerifiedMemories`.
-    fn reconcile(&mut self, rows: Vec<String>, ctx: &MutationCtx) -> StoreResult<Vec<Value>> {
-        let Some(root) = self.project_root.clone() else {
+    /// `reconcileVerifiedMemories`. With a linked-worktree `checkout`, only
+    /// the labeled results are returned; the shared rows are not touched.
+    fn reconcile(
+        &mut self,
+        rows: Vec<String>,
+        ctx: &MutationCtx,
+        checkout: Option<&Path>,
+    ) -> StoreResult<Vec<Value>> {
+        let Some(root) = checkout
+            .map(Path::to_path_buf)
+            .or_else(|| self.project_root.clone())
+        else {
             return Ok(vec![]);
         };
         let real_root = std::fs::canonicalize(&root)
@@ -677,7 +699,15 @@ impl SageStore {
                 continue;
             };
             let raw: Value = serde_json::from_str(&data).unwrap_or(Value::Null);
-            let r = verify_memory(&root, &real_root, &raw, &m, &at);
+            let mut r = verify_memory(&root, &real_root, &raw, &m, &at);
+            if checkout.is_some() {
+                r["checkout"] = json!({
+                    "root": root.display().to_string(),
+                    "kind": wrongmemory_contracts::CHECKOUT_LINKED_WORKTREE,
+                });
+                results.push(r);
+                continue;
+            }
             let status = r["status"].as_str().unwrap_or("unknown");
             let base = |status, freshness| Update {
                 id: m.id.clone(),

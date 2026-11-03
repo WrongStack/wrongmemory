@@ -9,8 +9,8 @@ use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
-use wrongmemory_contracts::method;
-use wrongmemory_ipc::{Client, DataRoot};
+use wrongmemory_contracts::{ErrorCode, method};
+use wrongmemory_ipc::{CallError, Client, DataRoot};
 
 fn git(dir: &Path, args: &[&str]) {
     let ok = Command::new("git")
@@ -216,6 +216,151 @@ async fn managed_registration_from_a_linked_worktree_resolves_to_the_main_checko
             .ends_with("planted"),
         "{own}"
     );
+
+    stop_daemon(child, c).await;
+}
+
+async fn call_err(c: &mut Client, m: &str, pid: &str, params: Value) -> ErrorCode {
+    match c.call_raw(m, Some(pid), params, None).await {
+        Err(CallError::Remote(e)) => e.code,
+        other => panic!("{m}: expected a typed error, got {other:?}"),
+    }
+}
+
+async fn ok(c: &mut Client, m: &str, pid: Option<&str>, params: Value) -> Value {
+    c.call_raw(m, pid, params, None)
+        .await
+        .unwrap_or_else(|e| panic!("{m}: {e}"))
+}
+
+/// WM-INV-14: linked worktrees share memory, not evidence. A host bound to
+/// its linked worktree reads path anchors with its own absolute paths, and
+/// verification there is reported for that worktree only; the main checkout
+/// keeps the shared state.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_bound_linked_worktree_gets_its_own_evidence_without_changing_shared_state() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (main, wt) = repo_with_worktree(tmp.path());
+    // The anchored file exists in the main checkout; the worktree renamed it.
+    std::fs::create_dir_all(main.join("src")).unwrap();
+    std::fs::write(main.join("src/config.ts"), "export const port = 8080;\n").unwrap();
+    std::fs::create_dir_all(wt.join("src")).unwrap();
+    std::fs::write(wt.join("src/settings.ts"), "export const port = 8080;\n").unwrap();
+    let home = tmp.path().join("home");
+    let (child, mut c) = start_daemon(&home).await;
+    let pid = register(&mut c, &main, "managed").await.unwrap()["project"]["projectId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let p = Some(pid.as_str());
+    let id = ok(
+        &mut c,
+        method::MEMORY_REMEMBER,
+        p,
+        json!({"text": "The default port is 8080 in src/config.ts.", "kind": "fact",
+               "anchors": [{"type": "file", "path": "src/config.ts"}]}),
+    )
+    .await["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let wt_config = wt.join("src").join("config.ts").display().to_string();
+    let hits = |v: &Value| -> Vec<String> {
+        v["hits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|h| h["memory"]["id"].as_str().unwrap().to_string())
+            .collect()
+    };
+
+    // Unbound, the worktree's absolute path is outside the project root.
+    let unbound = ok(
+        &mut c,
+        method::MEMORY_FOR_PATH,
+        p,
+        json!({"path": wt_config}),
+    )
+    .await;
+    assert!(hits(&unbound).is_empty(), "{unbound}");
+
+    let root = DataRoot::resolve(Some(&home)).unwrap();
+    let mut w = Client::connect_host(&root, "worktree-host").await.unwrap();
+    let wt_root = json!({"root": wt.display().to_string()});
+    let bound = ok(&mut w, method::PROJECT_BIND_CHECKOUT, p, wt_root.clone()).await;
+    assert_eq!(bound["checkout"]["kind"], "linkedWorktree", "{bound}");
+    assert!(
+        bound["checkout"]["root"]
+            .as_str()
+            .unwrap()
+            .to_lowercase()
+            .ends_with("linked"),
+        "{bound}"
+    );
+
+    // Bound, the same absolute path is the shared project path.
+    let found = ok(
+        &mut w,
+        method::MEMORY_FOR_PATH,
+        p,
+        json!({"path": wt_config}),
+    )
+    .await;
+    assert_eq!(hits(&found), vec![id.clone()], "{found}");
+
+    // Evidence from the worktree: stale there, labeled, and not persisted.
+    let before = ok(&mut c, method::MEMORY_GET, p, json!({"id": id})).await;
+    for params in [json!({"id": id}), json!({"paths": [wt_config]})] {
+        let r = ok(&mut w, method::MEMORY_VERIFY, p, params.clone()).await;
+        let results = r["results"].as_array().unwrap();
+        assert_eq!(results.len(), 1, "{params}: {r}");
+        assert_eq!(results[0]["memoryId"], id.as_str());
+        assert_eq!(results[0]["status"], "stale", "{params}: {r}");
+        assert_eq!(results[0]["checkout"]["kind"], "linkedWorktree", "{r}");
+    }
+    let after = ok(&mut c, method::MEMORY_GET, p, json!({"id": id})).await;
+    assert_eq!(before, after, "worktree evidence changed the shared record");
+
+    // The main checkout's verification is the shared, persisted one.
+    let r = ok(&mut c, method::MEMORY_VERIFY, p, json!({"id": id})).await;
+    assert_eq!(r["results"][0]["status"], "verified", "{r}");
+    assert!(r["results"][0].get("checkout").is_none(), "{r}");
+    let shared = ok(&mut c, method::MEMORY_GET, p, json!({"id": id})).await;
+    assert_ne!(shared, after, "main checkout evidence was not recorded");
+
+    // Binding the main checkout clears the worktree binding.
+    let main_root = json!({"root": main.display().to_string()});
+    let to_main = ok(&mut w, method::PROJECT_BIND_CHECKOUT, p, main_root).await;
+    assert_eq!(to_main["checkout"]["kind"], "main", "{to_main}");
+    let r = ok(&mut w, method::MEMORY_VERIFY, p, json!({"id": id})).await;
+    assert_eq!(r["results"][0]["status"], "verified", "{r}");
+    assert!(r["results"][0].get("checkout").is_none(), "{r}");
+
+    // Refused: an unrelated directory, a planted `.git` file naming the real
+    // worktree's entry, and a relative path.
+    let other = tmp.path().join("other");
+    std::fs::create_dir_all(&other).unwrap();
+    let planted = tmp.path().join("planted");
+    std::fs::create_dir_all(&planted).unwrap();
+    std::fs::copy(wt.join(".git"), planted.join(".git")).unwrap();
+    for dir in [&other, &planted] {
+        let params = json!({"root": dir.display().to_string()});
+        let code = call_err(&mut w, method::PROJECT_BIND_CHECKOUT, &pid, params).await;
+        assert_eq!(code, ErrorCode::Forbidden, "{}", dir.display());
+    }
+    let relative = json!({"root": "linked"});
+    let code = call_err(&mut w, method::PROJECT_BIND_CHECKOUT, &pid, relative).await;
+    assert_eq!(code, ErrorCode::InvalidRequest);
+
+    // A grant cannot claim a checkout, even with the curator profile.
+    let grant = json!({"label": "curator", "profile": "curator", "projects": [pid]});
+    let gid = ok(&mut c, method::GRANT_CREATE, None, grant).await["grant"]["grantId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let mut g = Client::connect_grant(&root, &gid, "agent").await.unwrap();
+    let code = call_err(&mut g, method::PROJECT_BIND_CHECKOUT, &pid, wt_root).await;
+    assert_eq!(code, ErrorCode::Forbidden);
 
     stop_daemon(child, c).await;
 }

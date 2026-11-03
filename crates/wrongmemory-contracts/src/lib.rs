@@ -363,6 +363,8 @@ pub mod method {
     pub const PROJECT_GET: &str = "project.get";
     pub const PROJECT_DETACH: &str = "project.detach";
     pub const PROJECT_EXPORT: &str = "project.export";
+    /// Host only: the actual checkout this connection works in (WM-INV-14).
+    pub const PROJECT_BIND_CHECKOUT: &str = "project.bindCheckout";
     pub const GRANT_CREATE: &str = "grant.create";
     pub const GRANT_LIST: &str = "grant.list";
     pub const GRANT_REVOKE: &str = "grant.revoke";
@@ -421,6 +423,7 @@ pub mod method {
         PROJECT_GET,
         PROJECT_DETACH,
         PROJECT_EXPORT,
+        PROJECT_BIND_CHECKOUT,
         GRANT_CREATE,
         GRANT_LIST,
         GRANT_REVOKE,
@@ -543,6 +546,31 @@ pub struct RegisterProjectParams {
     #[serde(default)]
     pub force_owner: bool,
 }
+
+/// `project.bindCheckout`: the checkout a host connection actually works in.
+/// Linked worktrees share the main checkout's memory, but their files differ,
+/// so path inputs and verification evidence must refer to the caller's own
+/// checkout (WM-INV-14). The daemon accepts the project's root or a linked
+/// Git worktree whose two-sided link (`.git` file and the admin directory's
+/// `gitdir` back-link) resolves to it; any other directory is refused.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BindCheckoutParams {
+    pub root: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CheckoutInfo {
+    pub root: String,
+    /// [`CHECKOUT_MAIN`] or [`CHECKOUT_LINKED_WORKTREE`].
+    pub kind: String,
+}
+
+/// The project's own root: evidence is the shared, persisted state.
+pub const CHECKOUT_MAIN: &str = "main";
+/// A linked worktree: evidence is reported for it and never persisted.
+pub const CHECKOUT_LINKED_WORKTREE: &str = "linkedWorktree";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

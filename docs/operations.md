@@ -42,6 +42,9 @@ wstack sage service status
   - Run `use wrongmemory` in a project to back up and hand over its existing store.
   - Other projects are registered the first time they are used.
   - A linked Git worktree uses its main checkout's project and store, as local SAGE does.
+  - Memory is shared across worktrees; file evidence is not. A host session in a linked worktree binds its connection to that worktree (`project.bindCheckout`, from WrongMemory 0.1.4 and a WrongStack build that sends it). The daemon accepts only the project's own root or a worktree whose Git link checks out from both sides, and only from the host, never from a grant.
+  - Once bound, absolute paths inside the worktree resolve to the shared project paths. `memory_verify` then checks the worktree's own files and labels each result `checkout: {kind: "linkedWorktree", root}`. Those results are reported, never written back: only the main checkout's verification (and scheduled hygiene) changes a memory's status or `lastVerifiedAt`. A file renamed on a branch therefore does not mark the shared memory stale.
+  - External MCP clients always verify against the main checkout.
 - `use local` detaches the project. A later `use wrongmemory` registers it again under a **new project id**: reconnect external clients (`wrongmemory connect … --create-grant`), since their entries carry the old id.
 
 ## Update and rollback

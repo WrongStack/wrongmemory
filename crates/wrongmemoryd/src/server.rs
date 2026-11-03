@@ -25,6 +25,9 @@ use wrongmemory_contracts::{
 use wrongmemory_contracts::{
     Admission, EventsSinceParams, EventsSinceResult, JobInfo, MaintenanceConfigureParams, StoreKind,
 };
+use wrongmemory_contracts::{
+    BindCheckoutParams, CHECKOUT_LINKED_WORKTREE, CHECKOUT_MAIN, CheckoutInfo,
+};
 use wrongmemory_ipc::endpoint::{generate_token, token_eq};
 use wrongmemory_ipc::frame::{FrameError, read_frame, write_frame};
 use wrongmemory_ipc::{DataRoot, Discovery};
@@ -116,6 +119,64 @@ struct Conn {
     principal: Principal,
     /// Daemon-issued or trusted-host-bound session (WM-INV-03).
     session: Option<String>,
+    /// Host-bound linked worktree (`project.bindCheckout`, WM-INV-14). Unset
+    /// for the project's own root and for grants: evidence is the shared one.
+    checkout: Option<BoundCheckout>,
+}
+
+struct BoundCheckout {
+    project_id: String,
+    root: std::path::PathBuf,
+}
+
+impl Conn {
+    /// The linked worktree this connection is bound to for `project_id`.
+    fn checkout_for(&self, project_id: &str) -> Option<&std::path::Path> {
+        self.checkout
+            .as_ref()
+            .filter(|c| c.project_id == project_id)
+            .map(|c| c.root.as_path())
+    }
+}
+
+/// Absolute paths inside a bound linked worktree are rewritten relative to it,
+/// so the shared store reads them as the same project path; the main
+/// checkout's root would reject them as outside the project. Relative paths
+/// are already checkout-independent, and other absolute paths are left as
+/// they are (the store applies its own containment rules).
+fn rebase_checkout_paths(m: &str, params: &mut Value, root: &std::path::Path) {
+    let rebase = |v: &mut Value| {
+        if let Some(s) = v.as_str()
+            && std::path::Path::new(s).is_absolute()
+            && let Ok(rel) = wrongmemory_storage::paths::normalize_project_path(root, s)
+        {
+            *v = Value::String(rel);
+        }
+    };
+    let each = |list: Option<&mut Value>| {
+        if let Some(items) = list.and_then(Value::as_array_mut) {
+            items.iter_mut().for_each(rebase);
+        }
+    };
+    match m {
+        method::MEMORY_FOR_PATH | method::MEMORY_FOR_FILE => {
+            if let Some(p) = params.get_mut("path") {
+                rebase(p);
+            }
+        }
+        method::MEMORY_VERIFY => each(params.get_mut("paths")),
+        method::MEMORY_UNIFIED_SEARCH => each(params.pointer_mut("/query/paths")),
+        method::MEMORY_REMEMBER | method::MEMORY_UPDATE | method::CANDIDATE_PROPOSE => {
+            if let Some(anchors) = params.get_mut("anchors").and_then(Value::as_array_mut) {
+                for a in anchors {
+                    if let Some(p) = a.get_mut("path") {
+                        rebase(p);
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
 }
 
 fn err(code: ErrorCode, msg: impl Into<String>) -> ErrorBody {
@@ -475,6 +536,7 @@ where
         connection_id: format!("c_{}", uuid::Uuid::new_v4().simple()),
         session: principal.grant.as_ref().map(|_| new_session_id()),
         principal,
+        checkout: None,
     };
     let mut hello = shared.hello(&state.principal);
     hello.connection_id = state.connection_id.clone();
@@ -660,6 +722,8 @@ fn required_action(m: &str) -> Option<Action> {
         | method::PROJECT_REGISTER
         | method::PROJECT_DETACH
         | method::PROJECT_EXPORT
+        // A grant cannot claim a checkout; its evidence is the shared one.
+        | method::PROJECT_BIND_CHECKOUT
         // Store-wide report / audit trail across every session: host only.
         | method::MEMORY_DOCTOR
         | method::MEMORY_AUDIT
@@ -857,6 +921,7 @@ async fn dispatch_inner(
     }
 
     let project_scoped = req.method == method::PROJECT_GET
+        || req.method == method::PROJECT_BIND_CHECKOUT
         || req.method.starts_with("memory.")
         || req.method.starts_with("candidate.")
         || req.method.starts_with("maintenance.")
@@ -878,6 +943,10 @@ async fn dispatch_inner(
     } else {
         None
     };
+    let mut req = req;
+    if let Some(root) = project_id.as_deref().and_then(|id| state.checkout_for(id)) {
+        rebase_checkout_paths(&req.method, &mut req.params, root);
+    }
 
     match req.method.as_str() {
         method::DAEMON_HEALTH => {
@@ -942,6 +1011,35 @@ async fn dispatch_inner(
                 .await?
                 .ok_or_else(|| err(ErrorCode::ProjectNotFound, "project not found"))?;
             to_value(p)
+        }
+        method::PROJECT_BIND_CHECKOUT => {
+            let p: BindCheckoutParams = parse(req.params)?;
+            let id = project_id.expect("scoped");
+            let lookup = id.clone();
+            let (project_root, linked) = shared
+                .blocking(move |s| {
+                    let project = s
+                        .reg(|r| r.get_project(&lookup))?
+                        .ok_or_else(|| err(ErrorCode::ProjectNotFound, "project not found"))?;
+                    let linked = projects::resolve_checkout(&project.root, &p.root)?;
+                    Ok((project.root, linked))
+                })
+                .await?;
+            let info = match &linked {
+                Some(root) => CheckoutInfo {
+                    root: root.display().to_string(),
+                    kind: CHECKOUT_LINKED_WORKTREE.into(),
+                },
+                None => CheckoutInfo {
+                    root: project_root,
+                    kind: CHECKOUT_MAIN.into(),
+                },
+            };
+            state.checkout = linked.map(|root| BoundCheckout {
+                project_id: id,
+                root,
+            });
+            to_value(json!({ "checkout": info }))
         }
         method::PROJECT_DETACH => {
             let id: String = parse::<Value>(req.params)?
@@ -1223,6 +1321,7 @@ async fn dispatch_inner(
                 .as_ref()
                 .is_none_or(|g| g.profile.allows(Action::Curate));
             let pid = project_id.expect("scoped");
+            let checkout = state.checkout_for(&pid).map(std::path::Path::to_path_buf);
             let m = req.method.clone();
             let params = obj(req.params)?;
             shared.inflight.fetch_add(1, Ordering::SeqCst);
@@ -1388,11 +1487,11 @@ async fn dispatch_inner(
                                         "at most 1000 paths per call",
                                     ));
                                 }
-                                store.verify_for_paths(&paths, &ctx)?
+                                store.verify_for_paths(&paths, &ctx, checkout.as_deref())?
                             }
                             None => {
                                 let id = params.get("id").and_then(Value::as_str);
-                                store.verify(id, &ctx)?
+                                store.verify(id, &ctx, checkout.as_deref())?
                             }
                         };
                         Ok(json!({ "results": results }))

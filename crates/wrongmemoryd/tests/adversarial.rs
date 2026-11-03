@@ -240,6 +240,7 @@ async fn grants_cannot_cross_projects_or_sessions() {
     // ── Project substitution on every project-scoped method ──
     let scoped = [
         method::PROJECT_GET,
+        method::PROJECT_BIND_CHECKOUT,
         method::MEMORY_SEARCH,
         method::MEMORY_GET,
         method::MEMORY_FOR_PATH,

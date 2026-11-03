@@ -451,6 +451,7 @@ mod tests {
             method::PROJECT_REGISTER,
             method::PROJECT_DETACH,
             method::PROJECT_EXPORT,
+            method::PROJECT_BIND_CHECKOUT,
             method::GRANT_CREATE,
             method::GRANT_REVOKE,
             method::MEMORY_REMEMBER,

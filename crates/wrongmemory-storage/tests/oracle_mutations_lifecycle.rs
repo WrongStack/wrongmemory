@@ -974,7 +974,7 @@ fn verify_scenario_matches_oracle() {
             "dump" => None,
             "verify" => {
                 let id = input["id"].as_str().map(|x| r.real(x));
-                Some(r.store.verify(id.as_deref(), &c).unwrap())
+                Some(r.store.verify(id.as_deref(), &c, None).unwrap())
             }
             "verifyForPaths" => {
                 let paths: Vec<String> = input["paths"]
@@ -983,7 +983,7 @@ fn verify_scenario_matches_oracle() {
                     .iter()
                     .map(|p| p.as_str().unwrap().to_string())
                     .collect();
-                Some(r.store.verify_for_paths(&paths, &c).unwrap())
+                Some(r.store.verify_for_paths(&paths, &c, None).unwrap())
             }
             "updateSage" => {
                 let id = r.real(input["id"].as_str().unwrap());

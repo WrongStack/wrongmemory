@@ -160,6 +160,35 @@ pub fn canonical_dir(p: &Path) -> Result<PathBuf, ErrorBody> {
     })
 }
 
+/// WM-INV-14: the checkout a host connection says it works in. `Ok(None)` is
+/// the project's own root. `Ok(Some(root))` is a linked worktree of it, with
+/// Git's link checked from both sides (`linked_worktree_main`), so an
+/// unrelated directory cannot borrow the project's evidence. Anything else is
+/// refused. Network and device paths are refused before any filesystem call.
+pub fn resolve_checkout(project_root: &str, requested: &str) -> Result<Option<PathBuf>, ErrorBody> {
+    let path = Path::new(requested);
+    if requested.starts_with("\\\\") || requested.starts_with("//") || !path.is_absolute() {
+        return Err(ErrorBody::new(
+            ErrorCode::InvalidRequest,
+            "checkout root must be an absolute local path",
+        ));
+    }
+    let checkout = canonical_dir(path)?;
+    let main = canonical_dir(Path::new(project_root))?;
+    if checkout == main {
+        return Ok(None);
+    }
+    let linked_main = wrongmemory_storage::wrongstack_paths::linked_worktree_main(&checkout)
+        .and_then(|m| canonical_dir(&m).ok());
+    if linked_main.as_ref() == Some(&main) {
+        return Ok(Some(checkout));
+    }
+    Err(ErrorBody::new(
+        ErrorCode::Forbidden,
+        "checkout is neither the project root nor one of its linked worktrees",
+    ))
+}
+
 /// SAGE's default project-local store location.
 pub fn adopted_store_path(root: &Path) -> PathBuf {
     root.join(".wrongstack").join("memories").join("sage.db")
