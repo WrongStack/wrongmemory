@@ -2,7 +2,7 @@
 
 This maps every gate of the plan's release evidence matrix (`docs/plan/validation-and-operations.md` §13) to its evidence. It uses the plan's labels: PASS, FAIL, NOT RUN, UNSUPPORTED. "Not claimed" marks an optional increment (L4) this release does not claim. Details and commands live in `docs/status.md` (by task id) and in `docs/evidence/wm-705-demo-2026-11-03.md`.
 
-**Source.** `main` with the 0.1.4 changes (checkout evidence, WM-201). The last attested artifacts are v0.1.3 (draft, `f80bfe7`). The baseline is WrongStack `222d23a`, storage profile `sage-sqlite-v5-baseline`.
+**Source.** `main` at 0.1.6 (`32708ad`). The last attested artifacts are v0.1.6 (draft, `32708ad`): checksums and SLSA provenance verified on the downloaded assets. The baseline is WrongStack `222d23a`, storage profile `sage-sqlite-v5-baseline`.
 
 ## Verdict
 
