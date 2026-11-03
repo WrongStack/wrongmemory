@@ -58,6 +58,17 @@ impl Env {
     }
 }
 
+/// Stops the test's daemon when the test ends, also after a failed
+/// assertion, so a red run leaves no daemon holding the binary or the temp
+/// directory. Declared after the `Env`, so it runs before the directory goes.
+struct StopDaemon<'a>(&'a Env);
+
+impl Drop for StopDaemon<'_> {
+    fn drop(&mut self) {
+        let _ = self.0.cmd(&["daemon", "stop"]);
+    }
+}
+
 fn read_json(p: &Path) -> Value {
     serde_json::from_str(&std::fs::read_to_string(p).unwrap()).unwrap()
 }
@@ -384,6 +395,7 @@ fn print_formats_and_doctor_without_daemon() {
 #[test]
 fn create_grant_doctor_and_revoke_with_real_daemon() {
     let e = env();
+    let _stop = StopDaemon(&e);
     let reg: Value = serde_json::from_str(&e.ok(&[
         "--json",
         "project",
@@ -414,7 +426,6 @@ fn create_grant_doctor_and_revoke_with_real_daemon() {
     assert!(stderr.contains(&format!("grant {grant}")), "{stderr}");
     assert!(stderr.contains("revoked"), "{stderr}");
     assert!(!stderr.contains("not running"), "{stderr}");
-    e.ok(&["daemon", "stop"]);
 }
 
 /// Codex refuses tools that are not read-only in a non-interactive run, so a
@@ -423,6 +434,7 @@ fn create_grant_doctor_and_revoke_with_real_daemon() {
 #[test]
 fn approve_proposals_is_codex_only_and_read_propose_only() {
     let e = env();
+    let _stop = StopDaemon(&e);
     let reg: Value = serde_json::from_str(&e.ok(&[
         "--json",
         "project",
@@ -501,5 +513,4 @@ fn approve_proposals_is_codex_only_and_read_propose_only() {
             .get("memory_search")
             .is_none()
     );
-    e.ok(&["daemon", "stop"]);
 }
