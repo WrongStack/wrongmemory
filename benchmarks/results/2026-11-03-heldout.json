@@ -1,0 +1,388 @@
+{
+  "schema": "wrongmemory/heldout-quality@1",
+  "corpus": {
+    "source": {
+      "repository": "WrongStack/WrongStack",
+      "commit": "154227c23a0ae72987f458e950cb0997318b80be",
+      "authoredBy": "independent agent, no access to the retrieval code",
+      "date": "2026-11-03"
+    },
+    "memories": 90,
+    "negatives": 13,
+    "tasks": 52,
+    "requiredLinks": 67,
+    "mergedOnWrite": []
+  },
+  "budget": 10,
+  "channels": {
+    "lexical": {
+      "recallAt5": 0.853,
+      "recallAt10": 0.917,
+      "allRequiredAt10": 0.865,
+      "mrr": 0.836,
+      "precisionAt5": 0.208,
+      "emptyResults": 0,
+      "tasksWithMisses": 7,
+      "misses": [
+        {
+          "commit": "5265759f16de1b0ccd69e81edf0ed7332cd35d38",
+          "found": 0,
+          "required": 1,
+          "returned": 10
+        },
+        {
+          "commit": "d9a5496fc850b16fd9ecf9e7202c140a9aff5a8b",
+          "found": 1,
+          "required": 2,
+          "returned": 10
+        },
+        {
+          "commit": "557e161fa8fc9d1267b8766ec84cd9fee0ff07d6",
+          "found": 0,
+          "required": 2,
+          "returned": 10
+        },
+        {
+          "commit": "fdcb479f2b728e05c6616f5bd7557db9b8c6b3ff",
+          "found": 1,
+          "required": 2,
+          "returned": 10
+        },
+        {
+          "commit": "0797cda00152fde099e06544700772f988def664",
+          "found": 1,
+          "required": 2,
+          "returned": 10
+        },
+        {
+          "commit": "65acf7689bbdf43fa04adce515db837fbef51e6a",
+          "found": 2,
+          "required": 3,
+          "returned": 10
+        },
+        {
+          "commit": "fd612c4a7b0d081e9b3f9f55ce86a68952ad12b9",
+          "found": 1,
+          "required": 2,
+          "returned": 10
+        }
+      ]
+    },
+    "hybrid": {
+      "recallAt5": 0.872,
+      "recallAt10": 0.917,
+      "allRequiredAt10": 0.865,
+      "mrr": 0.87,
+      "precisionAt5": 0.212,
+      "emptyResults": 0,
+      "tasksWithMisses": 7,
+      "misses": [
+        {
+          "commit": "5265759f16de1b0ccd69e81edf0ed7332cd35d38",
+          "found": 0,
+          "required": 1,
+          "returned": 10
+        },
+        {
+          "commit": "d9a5496fc850b16fd9ecf9e7202c140a9aff5a8b",
+          "found": 1,
+          "required": 2,
+          "returned": 10
+        },
+        {
+          "commit": "557e161fa8fc9d1267b8766ec84cd9fee0ff07d6",
+          "found": 0,
+          "required": 2,
+          "returned": 10
+        },
+        {
+          "commit": "fdcb479f2b728e05c6616f5bd7557db9b8c6b3ff",
+          "found": 1,
+          "required": 2,
+          "returned": 10
+        },
+        {
+          "commit": "0797cda00152fde099e06544700772f988def664",
+          "found": 1,
+          "required": 2,
+          "returned": 10
+        },
+        {
+          "commit": "65acf7689bbdf43fa04adce515db837fbef51e6a",
+          "found": 2,
+          "required": 3,
+          "returned": 10
+        },
+        {
+          "commit": "fd612c4a7b0d081e9b3f9f55ce86a68952ad12b9",
+          "found": 1,
+          "required": 2,
+          "returned": 10
+        }
+      ]
+    },
+    "path": {
+      "recallAt5": 0.474,
+      "recallAt10": 0.474,
+      "allRequiredAt10": 0.404,
+      "mrr": 0.529,
+      "precisionAt5": 0.526,
+      "emptyResults": 23,
+      "tasksWithMisses": 31,
+      "misses": [
+        {
+          "commit": "aa532c2adcea67b4ff77c9652f889a6c16176d20",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "e1591749681aadc1dd4c4171ba397a58b21966e1",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "28e455baadb237486e6f425fc11a5ac56f52a289",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "5265759f16de1b0ccd69e81edf0ed7332cd35d38",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "bc6fa9faf9f524e5f9dd35020f0c4d252d4ec78a",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "d9a5496fc850b16fd9ecf9e7202c140a9aff5a8b",
+          "found": 0,
+          "required": 2,
+          "returned": 1
+        },
+        {
+          "commit": "d1c490d6b2e9da967f51e43c4fdaa21fc05115ec",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "16d97e5316a6f3e49af28908bfeecb94e0011f62",
+          "found": 1,
+          "required": 2,
+          "returned": 1
+        },
+        {
+          "commit": "830b47912e3e3f0c051eeb7b6c46972c02aa6ef1",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "5a5eab5395d71cacdd9ed1cdc2c13645212348d7",
+          "found": 0,
+          "required": 2,
+          "returned": 0
+        },
+        {
+          "commit": "f1ea144345d0c45ad953bca431cc0d650f6e14ba",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "557e161fa8fc9d1267b8766ec84cd9fee0ff07d6",
+          "found": 1,
+          "required": 2,
+          "returned": 1
+        },
+        {
+          "commit": "8f52191f2f179dd74c8c8a0f51580e661cccf34f",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "1ca2990be886dbf7ddb426d60138993e3489b720",
+          "found": 0,
+          "required": 2,
+          "returned": 0
+        },
+        {
+          "commit": "da10fbec9abd1aef72a30e5dca348573b3ab0554",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "de1406f59d05c6024cf9758755d2f1cff389808c",
+          "found": 1,
+          "required": 2,
+          "returned": 1
+        },
+        {
+          "commit": "a5647cdd526f5d9e25562ddd8a03f1ebf74ac803",
+          "found": 0,
+          "required": 2,
+          "returned": 0
+        },
+        {
+          "commit": "bc3d83f5620be47c97fa079c9686566cc21add39",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "cc7ce2969c85d158f2483337722eba435ea5bbd3",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "9781854ef57afe06c13c3944ed111c06729b3399",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "fdcb479f2b728e05c6616f5bd7557db9b8c6b3ff",
+          "found": 0,
+          "required": 2,
+          "returned": 0
+        },
+        {
+          "commit": "68f7729d6246faf84775de6ade22b22075eb02a2",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "30b8fac3b31c3ba969f1aa8c74077fcac4baddcf",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "f691ebf8f398d46b4d20100768923db8eebb267d",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "0797cda00152fde099e06544700772f988def664",
+          "found": 1,
+          "required": 2,
+          "returned": 1
+        },
+        {
+          "commit": "d8aa584a407f832065338887aa2a03fff67495bf",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "680da81f32cdb93ab803a576d198604330aa6f0d",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "65acf7689bbdf43fa04adce515db837fbef51e6a",
+          "found": 2,
+          "required": 3,
+          "returned": 2
+        },
+        {
+          "commit": "fd612c4a7b0d081e9b3f9f55ce86a68952ad12b9",
+          "found": 1,
+          "required": 2,
+          "returned": 1
+        },
+        {
+          "commit": "ad9f79dbc2aad903b0348e65abd7449273ec1a1c",
+          "found": 0,
+          "required": 1,
+          "returned": 0
+        },
+        {
+          "commit": "0536d7339707ba6e6004dfc131a11976c1c3f64f",
+          "found": 1,
+          "required": 2,
+          "returned": 1
+        }
+      ]
+    },
+    "recipe": {
+      "recallAt5": 0.853,
+      "recallAt10": 0.885,
+      "allRequiredAt10": 0.827,
+      "mrr": 0.834,
+      "precisionAt5": 0.208,
+      "emptyResults": 0,
+      "tasksWithMisses": 9,
+      "misses": [
+        {
+          "commit": "5265759f16de1b0ccd69e81edf0ed7332cd35d38",
+          "found": 0,
+          "required": 1,
+          "returned": 5
+        },
+        {
+          "commit": "d9a5496fc850b16fd9ecf9e7202c140a9aff5a8b",
+          "found": 1,
+          "required": 2,
+          "returned": 6
+        },
+        {
+          "commit": "5a5eab5395d71cacdd9ed1cdc2c13645212348d7",
+          "found": 1,
+          "required": 2,
+          "returned": 5
+        },
+        {
+          "commit": "f1ea144345d0c45ad953bca431cc0d650f6e14ba",
+          "found": 0,
+          "required": 1,
+          "returned": 5
+        },
+        {
+          "commit": "557e161fa8fc9d1267b8766ec84cd9fee0ff07d6",
+          "found": 1,
+          "required": 2,
+          "returned": 6
+        },
+        {
+          "commit": "fdcb479f2b728e05c6616f5bd7557db9b8c6b3ff",
+          "found": 1,
+          "required": 2,
+          "returned": 5
+        },
+        {
+          "commit": "30b8fac3b31c3ba969f1aa8c74077fcac4baddcf",
+          "found": 0,
+          "required": 1,
+          "returned": 5
+        },
+        {
+          "commit": "0797cda00152fde099e06544700772f988def664",
+          "found": 1,
+          "required": 2,
+          "returned": 5
+        },
+        {
+          "commit": "fd612c4a7b0d081e9b3f9f55ce86a68952ad12b9",
+          "found": 1,
+          "required": 2,
+          "returned": 5
+        }
+      ]
+    }
+  },
+  "leaks": []
+}

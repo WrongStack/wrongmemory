@@ -1,0 +1,1239 @@
+{
+  "description": "Held-out retrieval corpus built from the public WrongStack repository. Each task is a real commit restated as a coding-agent request; its required memories are project knowledge (conventions, decisions, warnings, facts, root causes) that existed in the repository's docs, agent notes or code before that commit. The store also holds same-project distractors that no task needs, plus hard negatives (another session's private scratch notes, superseded notes and contradicting notes) that must never be returned.",
+  "source": {
+    "repository": "WrongStack/WrongStack",
+    "commit": "154227c23a0ae72987f458e950cb0997318b80be",
+    "authoredBy": "independent agent, no access to the retrieval code",
+    "date": "2026-11-03"
+  },
+  "memories": [
+    {
+      "key": "worktreeGitIdentityFallback",
+      "text": "WorktreeManager prefixes every git call that creates a commit with identityArgs(cwd), i.e. `git -c user.name=... -c user.email=...` using a fixed 'WrongStack AutoPhase' identity, and returns no args when the user already has an identity configured. CI runners and fresh machines usually have no global git identity, and a commit that fails there surfaces as a silent no-op or a bogus merge result.",
+      "kind": "convention",
+      "tags": ["worktree", "git", "ci"],
+      "files": ["packages/core/src/worktree/worktree-manager.ts"],
+      "provenance": "packages/core/src/worktree/worktree-manager.ts identityArgs() and its uses in commitAll, the squash-merge commits and revertCommits (added by 24a337bd2e, 2026-05-30)"
+    },
+    {
+      "key": "coreLayerRules",
+      "text": "Inside packages/core/src the directories are ranked layers: kernel/types, then infrastructure, then core/models/security/registry, then execution, storage, coordination, and plugin/extension/observability/sdd/skills on top. A lower layer may not import a higher layer's runtime values (infrastructure/ may only use kernel/ and types/), and no two layers may depend on each other at runtime; packages/core/tests/architecture/package-boundaries.test.ts enforces this.",
+      "kind": "decision",
+      "tags": ["architecture", "core", "layering"],
+      "files": ["docs/architecture-rules.md", "packages/core/tests/architecture/package-boundaries.test.ts"],
+      "provenance": "docs/architecture-rules.md, sections 'Layer Definitions', 'Dependency Rules' (Rules 1-9) and 'Test Coverage'"
+    },
+    {
+      "key": "coreApiSnapshotHook",
+      "text": "architecture/core-public-api-snapshot.json is committed evidence: the pre-commit hook runs scripts/sync-core-public-api-snapshot.mjs to refresh and stage it whenever staged sources can change core's public surface. The helper refuses to run while unrelated unstaged snapshot inputs sit in the shared worktree, so when you move or export core symbols, commit the regenerated snapshot together with the source change.",
+      "kind": "workflow",
+      "tags": ["architecture", "pre-commit", "api-snapshot"],
+      "files": [".githooks/pre-commit", "architecture/core-public-api-snapshot.json"],
+      "provenance": ".githooks/pre-commit, 'Core API snapshots are committed architecture evidence' block"
+    },
+    {
+      "key": "archExceptionsPolicy",
+      "text": "Records in architecture/exceptions.json are temporary allowances, not permanent ones: each needs a stable ID, rule kind, exact members, owner, concrete reason, introduction and review dates, a removal condition and a canonical task ID. check:architecture fails on expired or stale records, so a lapsed cycle exception has to be resolved or genuinely re-reviewed.",
+      "kind": "decision",
+      "tags": ["architecture", "exceptions", "cycles"],
+      "files": ["architecture/exceptions.json"],
+      "provenance": "architecture/README.md, section 'Exception requirements'"
+    },
+    {
+      "key": "coreLayersMoveContractDown",
+      "text": "check:core-layers ranks every source area and counts even type-only imports from a lower rank into a higher one as upward edges, because they drag the higher area into the declaration graph. The accepted fix is to move the shared type down into a leaf module and re-export it from the old place so importers keep working, or to invert the dependency; kernel/ and types/ have lived in @wrongstack/contracts since 2026-10-24.",
+      "kind": "convention",
+      "tags": ["architecture", "contracts", "cycles"],
+      "files": ["architecture/core-layers.json"],
+      "provenance": "architecture/README.md, paragraph on check:core-layers and the 2026-10-24 contracts extraction"
+    },
+    {
+      "key": "execDangerClassifier",
+      "text": "packages/tools/src/_danger-detect.ts grades exec commands as safe, caution or destructive using deterministic regex and exact-match rules (no I/O, no clock, no LLM). Each rule has a stable id that config can switch off through tools.exec.danger.bypass, and a destructive verdict routes the call to the confirm prompt instead of hard-denying it.",
+      "kind": "fact",
+      "tags": ["tools", "security", "exec"],
+      "files": ["packages/tools/src/_danger-detect.ts"],
+      "provenance": "packages/tools/src/_danger-detect.ts, module header comment"
+    },
+    {
+      "key": "powershellCaseInsensitive",
+      "text": "PowerShell treats cmdlet names and parameters case-insensitively by language spec, so -recurse, -Recurse and -RECURSE are the same switch. Matchers for PowerShell arguments therefore need the /i flag; the disk-volume, restart and execution-policy rules in the exec danger module already use it.",
+      "kind": "warning",
+      "tags": ["powershell", "windows", "security"],
+      "files": ["packages/tools/src/_danger-detect.ts"],
+      "provenance": "packages/tools/src/_danger-detect.ts, the powershell-* rules (powershell-disk-volume-destroy, powershell-stop-restart-computer, powershell-execution-policy-bypass)"
+    },
+    {
+      "key": "yoloRiskFlagParity",
+      "text": "Two shell classifiers have to agree on command shapes: the exec danger rules in packages/tools and the YOLO gate in packages/core/src/security/yolo-risk.ts. The core side lowercases tokens and the letters of short-flag clusters in flagLetters() before matching, so a shape one side catches and the other misses lets a destructive command skip a confirmation path.",
+      "kind": "convention",
+      "tags": ["security", "yolo", "parity"],
+      "files": ["packages/core/src/security/yolo-risk.ts", "packages/tools/src/_danger-detect.ts"],
+      "provenance": "packages/core/src/security/yolo-risk.ts flagLetters() (ch.toLowerCase()); packages/tools/src/_danger-detect.ts flagLetters() doc comment"
+    },
+    {
+      "key": "killGuardStaticLimits",
+      "text": "bash-kill-guard.ts shields WrongStack's own processes by statically parsing kill, pkill, taskkill, Stop-Process and wmic lines; it is a regex reader, not a shell, and its header lists the spellings it misses (quote splitting, eval, $(printf kill), variable indirection, node -e process.kill). Its contract is that every handled form maps to both a detector and a block path in isKillRelatedCommand, parseKillCommand and isKillProtected.",
+      "kind": "fact",
+      "tags": ["tools", "security", "kill-guard"],
+      "files": ["packages/tools/src/bash-kill-guard.ts"],
+      "provenance": "packages/tools/src/bash-kill-guard.ts, header 'Handles', 'Security contract' and 'Known bypasses' sections"
+    },
+    {
+      "key": "yoloDestructiveKinds",
+      "text": "The YOLO confirmation gate works per DestructiveKind (packages/core/src/security/yolo-risk.ts): disk-wipe, system-halt, delete-outside, bulk-delete, git-history, publish, download-and-run, agent-state and credential-bind. agent-state and credential-bind are locked and can never be un-gated from settings; none of the kinds covers terminating processes.",
+      "kind": "fact",
+      "tags": ["yolo", "security", "permissions"],
+      "files": ["packages/core/src/security/yolo-risk.ts"],
+      "provenance": "packages/core/src/security/yolo-risk.ts, DestructiveKind union, LOCKED_DESTRUCTIVE_KINDS and ALL_DESTRUCTIVE_KINDS"
+    },
+    {
+      "key": "windowsNativeRealpath",
+      "text": "On Windows the JS fs.realpathSync leaves 8.3 short-name aliases such as PROGRA~1 untouched, while fs.realpathSync.native expands them to the long name. Any security comparison against ~/.wrongstack has to canonicalize with the native variant, which is what realpathOfNearestExisting in agent-state-sensitivity.ts does.",
+      "kind": "warning",
+      "tags": ["windows", "paths", "security"],
+      "files": ["packages/core/src/security/agent-state-sensitivity.ts"],
+      "provenance": "packages/core/src/security/agent-state-sensitivity.ts, realpathOfNearestExisting() using realpathSync.native"
+    },
+    {
+      "key": "canonicalEscapeTest",
+      "text": "Whether a path.relative() result leaves its root is decided by rel === '..' || rel.startsWith('..' + path.sep) || path.isAbsolute(rel), as escapesRoot in packages/sage/src/paths.ts does. A segment that merely begins with two dots, like '..configs', is a legal name inside the root.",
+      "kind": "convention",
+      "tags": ["paths", "containment"],
+      "files": ["packages/sage/src/paths.ts"],
+      "provenance": "packages/sage/src/paths.ts, escapesRoot()"
+    },
+    {
+      "key": "providerErrorTaxonomy",
+      "text": "classifyProviderError in packages/core/src/types/provider.ts is the single place that turns a provider HTTP failure into a ProviderErrorKind; error handling, fallback and the subagent classifier all branch on that result. quota_exhausted means fail over at once, auth (401/403) means retrying is pointless, and the 'rate limit exceeded' text is matched on body.message only because OpenAI's raw JSON code field would give a false positive.",
+      "kind": "fact",
+      "tags": ["providers", "errors", "fallback"],
+      "files": ["packages/core/src/types/provider.ts", "packages/core/src/types/quota-regex.ts"],
+      "provenance": "packages/core/src/types/provider.ts, ProviderErrorKind comments and classifyProviderError()"
+    },
+    {
+      "key": "telegramPollingModel",
+      "text": "The Telegram plugin uses local getUpdates polling. A cross-process poll lock lets only one instance per bot token poll (avoiding HTTP 409), standbys take over once the holder's heartbeat goes stale, and offset-store.ts persists the update offset with fsync and atomic rename; Telegram keeps redelivering every update at or above the offset you send.",
+      "kind": "fact",
+      "tags": ["telegram", "polling"],
+      "files": ["packages/telegram/src/poller.ts", "packages/telegram/src/offset-store.ts"],
+      "provenance": "docs/adr/adr-003-telegram-broker-and-webhook.md, 'Context' and 'Current architecture (local polling)'"
+    },
+    {
+      "key": "telegramUtf16Slice",
+      "text": "Telegram text is shortened with sliceUtf16Safe from packages/telegram/src/text-format.ts, which never splits a surrogate pair; the outbox and the generic truncation helper already use it. A raw String.slice at a fixed length can leave a lone high surrogate when an emoji sits on the boundary.",
+      "kind": "convention",
+      "tags": ["telegram", "unicode"],
+      "files": ["packages/telegram/src/text-format.ts"],
+      "provenance": "packages/telegram/src/text-format.ts sliceUtf16Safe(); used in packages/telegram/src/outbox.ts"
+    },
+    {
+      "key": "sageInMutationReread",
+      "text": "SAGE hygiene passes (purge, verification, reactivation) re-read each target row inside the queued store mutation and re-check their predicate on that current row rather than acting on the listing snapshot, because an update or recovery can commit between listing and mutation.",
+      "kind": "convention",
+      "tags": ["sage", "concurrency"],
+      "files": ["packages/sage/src/sqlite-store-hygiene.ts"],
+      "provenance": "packages/sage/src/sqlite-store-hygiene.ts, 'Re-read inside the mutation' comments in the purge and verification passes"
+    },
+    {
+      "key": "daemonBindElection",
+      "text": "Per-project daemons elect their owner by binding: bind the endpoint first, only then open SQLite, then write the metadata file (pid, authToken, startedAt), and only then greet clients with hello. A process that loses the bind must exit without ever opening a second writer on the database.",
+      "kind": "decision",
+      "tags": ["daemons", "sqlite", "ownership"],
+      "files": ["docs/project-daemons.md"],
+      "provenance": "docs/project-daemons.md, section 'The bind is the ownership election'"
+    },
+    {
+      "key": "mailboxSqliteModel",
+      "text": "The project mailbox is a SQLite database (WAL, busy_timeout 5000) owned by the mailbox project server. mailbox_meta stores the schema version and one-time migration markers, broadcast and alias messages keep a per-actor row in message_receipts instead of one global completion state, and legacy JSONL files are imported once and never written again.",
+      "kind": "fact",
+      "tags": ["mailbox", "sqlite", "schema"],
+      "files": ["docs/mailbox-architecture.md"],
+      "provenance": "docs/mailbox-architecture.md, sections 'SQLite model' and 'Retention and migration'"
+    },
+    {
+      "key": "daemonIdleExit",
+      "text": "Project daemons (kanban, sage, chronicle, mailbox, session-catalog, codebase-index, governance) are spawned on demand by their client, run detached, and exit after an idle timeout of 5 minutes by default with no connected clients. governance is opt-in per project and runs its own startup-lease election instead of the shared bind helper.",
+      "kind": "fact",
+      "tags": ["daemons", "lifecycle"],
+      "files": ["docs/project-daemons.md"],
+      "provenance": "docs/project-daemons.md, 'The daemons' table and the governance note under 'The reclaim ladder'"
+    },
+    {
+      "key": "fireAndForgetCatch",
+      "text": "Any promise launched with `void` from a timer tick, a callback or another detached path needs its own .catch at that call site; otherwise a rejection becomes an unhandled rejection in the host process. fleet-supervisor's interval tick absorbs evaluate() failures this way so supervision degrades quietly.",
+      "kind": "convention",
+      "tags": ["async", "reliability"],
+      "files": ["packages/core/src/coordination/fleet-supervisor.ts"],
+      "provenance": "packages/core/src/coordination/fleet-supervisor.ts, setInterval tick comment and evaluate().catch (7a06e5a8fe, 2026-07-24)"
+    },
+    {
+      "key": "structuredLogShape",
+      "text": "Server-side console.warn/console.error output is a single-line JSON object: level, a dotted subsystem event such as session_store.delete_failed, message from toErrorMessage(err), timestamp, plus domain fields. Browser components keep multi-argument console.error. scripts/lint-console-logging.mjs runs in the pre-commit hook and in CI and rejects ad-hoc string logs.",
+      "kind": "convention",
+      "tags": ["logging", "lint"],
+      "files": ["docs/typescript-style-guide.md", "scripts/lint-console-logging.mjs"],
+      "provenance": "docs/typescript-style-guide.md, section 'Structured error logging' (Schema, Do/Don't, Lint guard)"
+    },
+    {
+      "key": "unrefBackgroundTimers",
+      "text": "Auxiliary setInterval pollers (outdated-package watcher, techstack mailbox consumer, TUI spinner) are unref()'d so they never keep the Node event loop alive on their own; the REPL, TUI or server owns the real keep-alive, and dispose() still clears the timer.",
+      "kind": "convention",
+      "tags": ["timers", "lifecycle", "node"],
+      "files": ["packages/core/src/coordination/package-outdated-watcher.ts"],
+      "provenance": "packages/core/src/coordination/package-outdated-watcher.ts and techstack-mailbox-consumer.ts timer comments (2eaf293f14); docs/tui-ink.md spinner note"
+    },
+    {
+      "key": "exactOptionalProps",
+      "text": "exactOptionalPropertyTypes is enabled: `prop?: T` means the key may be absent, not that it may hold undefined. When a value can be undefined, use ?? with a concrete fallback or add the key through a conditional spread instead of assigning undefined.",
+      "kind": "convention",
+      "tags": ["typescript", "types"],
+      "files": ["docs/typescript-style-guide.md"],
+      "provenance": "docs/typescript-style-guide.md, section 'exactOptionalPropertyTypes'"
+    },
+    {
+      "key": "testTypesRatchet",
+      "text": "check:test-types type-checks every package's tsconfig.test.json and compares the diagnostics with architecture/test-typecheck-baseline/. A new diagnostic or a higher count of an existing one fails CI, so test files must type-check too, not just src.",
+      "kind": "workflow",
+      "tags": ["typescript", "ci", "tests"],
+      "files": ["architecture/test-typecheck-baseline"],
+      "provenance": "architecture/README.md, paragraph on check:test-types"
+    },
+    {
+      "key": "secretFieldDetection",
+      "text": "There are two separate secret detectors: isSecretField(name) in packages/core/src/security/config-secrets.ts judges whether a config key name looks sensitive, and the SecretScrubber (packages/core/src/security/secret-scrubber.ts) recognises credential-shaped values such as provider key prefixes and high-entropy env assignments.",
+      "kind": "fact",
+      "tags": ["security", "secrets"],
+      "files": ["packages/core/src/security/config-secrets.ts", "packages/core/src/security/secret-scrubber.ts"],
+      "provenance": "packages/core/src/security/config-secrets.ts isSecretField(); packages/core/src/security/secret-scrubber.ts"
+    },
+    {
+      "key": "argParserFlagValues",
+      "text": "In packages/cli/src/arg-parser.ts parseArgs, a `--name` flag that is not in BOOLEAN_FLAGS takes the next non-dash token as its value, but every two-character `-x` flag is forced to true (only -v, -y and -h are expanded to long names). Subcommand handlers then read whatever is left in positional[].",
+      "kind": "fact",
+      "tags": ["cli", "args"],
+      "files": ["packages/cli/src/arg-parser.ts"],
+      "provenance": "packages/cli/src/arg-parser.ts, parseArgs() loop and BOOLEAN_FLAGS"
+    },
+    {
+      "key": "queueStoreEmptyClears",
+      "text": "QueueStore.write() never writes an empty array: when the list is empty, or nothing survives retention filtering, it calls clear(), which unlinks queue.json.",
+      "kind": "fact",
+      "tags": ["storage", "queue"],
+      "files": ["packages/core/src/storage/queue-store.ts"],
+      "provenance": "packages/core/src/storage/queue-store.ts, write() ('Empty queue -> remove the file rather than write []') and clear()"
+    },
+    {
+      "key": "tuiHydrationGuard",
+      "text": "TUI persistence hooks run their save effect on mount, while in-memory state is still empty and the async load from disk has not returned. Input history avoids clobbering its file by refusing to save until a loaded ref is set (use-input-history-persistence.ts).",
+      "kind": "bug_root_cause",
+      "tags": ["tui", "react", "persistence"],
+      "files": ["packages/tui/src/hooks/use-input-history-persistence.ts"],
+      "provenance": "packages/tui/src/hooks/use-input-history-persistence.ts inputHistoryLoadedRef; design noted in 45c2cff722 (2026-07-04)"
+    },
+    {
+      "key": "mcpTokenStore",
+      "text": "MCP OAuth tokens are kept encrypted in packages/mcp/src/token-store.ts and written with atomicWrite under withFileLock, so several wstack processes share and rotate the same entries. In-process refresh is single-flight and deliberately does not inherit any one caller's abort signal.",
+      "kind": "fact",
+      "tags": ["mcp", "oauth"],
+      "files": ["packages/mcp/src/token-store.ts"],
+      "provenance": "packages/mcp/src/token-store.ts, imports of atomicWrite/withFileLock and the shared refreshPromise comment"
+    },
+    {
+      "key": "webuiI18nCompleteness",
+      "text": "WebUI strings live in packages/webui/src/i18n/locales/<lng>/<namespace>.json with en as the reference and de, es, fr, it, pt-BR and tr alongside. scripts/check-i18n-completeness.mjs (lint:i18n, part of release:check) fails when any locale lacks a leaf key that en has.",
+      "kind": "workflow",
+      "tags": ["webui", "i18n", "release"],
+      "files": ["scripts/check-i18n-completeness.mjs"],
+      "provenance": "scripts/check-i18n-completeness.mjs; package.json scripts lint:i18n and release:check"
+    },
+    {
+      "key": "intakeProposalLocking",
+      "text": "In requirement-intake, LLM output is only ever a proposal stored with source 'llm' and applied after an explicit acceptSuggestion; status transitions are enforced in application logic. Every record write goes through atomicWrite under a per-file withFileLock, and a stale expectedVersion throws IntakeConflictError instead of overwriting.",
+      "kind": "decision",
+      "tags": ["requirement-intake", "concurrency"],
+      "files": ["packages/requirement-intake/README.md"],
+      "provenance": "packages/requirement-intake/README.md, design principles 3-5 and the storage layout section"
+    },
+    {
+      "key": "mailboxSessionAffinity",
+      "text": "Mailbox reads in packages/core/src/coordination/mailbox-tool.ts use two filters: isMailboxMessageVisibleTo (addressing and audience) and acceptMailboxMessageForSession (session-affinity tokens, e.g. stamped on chimera reports). The check and query actions apply both.",
+      "kind": "fact",
+      "tags": ["mailbox", "sessions"],
+      "files": ["packages/core/src/coordination/mailbox-tool.ts"],
+      "provenance": "packages/core/src/coordination/mailbox-tool.ts, executeCheck/executeQuery calls to acceptMailboxMessageForSession"
+    },
+    {
+      "key": "compileUserRegexGate",
+      "text": "compileUserRegex in packages/primitives/src/regex-guard.ts is the one ReDoS gate for user- and LLM-supplied patterns (grep, replace, json tools, session-reader, kanban file_matches); primitives has no workspace deps so every tier can share it. V8 cannot interrupt a running match, so the guard decides statically; its own parser and the ambiguity module regex-ambiguity.ts must model a pattern identically, and false positives are the accepted bias.",
+      "kind": "decision",
+      "tags": ["regex", "redos", "security"],
+      "files": ["packages/primitives/src/regex-guard.ts", "packages/primitives/src/regex-ambiguity.ts"],
+      "provenance": "packages/primitives/src/regex-guard.ts header; docs/adr/adr-004-step-budgeted-regex-ambiguity-matcher.md 'Context'"
+    },
+    {
+      "key": "perfContract",
+      "text": "Performance work needs numbers: record a baseline in PERF_LOG.md first (workload, command, metric, value, commit, machine, runtime version), change one variable, re-measure, and revert anything inside noise (under 5% or within the spread of 3 runs). Correctness gates everything, and the order of attack is less work, then fewer times, then later or never, and only then faster code.",
+      "kind": "workflow",
+      "tags": ["performance", "process"],
+      "files": ["PERF_LOG.md"],
+      "provenance": "CONTRIBUTING.md, section 'Performance Contract' rules 1-5"
+    },
+    {
+      "key": "sessionJournalWritePath",
+      "text": "FileSessionWriter (packages/core/src/storage/file-session-writer.ts) owns each session journal's append, flush, close, checkpoint and truncate. Events in CRITICAL_EVENT_TYPES (user_input, llm_response, checkpoint, in_flight_start, in_flight_end) bypass the batch window and hit disk immediately, and checkpoint file content goes into the project's _cas content store.",
+      "kind": "fact",
+      "tags": ["sessions", "journal", "storage"],
+      "files": ["packages/core/src/storage/file-session-writer.ts"],
+      "provenance": "docs/architecture/session-journal.md, sections '1. Where it lives' and '2. The write path'"
+    },
+    {
+      "key": "hooksNeverCrash",
+      "text": "A hook must never be able to crash the agent: each invocation is isolated and its failure is resolved by the hook's failure policy (open skips, closed denies) and surfaced as a warning. Command-hook stdout and stderr and HTTP-hook responses are capped at 64 KiB.",
+      "kind": "decision",
+      "tags": ["hooks", "reliability"],
+      "files": ["docs/hooks.md", "packages/core/src/hooks/shell-executor.ts"],
+      "provenance": "docs/hooks.md, 'A hook can never crash the agent' table and 'Output caps'"
+    },
+    {
+      "key": "pluginLifecycleContract",
+      "text": "Plugins export setup(api) and teardown(api); the host wraps them in timeouts (30 s for setup, 10 s for teardown). Listeners added through api.onEvent are removed automatically on teardown, anything else must be unsubscribed there, and health() is reported through /diag plugins.",
+      "kind": "convention",
+      "tags": ["plugins", "lifecycle"],
+      "files": ["docs/plugin-author-guide.md"],
+      "provenance": "docs/plugin-author-guide.md, host safety-net table, api.onEvent row, health() and 'Teardown contract'"
+    },
+    {
+      "key": "openaiCompatibleSubclass",
+      "text": "OpenAICompatibleProvider (packages/providers/src/openai-compatible.ts) extends OpenAIProvider, and Together, Groq, OpenRouter and local servers all run through it with family 'openai-compatible'. Anything changed in the OpenAI request body reaches all of those backends unless the subclass overrides it.",
+      "kind": "fact",
+      "tags": ["providers", "openai"],
+      "files": ["packages/providers/src/openai-compatible.ts", "packages/providers/src/openai.ts"],
+      "provenance": "packages/providers/src/openai-compatible.ts class declaration; docs/provider-author-guide.md 'A pure OpenAI-compatible endpoint'"
+    },
+    {
+      "key": "redactCommandHelper",
+      "text": "redactCommand (packages/tools/src/_redact-command.ts, re-exported from process-registry.ts) returns a display-safe copy of a command line with values of sensitive flags (--token, --password, -p, *_API_KEY=..., long base64 after a key-like flag) replaced by [REDACTED]. Process-registry entries in bash.ts, exec.ts and _spawn-stream.ts already go through it.",
+      "kind": "fact",
+      "tags": ["security", "redaction", "tools"],
+      "files": ["packages/tools/src/_redact-command.ts"],
+      "provenance": "packages/tools/src/_redact-command.ts SENSITIVE_FLAG_PATTERNS and redactCommand(); call sites in bash.ts and _spawn-stream.ts"
+    },
+    {
+      "key": "toolSecretsNeverLogged",
+      "text": "Tool authors never log or persist secrets; a tool that needs credentials declares them and leaves handling to the secret scrubber and the vault.",
+      "kind": "convention",
+      "tags": ["security", "tools"],
+      "files": ["docs/tool-author-guide.md"],
+      "provenance": "docs/tool-author-guide.md, security checklist item 'Secrets'"
+    },
+    {
+      "key": "atomicWriteHelper",
+      "text": "Persisted state files are written with atomicWrite from @wrongstack/core/utils (temp file plus rename, optional mode such as 0o600), and combined with withFileLock where more than one process can write. A reader then sees either the old file or the new one, never a partial write.",
+      "kind": "convention",
+      "tags": ["storage", "fs"],
+      "files": ["packages/core/src/utils/atomic-write.ts"],
+      "provenance": "packages/core/src/utils/atomic-write.ts; usage in packages/core/src/storage/queue-store.ts and the requirement-intake store"
+    },
+    {
+      "key": "yoloPermissionOrder",
+      "text": "DefaultPermissionPolicy.evaluate() takes the first matching rule in this order: session soft deny, session soft allow, trust-file deny, tool default deny, YOLO destructive gate, trust-file allow, trust auto flag, YOLO auto, smart bypass, tool default, confirm. Tools declared with riskTier 'destructive' are always confirmed under YOLO; isDestructiveYoloCall() in permission-policy.ts makes that call.",
+      "kind": "fact",
+      "tags": ["permissions", "yolo"],
+      "files": ["packages/core/src/security/permission-policy.ts", "docs/yolo-mode.md"],
+      "provenance": "docs/yolo-mode.md, 'Permission Evaluation Order' and 'Destructive Confirmation'"
+    },
+    {
+      "key": "kanbanDomainCallAllowlist",
+      "text": "Kanban state lives only in the elected project daemon's SQLite. Stateful package APIs are overridden in packages/kanban/src/client-domain.ts and executed inside the daemon via domainCall, limited to the operation list in packages/kanban/src/domain-operations.ts; ServerKanbanStore uses the same codec, and losing the daemon never enables a direct-file fallback.",
+      "kind": "decision",
+      "tags": ["kanban", "ipc", "daemons"],
+      "files": ["packages/kanban/src/domain-operations.ts", "packages/kanban/src/client-domain.ts"],
+      "provenance": "docs/kanban-architecture.md, primary implementation table and storage guarantees (section 4), section 5 'Core Manager API'"
+    },
+    {
+      "key": "kanbanBoardKinds",
+      "text": "Kanban boards carry a kind: project, session_mirror, sdd_mirror, import or archive. Unless a caller passes include/exclude filters, queue health, snapshots, ready tasks and dispatch hide session_mirror and archive boards (DEFAULT_EXCLUDED_KINDS in manager/board-kind-filter.ts).",
+      "kind": "fact",
+      "tags": ["kanban", "boards"],
+      "files": ["packages/kanban/src/manager/board-kind-filter.ts"],
+      "provenance": "packages/kanban/src/manager/board-kind-filter.ts, BoardKindFilter doc and DEFAULT_EXCLUDED_KINDS"
+    },
+    {
+      "key": "purlConstruct",
+      "text": "Techstack's ecosystem ids and purl types differ for several ecosystems: python is pypi, rust is cargo, dotnet is nuget, php is composer, dart is pub, go is golang, and gradle maps to maven. constructPurl in packages/techstack/src/registry/purl.ts applies that mapping (purlTypeForEcosystem) and the per-ecosystem name rules; SBOM export and OSV queries only match canonical purls.",
+      "kind": "fact",
+      "tags": ["techstack", "purl", "sbom"],
+      "files": ["packages/techstack/src/registry/purl.ts"],
+      "provenance": "packages/techstack/src/registry/purl.ts, ECOSYSTEM_TO_PURL_TYPE and constructPurl()"
+    },
+    {
+      "key": "chronicleOwnership",
+      "text": "Chronicle has a single production writer per project, the Chronicle project server, which owns chronicle.sqlite and rebuilds metrics.db as a disposable projection. createChronicleEventJournal and createChronicleProjectAccess are the only places that choose between that server and inline recovery; WebUI and CLI never open Chronicle storage directly.",
+      "kind": "decision",
+      "tags": ["chronicle", "ownership"],
+      "files": ["docs/chronicle-architecture.md"],
+      "provenance": "docs/chronicle-architecture.md, 'Ownership contract', 'Physical state' and 'Runtime and fallback'"
+    },
+    {
+      "key": "bindProjectEndpointRule",
+      "text": "Project daemons must bind through bindProjectEndpoint() in @wrongstack/persistence (src/project-endpoint.ts). It returns bound, already-owned or failed and implements the reclaim ladder for a stale Unix socket: on EADDRINUSE probe the endpoint and unlink only if nothing answers; on Windows a named pipe means a live owner. Never hand-roll listen() with an EADDRINUSE handler.",
+      "kind": "decision",
+      "tags": ["daemons", "persistence", "ipc"],
+      "files": ["packages/persistence/src/project-endpoint.ts"],
+      "provenance": "docs/project-daemons.md, 'Self-healing: the stale endpoint' and 'The reclaim ladder'"
+    },
+    {
+      "key": "untrustedFenceNeutralize",
+      "text": "Untrusted text placed in a model-visible prompt gets fenced, and a fence only works if its closing delimiter cannot occur in the body. packages/primitives/src/project-supplied-fence.ts is the single definition for project-supplied content and always neutralises delimiter look-alikes (invisible characters included) inside the body itself rather than trusting call sites.",
+      "kind": "convention",
+      "tags": ["security", "prompt-injection"],
+      "files": ["packages/primitives/src/project-supplied-fence.ts"],
+      "provenance": "packages/primitives/src/project-supplied-fence.ts, module header (WS-SEC-02 history)"
+    },
+    {
+      "key": "subagentIdleWatchdogs",
+      "text": "Subagents have two different idle timers: the host lifecycle window config.fleet.lifecycle.idleTimeoutMs (30 s by default) that retires a worker between tasks, and the in-task activity watchdog SubagentBudget.idleTimeoutMs that fails a worker which goes quiet while working. Neither is a wall-clock limit on the whole task.",
+      "kind": "fact",
+      "tags": ["fleet", "subagents", "timeouts"],
+      "files": ["docs/agents.md"],
+      "provenance": "docs/agents.md, subagent live lifecycle paragraph; docs/configuration.md fleet.lifecycle"
+    },
+    {
+      "key": "sageSessionIsolation",
+      "text": "A SAGE memory with scope 'session' must carry ownerSessionId and is private to that session: path lookups, retrieval and listings isolate on ownerSessionId, so another session or a shared view must not see it.",
+      "kind": "decision",
+      "tags": ["sage", "sessions", "privacy"],
+      "files": ["docs/sage/SYSTEM-REPORT.md"],
+      "provenance": "docs/sage/SYSTEM-REPORT.md, section 7.1 'Session isolation via ownerSessionId' and remember rule 4"
+    },
+    {
+      "key": "buildPackageProfiles",
+      "text": "scripts/build-package.mjs builds each workspace package with esbuild from a per-package profile of entries and externals. Externals come from the profile list, from the dependencies declared in the package's package.json, and from workspaceExternal (externalise every @wrongstack/* import) for profiles that set it.",
+      "kind": "fact",
+      "tags": ["build", "esbuild", "monorepo"],
+      "files": ["scripts/build-package.mjs"],
+      "provenance": "scripts/build-package.mjs, packageExternals, workspaceExternalPlugin and the profile table"
+    },
+    {
+      "key": "newPackageRegistration",
+      "text": "A new workspace package needs packages/<name> with package.json, tsconfig.json, src/ and tests/, a project reference in the root tsconfig.json, a vitest config if tests need one, and a bun install to link it.",
+      "kind": "workflow",
+      "tags": ["monorepo", "packages"],
+      "files": ["tsconfig.json"],
+      "provenance": "CONTRIBUTING.md, section 'Adding a New Package'"
+    },
+    {
+      "key": "peelFeaturePackage",
+      "text": "Feature areas leave core by inversion: first put core's calls into the area behind a port or container token that @wrongstack/runtime binds, then move the area and its tests into a package that depends on core, which never imports it back. HQ, goal, chronicle, worktree, coordination and builtin-plugins all moved out this way.",
+      "kind": "decision",
+      "tags": ["architecture", "packages", "extraction"],
+      "files": ["architecture/README.md"],
+      "provenance": "architecture/README.md, paragraph 'Peel further feature areas the same way' and the extraction history that follows"
+    },
+    {
+      "key": "toolPathContainment",
+      "text": "Tools that touch the filesystem resolve user-supplied paths with safeResolve or safeResolveReal from packages/tools/src/_util.ts, which check realpath containment against the project root (and ~/.wrongstack); never read path.join(base, userInput) directly.",
+      "kind": "convention",
+      "tags": ["tools", "security", "paths"],
+      "files": ["packages/tools/src/_util.ts", "docs/tool-author-guide.md"],
+      "provenance": "docs/tool-author-guide.md, security checklist item 'Path containment'"
+    },
+    {
+      "key": "execBlockedArgPatterns",
+      "text": "BLOCKED_ARG_PATTERNS in packages/tools/src/exec.ts is a per-binary hard-deny list for arguments that escape the sandbox: python -c/-m, node -e/-r, git --exec=/--upload-pack=/--receive-pack=/-C, bun --preload, docker build/run/exec, find -exec. A match is refused outright rather than sent to a confirmation prompt.",
+      "kind": "fact",
+      "tags": ["tools", "exec", "security"],
+      "files": ["packages/tools/src/exec.ts"],
+      "provenance": "packages/tools/src/exec.ts, BLOCKED_ARG_PATTERNS"
+    },
+    {
+      "key": "websiteSourceFromCode",
+      "text": "Website pages describe real behaviour: before writing or enriching one, read the source file it refers to and never make up content. Pages in website/src/pages share one pattern (PageHero, SectionIntro, Lucide feature cards, ExternalDoc and PageNext).",
+      "kind": "convention",
+      "tags": ["website", "docs"],
+      "files": ["website/src/pages"],
+      "provenance": ".wrongstack/AGENTS.md, 'How to work safely' (website bullet) and 'Domain knowledge' (website pages)"
+    },
+    {
+      "key": "childEnvSanitized",
+      "text": "Spawned child processes get env built with buildChildEnv(...), a sanitized copy, never the raw process.env, which holds provider keys and the vault passphrase. packages/core/tests/architecture/spawn-convention.test.ts enforces this and keeps an explicit, reviewed exemption list.",
+      "kind": "convention",
+      "tags": ["security", "spawn", "env"],
+      "files": ["packages/core/tests/architecture/spawn-convention.test.ts"],
+      "provenance": "packages/core/tests/architecture/spawn-convention.test.ts header; docs/hooks.md security model"
+    },
+    {
+      "key": "webuiPanelCrashIsolation",
+      "text": "WebUI rule from the ErrorBoundary component: a crash in one leaf component, such as a malformed markdown render, must never take down the whole chat session.",
+      "kind": "decision",
+      "tags": ["webui", "react", "errors"],
+      "files": ["packages/webui/src/components/ErrorBoundary.tsx"],
+      "provenance": "packages/webui/src/components/ErrorBoundary.tsx, doc comment"
+    },
+    {
+      "key": "heritageSkipSubtrees",
+      "text": "Inheritance extraction in packages/tools/src/codebase-index/tree-sitter/queries.ts must not descend into generic-argument nodes, and that list exists twice and must stay in sync: SKIP_SUBTREES in the heritage extractor and the last-child scan in heritageLeaf. Each grammar names these nodes differently (type_arguments, type_argument_list, type_parameter_list, type_projection, value_arguments).",
+      "kind": "fact",
+      "tags": ["codebase-index", "tree-sitter"],
+      "files": ["packages/tools/src/codebase-index/tree-sitter/queries.ts"],
+      "provenance": "packages/tools/src/codebase-index/tree-sitter/queries.ts, SKIP_SUBTREES and the heritageLeaf child scan"
+    },
+    {
+      "key": "streamWatchdogConfig",
+      "text": "modelRuntime.streaming holds two watchdogs, not budgets for the whole answer: hangTimeoutMs bounds the gap between body chunks and headersTimeoutMs the wait for response headers, both 60000 ms by default. 0 turns a watchdog off, and changes apply on the next launch.",
+      "kind": "fact",
+      "tags": ["providers", "streaming", "config"],
+      "files": ["packages/core/src/types/config/runtime.ts"],
+      "provenance": "packages/core/src/types/config/runtime.ts, ModelRuntimeStreamingConfig doc comment"
+    },
+    {
+      "key": "testAffectedNotAGate",
+      "text": "`bun run test:affected` skips test files whose whole import closure is unchanged since they last passed; it is for the edit loop, not a gate, because it only follows import edges and misses fixtures read at runtime. vitest --changed and --related selected zero files in this repo and are not usable.",
+      "kind": "workflow",
+      "tags": ["tests", "vitest"],
+      "provenance": "CONTRIBUTING.md, section 'bun run test:affected'"
+    },
+    {
+      "key": "bunTypecheckOnly",
+      "text": "Type checks run on Bun's TypeScript 7 checker, provisioned by `bun run setup:bun` into .bun/typecheck when needed; there is no tsc fallback. WRONGSTACK_BUN_TYPECHECK may point at an externally managed Bun that passes the same version checks.",
+      "kind": "fact",
+      "tags": ["typescript", "tooling", "bun"],
+      "provenance": "CONTRIBUTING.md, section 'Setup'"
+    },
+    {
+      "key": "releaseBinariesOnly",
+      "text": "Releases ship only as standalone wstack binaries built by .github/workflows/release.yml when a vX.Y.Z tag is pushed. npm publishing is retired: every workspace package is private, and `bun run release` only runs release:check.",
+      "kind": "decision",
+      "tags": ["release", "distribution"],
+      "files": [".github/workflows/release.yml"],
+      "provenance": "CONTRIBUTING.md, section 'Release Process'"
+    },
+    {
+      "key": "noVerifyBypass",
+      "text": "The pre-commit hook (.githooks/pre-commit, with set -e) runs the corruption guard, the console-logging lint and the unresolved-import guard. Don't commit with --no-verify unless you know exactly which guard you are skipping and why.",
+      "kind": "warning",
+      "tags": ["git", "pre-commit"],
+      "files": [".githooks/pre-commit"],
+      "provenance": "CONTRIBUTING.md, section 'Pre-Commit Hooks'"
+    },
+    {
+      "key": "ciLocalBeforePush",
+      "text": "No hook gates git push; run `bun run ci:local` (lint, build, typecheck, Vitest and WebUI tests, snapshot and architecture gates) before pushing. Coverage ratchets and Playwright e2e only run in GitHub CI, and release:check is the full matrix.",
+      "kind": "workflow",
+      "tags": ["ci", "git"],
+      "provenance": "CONTRIBUTING.md, section 'Local CI (bun run ci:local)'"
+    },
+    {
+      "key": "conventionalCommits",
+      "text": "Commit messages use Conventional Commits with a package scope, e.g. fix(cli): ..., feat(tools): ..., refactor(webui): ..., and each commit holds one logical change.",
+      "kind": "convention",
+      "tags": ["git", "commits"],
+      "provenance": "CONTRIBUTING.md, 'Commit message convention'"
+    },
+    {
+      "key": "agentsMdRegeneratedByInit",
+      "text": "/init regenerates .wrongstack/AGENTS.md from detected project facts and saves the previous version as AGENTS.md.bak, so hand-written context has to be merged back after running it.",
+      "kind": "warning",
+      "tags": ["agents-md", "init"],
+      "files": [".wrongstack/AGENTS.md"],
+      "provenance": ".wrongstack/AGENTS.md, header note"
+    },
+    {
+      "key": "mcpLazyConnect",
+      "text": "MCP servers marked lazy are not spawned at boot: their tools are registered from a manifest cache in ~/.wrongstack/cache/mcp-tools/<server>.json (invalidated by configHash), the server starts on the first tool call via MCPRegistry.ensureConnected, and it goes back to sleep after idleTimeoutMs (5 min by default).",
+      "kind": "fact",
+      "tags": ["mcp", "startup"],
+      "provenance": "docs/agents.md, 'Lazy connect' paragraph"
+    },
+    {
+      "key": "hookShellAllowlistNotBoundary",
+      "text": "runShellHook only checks the first token of a command hook against an allowlist and then runs the whole string with shell: true, so that list is a convenience filter, not a security boundary. Operator scripts are referenced by absolute path or through a wrapper in .wrongstack/hooks/.",
+      "kind": "warning",
+      "tags": ["hooks", "security"],
+      "files": ["docs/hooks.md"],
+      "provenance": "docs/hooks.md, 'Security model'"
+    },
+    {
+      "key": "httpHooksNoPrivateBlock",
+      "text": "HTTP hooks accept loopback http:// URLs and any valid https:// URL and do not block private, link-local or cloud-metadata addresses; prefer loopback or HTTPS endpoints and never log raw payloads indiscriminately.",
+      "kind": "warning",
+      "tags": ["hooks", "network"],
+      "provenance": "docs/hooks.md, 'Security model' (HTTP hooks bullet)"
+    },
+    {
+      "key": "readOnlyPolicy",
+      "text": "Read-only mode is a session toggle enforced by ReadOnlyPermissionPolicy, a wrapper around the normal policy that denies tools declaring mutating: true or a mutation capability (fs.write, fs.write.outside-project, ...) for the agent and its subagents. The only exception is a .md file under .temp_files/.",
+      "kind": "fact",
+      "tags": ["permissions", "read-only"],
+      "files": ["packages/core/src/security/readonly-permission-policy.ts"],
+      "provenance": "docs/readonly-mode.md, 'How it works'"
+    },
+    {
+      "key": "promptCacheKey",
+      "text": "Every request carries req.cache.key, a content hash of the stable system-prompt prefix (deriveCachePrefixKey in packages/core/src/utils/cache-key.ts). OpenAI, Copilot and Codex send it as prompt_cache_key; Anthropic ignores it and uses explicit cache_control breakpoints, at most 4.",
+      "kind": "fact",
+      "tags": ["providers", "caching"],
+      "files": ["packages/core/src/utils/cache-key.ts"],
+      "provenance": "docs/prompt-caching.md, 'The unified cache key' and 'Per-provider mechanisms'"
+    },
+    {
+      "key": "distributiveOmit",
+      "text": "Plain Omit or Pick on a discriminated union collapses to the keys common to every member; use DistributiveOmit or DistributivePick from @wrongstack/core to keep the union intact.",
+      "kind": "convention",
+      "tags": ["typescript", "types"],
+      "provenance": "docs/typescript-style-guide.md, 'Omit / Pick on unions'"
+    },
+    {
+      "key": "asAnyTrustBoundary",
+      "text": "Don't silence a type error with `as any`. At a real trust boundary (JSON parse, untyped library) narrow the value with an assertion function; `as never` outside test code is a red flag.",
+      "kind": "anti_pattern",
+      "tags": ["typescript", "types"],
+      "provenance": "docs/typescript-style-guide.md, 'as any — trust boundaries only'; CONTRIBUTING.md 'Code Style'"
+    },
+    {
+      "key": "exportedReturnTypes",
+      "text": "Exported functions declare their return type, switches over discriminated unions are exhaustive or assert in default, built-ins are imported with the node: prefix, and relative imports carry the .js extension.",
+      "kind": "convention",
+      "tags": ["typescript", "style"],
+      "provenance": "docs/typescript-style-guide.md, 'Exported functions', 'exhaustive switches' and 'Imports'"
+    },
+    {
+      "key": "archReportFreshness",
+      "text": "check:architecture fails when the newest commit touching architecture/, packages/ or apps/ is newer than the last regeneration of docs/reports/architecture-health-current.json and .md; regenerate both together with report:architecture (the pre-commit hook does it for staged sources). In a shallow clone the gate only warns.",
+      "kind": "workflow",
+      "tags": ["architecture", "reports"],
+      "files": ["docs/reports/architecture-health-current.md"],
+      "provenance": "architecture/README.md, report:architecture freshness paragraph"
+    },
+    {
+      "key": "lintWarningRatchet",
+      "text": "Biome warnings don't fail the lint job, so check:lint-warnings ratchets them in architecture/lint-warning-baseline.json by rule, scope and severity: a new production warning fails, and fixing one requires lowering the baseline in the same change.",
+      "kind": "workflow",
+      "tags": ["lint", "biome", "ratchet"],
+      "files": ["architecture/lint-warning-baseline.json"],
+      "provenance": "architecture/README.md, check:lint-warnings paragraph"
+    },
+    {
+      "key": "testSkipBudget",
+      "text": "Every skip, skipIf, runIf and runtime skip in the test suites is counted against architecture/test-skip-budget.json by check:test-skips; adding, changing or resolving one requires a budget update.",
+      "kind": "workflow",
+      "tags": ["tests", "ratchet"],
+      "files": ["architecture/test-skip-budget.json"],
+      "provenance": "architecture/README.md, check:test-skips paragraph"
+    },
+    {
+      "key": "mailboxAddressing",
+      "text": "Mailbox recipients take four forms: leader@<session-tag> (one exact identity), leader (base alias), @session (normalized to @session:<sender-session-id>) and * or all (project broadcast). assign and steer require a specific recipient, and control messages can only be sent through sendRuntimeControl.",
+      "kind": "fact",
+      "tags": ["mailbox", "addressing"],
+      "provenance": "docs/mailbox-architecture.md, 'Addressing and receipts'"
+    },
+    {
+      "key": "mailboxRetention",
+      "text": "The mailbox server runs a single compaction sweep every five minutes: an explicit expiresAt wins, status messages default to a 30-minute TTL and other types to 24 hours, and a message read by every eligible online agent can be removed after 10 minutes.",
+      "kind": "fact",
+      "tags": ["mailbox", "retention"],
+      "provenance": "docs/mailbox-architecture.md, 'Retention and migration'"
+    },
+    {
+      "key": "kanbanBoardIdPattern",
+      "text": "Kanban board ids must match ^[A-Za-z0-9][A-Za-z0-9_-]*$ and may not contain '..'; boards can be referenced by a unique id prefix, and mutations are revision-checked so stale updates are rejected.",
+      "kind": "fact",
+      "tags": ["kanban", "validation"],
+      "provenance": "docs/kanban-architecture.md, storage guarantees"
+    },
+    {
+      "key": "chronicleLegacyJsonl",
+      "text": "Chronicle's old daily JSONL partitions (chronicle/YYYY-MM-DD.events.jsonl) are only read behind WRONGSTACK_CHRONICLE_STORE=jsonl for migration checks; chronicle.sqlite is the authoritative journal.",
+      "kind": "fact",
+      "tags": ["chronicle", "migration"],
+      "provenance": "docs/chronicle-architecture.md, introduction and 'Physical state'"
+    },
+    {
+      "key": "i18nDisplayOnly",
+      "text": "WebUI i18n is display-only: it translates chrome such as buttons, labels and toasts, never agent prompts, skills, slash commands or model output. English is bundled inline, other locales load lazily as Vite chunks, and uiLocale is shared through Config.uiLocale.",
+      "kind": "decision",
+      "tags": ["webui", "i18n"],
+      "files": ["packages/webui/src/i18n/index.ts"],
+      "provenance": "packages/webui/src/i18n/index.ts, module header"
+    },
+    {
+      "key": "webuiServerKanbanMock",
+      "text": "webui-server tests whose import graph reaches @wrongstack/kanban should vi.mock it (stub bridgeKanbanSupervisor, getServerKanbanStore and recordTaskFileActivity): the real client can spawn a detached daemon and keep a named-pipe socket open, so vitest hangs after every test passes. WRONGSTACK_KANBAN_SERVER=0 is the runtime kill-switch.",
+      "kind": "workflow",
+      "tags": ["tests", "webui-server", "kanban"],
+      "provenance": ".wrongstack/agents/debugger/consolidated.md"
+    },
+    {
+      "key": "providerPresetNotTransport",
+      "text": "packages/providers/src/presets/openai.ts is not what serves the openai family at runtime: the registry factory switch in packages/providers/src/index.ts (case 'openai') constructs the class-based OpenAIProvider from openai.ts. Check the factory before assuming a preset edit changes live behaviour.",
+      "kind": "warning",
+      "tags": ["providers", "openai"],
+      "files": ["packages/providers/src/index.ts"],
+      "provenance": ".wrongstack/agents/context/consolidated.md"
+    },
+    {
+      "key": "inProjectConfigStripping",
+      "text": "Before adding a Config field to the TUI settings picker, check the in-project policy (IN_PROJECT_ALLOWED_KEYS and KNOWN_DENIED_IN_PROJECT in config-loader/in-project-policy.ts, PROJECT_SAFE_FIELDS in packages/cli/src/settings-menu.ts). Under configScope 'project' a top-level key missing from PROJECT_SAFE_FIELDS is silently stripped by filterSafeForProject, so such fields must be written to the profile.",
+      "kind": "warning",
+      "tags": ["config", "tui", "settings"],
+      "files": ["packages/cli/src/settings-menu.ts", "packages/cli/src/boot/tui-settings-adapter.ts"],
+      "provenance": ".wrongstack/agents/bug-hunter/learned.md, 'What to do' (TUI picker Config field)"
+    },
+    {
+      "key": "sessionCatalogRefcountFinally",
+      "text": "In packages/core/src/session-catalog/registry.ts a reference counter guarding a binding's lifecycle must be decremented in a finally around the awaited RPC: activate_reservation can reject with 'Resume reservation expired', and a decrement on the success path only pins the binding so closeBinding() never closes its IPC client.",
+      "kind": "bug_root_cause",
+      "tags": ["session-catalog", "ipc"],
+      "files": ["packages/core/src/session-catalog/registry.ts"],
+      "provenance": ".wrongstack/agents/bug-hunter/learned.md, 'What to avoid'"
+    },
+    {
+      "key": "doctorDaemons",
+      "text": "`wstack doctor --daemons` lists every project daemon as live, stale or stopped without spawning one; `--clear-stale` unlinks only endpoints that a fresh probe reports as stale. There is deliberately no restart option, because daemons start on demand.",
+      "kind": "workflow",
+      "tags": ["daemons", "diagnostics"],
+      "provenance": "docs/project-daemons.md, 'Inspecting daemons'"
+    },
+    {
+      "key": "docsCommandGuides",
+      "text": "A new CLI subcommand or slash command needs a linked guide in docs/subcommands/README.md or docs/slash/README.md. `bun run docs:check` verifies links, heading targets, catalog freshness and command-guide coverage; `bun run docs:catalog:write` regenerates the catalog from source declarations.",
+      "kind": "workflow",
+      "tags": ["docs", "cli"],
+      "provenance": "docs/maintenance.md"
+    },
+    {
+      "key": "readabilityOverSmallWins",
+      "text": "Don't trade readability for less than a 10% gain on a path that isn't hot, and label every performance statement as measured, read in the code, or SPECULATIVE.",
+      "kind": "preference",
+      "tags": ["performance", "readability"],
+      "provenance": "CONTRIBUTING.md, 'Performance Contract' rules 6 and 8"
+    }
+  ],
+  "negatives": [
+    {
+      "key": "scratchTelegramOffsetDebug",
+      "text": "Scratch for this session only: restarted the Telegram bot twice while poking at polling and the offset file in my profile looked stuck on an old update id. Haven't ruled out my own leftover poll lock yet; revisit after the merge.",
+      "kind": "fact",
+      "tags": ["telegram", "scratch"],
+      "provenance": "another session's private scratch note; not derived from the repository",
+      "session": "other-session"
+    },
+    {
+      "key": "scratchDangerDetectDebugLog",
+      "text": "WIP: I left a temporary debug print in packages/tools/src/_danger-detect.ts on my branch while trying rm flag spellings by hand. Strip it before anything gets committed from this worktree.",
+      "kind": "warning",
+      "tags": ["tools", "scratch"],
+      "files": ["packages/tools/src/_danger-detect.ts"],
+      "provenance": "another session's private scratch note; not derived from the repository",
+      "session": "other-session"
+    },
+    {
+      "key": "scratchKanbanSocketDelete",
+      "text": "Session note: the kanban daemon would not come up for me this morning, so I deleted its socket under $TMPDIR by hand and it started again. No idea yet what wedged it.",
+      "kind": "workflow",
+      "tags": ["kanban", "daemons", "scratch"],
+      "provenance": "another session's private scratch note; not derived from the repository",
+      "session": "other-session"
+    },
+    {
+      "key": "scratchQueueJsonVanished",
+      "text": "Personal reminder: my queue.json vanished twice today after restarting the TUI. Might be my profile setup; not investigated and not reported.",
+      "kind": "fact",
+      "tags": ["tui", "queue", "scratch"],
+      "provenance": "another session's private scratch note; not derived from the repository",
+      "session": "other-session"
+    },
+    {
+      "key": "scratchCheckpointTimings",
+      "text": "Draft numbers from one laptop run, not in PERF_LOG.md yet: first turn in the big monorepo took about 46 s before the provider call, small repo about 1 s. Need three repeats before quoting anything.",
+      "kind": "fact",
+      "tags": ["performance", "scratch"],
+      "provenance": "another session's private scratch note; not derived from the repository",
+      "session": "other-session"
+    },
+    {
+      "key": "scratchI18nMachineTranslation",
+      "text": "Note to self: the German and Turkish settings strings I added in this session are machine-translated placeholders; get a reviewer to check them before the next release.",
+      "kind": "workflow",
+      "tags": ["i18n", "scratch"],
+      "provenance": "another session's private scratch note; not derived from the repository",
+      "session": "other-session"
+    },
+    {
+      "key": "mailboxJsonlFile",
+      "text": "The mailbox is a JSONL file at ~/.wrongstack/projects/<slug>/_mailbox.jsonl protected by file locking; all agent coordination appends to that file.",
+      "kind": "fact",
+      "tags": ["mailbox", "storage"],
+      "provenance": ".wrongstack/AGENTS.md, 'Domain knowledge' (older description, replaced by the SQLite mailbox)",
+      "supersededBy": "mailboxSqliteModel"
+    },
+    {
+      "key": "yoloCatastrophicOnly",
+      "text": "Under YOLO only catastrophic, irreversible commands prompt: recursive deletes of a filesystem, drive or home root, disk wipes, writes outside the project and riskTier 'destructive' tools. git reset --hard, curl | sh, shutdown and DROP TABLE all auto-run.",
+      "kind": "fact",
+      "tags": ["yolo", "permissions"],
+      "provenance": "docs/yolo-mode.md, 'Destructive Confirmation' as of July 2026 (before the per-kind gate)",
+      "supersededBy": "yoloDestructiveKinds"
+    },
+    {
+      "key": "kernelStaysInCore",
+      "text": "kernel/ and types/ stay inside @wrongstack/core: extracting a separate kernel package was abandoned because WrongStackError is used everywhere, so layering is enforced inside core instead of by package splits.",
+      "kind": "decision",
+      "tags": ["architecture", "core"],
+      "provenance": "docs/architecture-rules.md, 'Decision: Layer Instead of Split' (2026-05-20)",
+      "supersededBy": "coreLayersMoveContractDown"
+    },
+    {
+      "key": "daemonHandRolledListen",
+      "text": "Each project daemon calls server.listen() itself; on EADDRINUSE it assumes another owner is alive and exits with code 0.",
+      "kind": "convention",
+      "tags": ["daemons", "ipc"],
+      "provenance": "docs/project-daemons.md, 'The reclaim ladder' (describes the hand-copied handlers used before 2026-08-11)",
+      "supersededBy": "bindProjectEndpointRule"
+    },
+    {
+      "key": "yoloCoversKills",
+      "text": "Killing processes is covered by the YOLO destructive gate, so the bash kill guard is only a best-effort fast path and does not need to be complete.",
+      "kind": "fact",
+      "tags": ["yolo", "kill-guard"],
+      "provenance": "packages/tools/src/bash-kill-guard.ts, old 'Mitigation' paragraph (incorrect)",
+      "contradicts": "yoloDestructiveKinds"
+    },
+    {
+      "key": "dotdotPrefixEscape",
+      "text": "A path.relative() result that starts with '..' is outside the root, so relative.startsWith('..') is the containment check to use for display and access decisions.",
+      "kind": "convention",
+      "tags": ["paths", "containment"],
+      "provenance": "pattern found in several display-path fallbacks (incorrect)",
+      "contradicts": "canonicalEscapeTest"
+    },
+    {
+      "key": "realpathExpandsShortNames",
+      "text": "fs.realpathSync already expands Windows 8.3 short names to long names, so realpathSync.native is unnecessary when comparing paths against ~/.wrongstack.",
+      "kind": "fact",
+      "tags": ["windows", "paths"],
+      "provenance": "assumption behind isInsideAgentStateRoot before 2026-10-24 (incorrect)",
+      "contradicts": "windowsNativeRealpath"
+    }
+  ],
+  "tasks": [
+    {
+      "commit": "f8fdf6dc3bd20e6f7f02f31ce9a3d6f42de163e1",
+      "subject": "fix(tools): block git -c/--config argument injection in exec allowlist",
+      "task": "The exec tool's git argument denylist blocks --exec=, --upload-pack= and -C but not -c/--config, which can run commands through git config (core.sshCommand, core.pager, http.proxy, alias.x=!cmd). Block -c, --config and --config-env= as well (CWE-88).",
+      "paths": ["packages/tools/src/exec.ts"],
+      "required": ["execBlockedArgPatterns"],
+      "why": "The agent has to know where exec keeps its per-binary hard-deny argument list."
+    },
+    {
+      "commit": "2a1016d7d4358ae0956df87c49c38a717b428b72",
+      "subject": "fix(providers): use max_completion_tokens for OpenAI, max_tokens for compatible endpoints (#10)",
+      "task": "OpenAI now requires max_completion_tokens (gpt-4o and o1/o3/o4 reject the deprecated max_tokens), but OpenAI-compatible endpoints such as Groq, Together, Mistral and local servers still only accept max_tokens. Send the right parameter for each, including in the OpenAI preset's body builder, and cover both with tests.",
+      "paths": ["packages/providers/src/openai.ts", "packages/providers/src/openai-compatible.ts", "packages/providers/src/presets/openai.ts", "packages/providers/tests/openai.test.ts", "packages/providers/tests/openai-compatible.test.ts", "packages/providers/tests/presets-anthropic-openai-google.test.ts"],
+      "required": ["openaiCompatibleSubclass"],
+      "why": "The compatible provider inherits from the OpenAI one, so the split needs an override in the subclass."
+    },
+    {
+      "commit": "aa532c2adcea67b4ff77c9652f889a6c16176d20",
+      "subject": "fix(core): move bootConfig to src root to satisfy layer boundary",
+      "task": "The package-boundaries architecture test fails because infrastructure/boot.ts (bootConfig) composes security/ (DefaultSecretVault, migratePlaintextSecrets) and storage/ (DefaultConfigLoader). Move bootConfig to a place where that composition is allowed, keep it exported from the core barrel, and don't change behaviour.",
+      "paths": ["packages/core/src/boot.ts", "packages/core/src/index.ts", "packages/core/src/infrastructure/index.ts", "packages/core/tests/boot.test.ts"],
+      "required": ["coreLayerRules"],
+      "why": "Fixing it needs the core layer order and what infrastructure/ may import."
+    },
+    {
+      "commit": "e1591749681aadc1dd4c4171ba397a58b21966e1",
+      "subject": "fix(tools): enforce project-root containment on json tool file reads (CWE-22)",
+      "task": "The json tool reads input.file directly with fs.readFile in its parse, query, validate and transform actions with no containment check, so an absolute or ../ path can read any file the process can reach. Enforce project-root containment the same way the read tool does, and add regression tests including a ../ escape for query.",
+      "paths": ["packages/tools/src/json.ts", "packages/tools/tests/json.test.ts"],
+      "required": ["toolPathContainment"],
+      "why": "The fix should use the shared path-resolution helpers tools are expected to use."
+    },
+    {
+      "commit": "28e455baadb237486e6f425fc11a5ac56f52a289",
+      "subject": "feat(plugins): add lint-gate — PreToolUse hook that lints before write/edit",
+      "task": "Add a lint-gate plugin: a PreToolUse hook that runs biome (or eslint) on the content a write or edit would produce, before the tool commits it. Config: linter (auto/biome/eslint), mode (block refuses, warn injects context), minimum severity and timeoutMs; if no linter is found it becomes a silent no-op. Register it with the CLI's plugins and add tests.",
+      "paths": ["packages/plugins/src/lint-gate/index.ts", "packages/plugins/src/index.ts", "packages/cli/src/wiring/plugins.ts", "packages/plugins/package.json", "packages/plugins/tsup.config.ts", "packages/plugins/tests/lint-gate.test.ts"],
+      "required": ["pluginLifecycleContract"],
+      "why": "A new plugin must follow the host's setup/teardown/health contract."
+    },
+    {
+      "commit": "82162795d21777f8fd054a42ac2954de6e2fd8e0",
+      "subject": "fix(webui): per-panel ErrorBoundary isolates crashes",
+      "task": "One top-level ErrorBoundary wraps the whole WebUI, so any uncaught render error in ChatView, SkillsPanel, OfficeMap or MessageBubble blanks the entire UI to the recovery screen. Give ErrorBoundary a panel level with a compact inline 'Try again' fallback, wrap each view and overlay in App.tsx in its own boundary, keep the root one, and add tests.",
+      "paths": ["packages/webui/src/components/ErrorBoundary.tsx", "packages/webui/src/App.tsx", "packages/webui/tests/components/error-boundary-panel.test.tsx"],
+      "required": ["webuiPanelCrashIsolation"],
+      "why": "The intended crash scope is a documented WebUI rule the change has to satisfy."
+    },
+    {
+      "commit": "04b9c75eba880677eb368726fed8b76a3ea1a4f0",
+      "subject": "fix(mcp-control): allow safe actions in YOLO mode without permission prompt",
+      "task": "mcp_control is a multi-action tool, but its tool-level riskTier 'destructive' makes every action prompt in YOLO mode. list, search, activate and deactivate are read-only or ephemeral and should run without confirmation; only enable, disable and restart change config or start external processes (npx -y <pkg>).",
+      "paths": ["packages/core/src/security/permission-policy.ts"],
+      "required": ["yoloPermissionOrder"],
+      "why": "The agent must know how the permission policy decides destructive YOLO calls."
+    },
+    {
+      "commit": "5265759f16de1b0ccd69e81edf0ed7332cd35d38",
+      "subject": "fix(mcp): dispose SSE timeout signal on error paths + atomic config writes",
+      "task": "Two MCP bugs: SSETransport.request() only disposes its timeout signal on the success path, so on any error the timer keeps running and the parent-abort listener leaks; and writeConfig() in manage.ts always uses the same `${path}.tmp` temp file, so concurrent writers (WebUI and REPL) can clobber it and corrupt config.json. Fix both and add a regression test for the error path.",
+      "paths": ["packages/mcp/src/transport.ts", "packages/mcp/src/manage.ts", "packages/mcp/tests/transport.test.ts"],
+      "required": ["atomicWriteHelper"],
+      "why": "Config writes should follow the project's safe file-write helper."
+    },
+    {
+      "commit": "bc6fa9faf9f524e5f9dd35020f0c4d252d4ec78a",
+      "subject": "fix(core): structured JSON logging for plan/task-store save failures",
+      "task": "CI's 'Lint console logging' step (lint:console --all) flags the ad-hoc '[plan-store] save failed:' and '[task-store] save failed:' fallbacks in core storage; they landed while the pre-commit hook wasn't propagating guard failures. Convert them to the standard logging shape already used by run-controller and secret-vault.",
+      "paths": ["packages/core/src/storage/plan-store.ts", "packages/core/src/storage/task-store.ts"],
+      "required": ["structuredLogShape"],
+      "why": "The required log format is a project convention enforced by a lint script."
+    },
+    {
+      "commit": "d9a5496fc850b16fd9ecf9e7202c140a9aff5a8b",
+      "subject": "fix(tools): redact cmd/args in telemetry emit sites (security: prevent secret leak)",
+      "task": "The five emitProcessStarted telemetry sites (_spawn-stream.ts, bash.ts background and foreground, exec.ts spawn-error and normal spawn) emit the raw command and args, so secret-bearing CLI flags can reach OTLP/Prometheus exporters through process.started events. Redact them there the way the process registry already does.",
+      "paths": ["packages/tools/src/_spawn-stream.ts", "packages/tools/src/bash.ts", "packages/tools/src/exec.ts"],
+      "required": ["redactCommandHelper", "toolSecretsNeverLogged"],
+      "why": "An existing redaction helper should be reused, and secrets must never reach observability sinks."
+    },
+    {
+      "commit": "d1c490d6b2e9da967f51e43c4fdaa21fc05115ec",
+      "subject": "fix(i18n): add missing endpointInvalidBadge and endpointInvalidRemedy to 6 locales",
+      "task": "endpointInvalidBadge and endpointInvalidRemedy were added to the English WebUI settings strings but never to the other locales, which breaks the i18n completeness gate in release:check. Add them to de, es, fr, it, pt-BR and tr.",
+      "paths": ["packages/webui/src/i18n/locales/de/settings.json", "packages/webui/src/i18n/locales/es/settings.json", "packages/webui/src/i18n/locales/fr/settings.json", "packages/webui/src/i18n/locales/it/settings.json", "packages/webui/src/i18n/locales/pt-BR/settings.json", "packages/webui/src/i18n/locales/tr/settings.json"],
+      "required": ["webuiI18nCompleteness"],
+      "why": "Knowing the locale layout and the gate's rule tells the agent exactly what to add."
+    },
+    {
+      "commit": "16d97e5316a6f3e49af28908bfeecb94e0011f62",
+      "subject": "feat(kanban): Session-board prune operation: archive/delete session mirrors past TTL",
+      "task": "Add a pruneSessionBoards operation to Kanban that checks session mirror boards against their retention TTL and either archives them (kind 'archive', retention.archivedAt stamped) or deletes them; skip keep or no-TTL boards, non-session boards and already-archived ones. Expose it through the full IPC surface, the public exports and the ServerKanbanStore facade, with tests.",
+      "paths": ["packages/kanban/src/manager/prune.ts", "packages/kanban/src/domain-operations.ts", "packages/kanban/src/client-domain.ts", "packages/kanban/src/server/kanban-store.ts", "packages/kanban/src/manager.ts", "packages/kanban/src/index.ts", "packages/kanban/tests/prune-session-boards.test.ts"],
+      "required": ["kanbanDomainCallAllowlist", "kanbanBoardKinds"],
+      "why": "A new stateful operation only works if routed through the daemon's operation list, and archiving relies on board-kind filtering."
+    },
+    {
+      "commit": "830b47912e3e3f0c051eeb7b6c46972c02aa6ef1",
+      "subject": "fix(webui): stop echoing MCP server credentials over the WebSocket (WS-036)",
+      "task": "mcp.list sends each MCP server's env map to the browser verbatim, which leaks GITHUB_TOKEN, *_API_KEY values and database passwords over the WebSocket (WS-036). Mask secret values while ordinary settings like NODE_ENV stay visible, and make sure the WebUI edit form, which prefills from this payload, cannot overwrite a stored credential with the mask when it sends it back.",
+      "paths": ["packages/mcp/src/manage.ts", "packages/mcp/src/index.ts", "packages/webui-server/src/server/mcp-handlers.ts", "packages/mcp/tests/env-mask.test.ts", "packages/webui-server/tests/mcp-env-redaction.test.ts"],
+      "required": ["secretFieldDetection"],
+      "why": "The project already has helpers for judging secret key names and secret-looking values."
+    },
+    {
+      "commit": "5a5eab5395d71cacdd9ed1cdc2c13645212348d7",
+      "subject": "fix(core): resolve exactOptionalPropertyTypes TS2379 in delegate lifecycle capture",
+      "task": "The test-inclusive TypeScript ratchet regressed with TS2379: in delegate-tool.test.ts the delegate.started handler pushes `subagentId: e.subagentId` (string | undefined) into an array typed `subagentId?: string`. Fix it without changing behaviour so the CI TypeCheck job passes again.",
+      "paths": ["packages/core/tests/coordination/delegate-tool.test.ts"],
+      "required": ["exactOptionalProps", "testTypesRatchet"],
+      "why": "Needs the optional-property rule and the fact that test files are type-checked against a baseline."
+    },
+    {
+      "commit": "8ff99d881a89de925b4ba803e8e26ece56632743",
+      "subject": "fix(core): apply session-affinity filter to mailbox unread count",
+      "task": "The mailbox tool's unread action filters messages only through isMailboxMessageVisibleTo, so a chimera report stamped with another session's affinity token counts toward this leader's unread total even though reading it would reject it. Make the unread count consistent with what check and query return.",
+      "paths": ["packages/core/src/coordination/mailbox-tool.ts"],
+      "required": ["mailboxSessionAffinity"],
+      "why": "The fix reuses the session filter the other read paths already apply."
+    },
+    {
+      "commit": "f1ea144345d0c45ad953bca431cc0d650f6e14ba",
+      "subject": "feat(vector-memory): wire syncFromSage() into the CLI boot path with first-boot marker and review hardening",
+      "task": "syncFromSage() has no production caller, so the vector store boots empty while SAGE holds the project corpus. On first boot per project, have the CLI mirror the active SAGE corpus into the vector store in the background, gated by a running/complete marker next to the vector db, with a warm-up embedding probe, a reindex heal pass before marking complete, and no takeover of a running marker whose owner is still alive.",
+      "paths": ["packages/cli/src/boot/vector-memory-sage-sync.ts", "packages/vector-memory/src/sage-sync-source.ts", "packages/cli/src/cli-main.ts", "packages/vector-memory/src/store.ts", "packages/vector-memory/src/index.ts", "packages/cli/tests/boot/vector-memory-sage-sync.test.ts", "packages/vector-memory/tests/sage-sync-source.test.ts"],
+      "required": ["sageSessionIsolation"],
+      "why": "The sync source must not copy session-private memories into a shared store."
+    },
+    {
+      "commit": "557e161fa8fc9d1267b8766ec84cd9fee0ff07d6",
+      "subject": "fix: stop unbounded resource retention in chronicle journals and collab WS handler",
+      "task": "Two leaks to fix in one change: an InlineChronicleProjectAccess that lives across midnight keeps one open ChronicleJournal (write buffer plus file handle) per day forever; and the collaboration WS handler's dispose() leaves close/error listeners on live sockets, collab.leave stacks duplicate listeners, and a never-joined observer keeps the broadcast interval alive.",
+      "paths": ["packages/core/src/chronicle/project-access.ts", "packages/webui-server/src/server/collaboration-ws-handler.ts", "architecture/core-public-api-snapshot.json"],
+      "required": ["chronicleOwnership", "coreApiSnapshotHook"],
+      "why": "Needs how inline Chronicle access relates to the project server, and both files feed the committed API snapshot."
+    },
+    {
+      "commit": "d01a25903c27185fa57189f44c7c64c762439c2e",
+      "subject": "fix(codebase-index): skip template_argument_list in C++ heritage extraction (Chimera medium)",
+      "task": "C++ heritage extraction emits a phantom inherit ref: for `class D : Base<Foo>` both Base and Foo come out, because tree-sitter-cpp calls the base-class argument subtree template_argument_list, which the earlier Java/C#/Kotlin generic-heritage fix did not cover. Skip it and add a negative regression test next to the Java/C#/Kotlin ones.",
+      "paths": ["packages/tools/src/codebase-index/tree-sitter/queries.ts", "packages/tools/tests/tree-sitter-refs.test.ts"],
+      "required": ["heritageSkipSubtrees"],
+      "why": "The node has to be added in both places the extractor skips argument subtrees."
+    },
+    {
+      "commit": "de1f7e062e9f2acdd57521f2f51e87dbe671772f",
+      "subject": "fix(providers): classify 403/429 hard billing-limit responses as quota_exhausted",
+      "task": "Kimi, Z.AI and Moonshot answer a hard billing-cycle limit with HTTP 403 and prose such as \"You've reached your usage limit for this billing cycle\". Those hit the 401/403 branch first and feed the 5-failure auth chain instead of the 15-minute quota block. Classify them, and similar 429s, as quota_exhausted, keep 402 as quota, and widen the quota pattern for usage/credit limit wording without new false positives.",
+      "paths": ["packages/core/src/types/provider.ts", "packages/core/src/types/quota-regex.ts", "packages/core/tests/types/provider-error-kind.test.ts"],
+      "required": ["providerErrorTaxonomy"],
+      "why": "The agent must know the one classifier every recovery path relies on and its matching pitfalls."
+    },
+    {
+      "commit": "f6a606a45ead171af649e31993f1017f474e2326",
+      "subject": "fix(plugin-sdk): declare @wrongstack/tools dependency and keep it external in plugin-sdk build",
+      "task": "plugin-sdk's local-bin.ts imports and re-exports @wrongstack/tools/win32, but the package only declares @wrongstack/core and its build doesn't keep tools external, so esbuild silently bundles the win32 helpers into dist/runtime.js while the declarations still reference the package. Fix the dependency declaration and the build.",
+      "paths": ["packages/plugin-sdk/package.json", "scripts/build-package.mjs"],
+      "required": ["buildPackageProfiles"],
+      "why": "Knowing how the build script decides externals tells the agent which two places to change."
+    },
+    {
+      "commit": "8f52191f2f179dd74c8c8a0f51580e661cccf34f",
+      "subject": "fix(wrongtrace): serialize and atomically publish gate-counters persist",
+      "task": "persistWrongTraceGateCounters writes the counters file in place and can interleave, because the standalone WebUI emit closure fires it unawaited on every gate decision. Serialize the writes in-process and make sure a failed write never leaves a truncated file; also correct the docs and JSDoc to describe a cumulative process-lifetime tally, and add a concurrent-persist test.",
+      "paths": ["packages/wrongtrace/src/gate-counters.ts", "packages/cli/tests/wrongtrace-gate-counters.test.ts", "docs/wrongtrace.md"],
+      "required": ["atomicWriteHelper"],
+      "why": "The fix should publish the file the way the project writes persisted state."
+    },
+    {
+      "commit": "1ca2990be886dbf7ddb426d60138993e3489b720",
+      "subject": "fix(tui): don't lose the persisted queue to the mount-time empty write",
+      "task": "use-queue-manager's persist effect writes the in-memory queue on mount while the rehydrate read is still resolving, and with an empty mount queue this can silently lose queued messages on every restart. Hold persist writes until hydration completes and keep any message enqueued before the read resolves; add regression tests.",
+      "paths": ["packages/tui/src/hooks/use-queue-manager.ts", "packages/tui/tests/use-queue-manager.test.ts"],
+      "required": ["queueStoreEmptyClears", "tuiHydrationGuard"],
+      "why": "Explains why an empty write destroys the file and how other TUI persistence avoids the mount-time race."
+    },
+    {
+      "commit": "54d1bb12f8edc76a5bc44bf6c590f9f770ade903",
+      "subject": "fix(tools): recognize uppercase GNU -R in rm flag clusters",
+      "task": "`rm -Rf`, `rm -fR`, `rm -R -f` and `rm -R --force` are classified safe: flagLetters adds short-cluster letters verbatim and the rm-recursive rule checks for lowercase r and f, but GNU -R means --recursive. Make these recursive force-deletes reach the destructive confirm gate, keep half-flag shapes safe, and add regression tests.",
+      "paths": ["packages/tools/src/_danger-detect.ts", "packages/tools/tests/danger-detect.test.ts"],
+      "required": ["execDangerClassifier", "yoloRiskFlagParity"],
+      "why": "The tools classifier has to match how the core YOLO classifier reads the same flags."
+    },
+    {
+      "commit": "243a46c09a90a1d668cb99728efcd85628cb4491",
+      "subject": "fix(tools): match PowerShell danger rule case-insensitively",
+      "task": "`Remove-Item -recurse -force` is classified safe and auto-runs past the destructive confirm gate, while the canonical -Recurse -Force spelling triggers it; the -WhatIf dry-run bypass is matched case-sensitively too. Fix the powershell-remove-item-recursive-force rule, drop any helper that becomes unused, and add lowercase, mixed-case and lowercase dry-run regression tests.",
+      "paths": ["packages/tools/src/_danger-detect.ts", "packages/tools/tests/danger-detect.test.ts"],
+      "required": ["execDangerClassifier", "powershellCaseInsensitive"],
+      "why": "Needs how the rules are written and the PowerShell casing semantics the sibling rules already follow."
+    },
+    {
+      "commit": "0a916da5e6825b897206d63a536419bc7c669180",
+      "subject": "fix(primitives): model raw astral literals as one token in both parsers",
+      "task": "parseCharClass in the regex guard and parseSeq/parseClass in the ambiguity module advance one UTF-16 unit for raw astral literals, so the low surrogate re-parses as a phantom lone surrogate: `(?:[\\u{1F600}]a|\\u{1F600}a)+` is wrongly allowed, `(?:[\\u{1F600}]x|[\\u{DE00}]x)+` wrongly rejected, and detectQuantifiedAmbiguity misses raw-vs-escaped duplicate branches. Read whole code points in both parsers and pin all four shapes.",
+      "paths": ["packages/primitives/src/regex-guard.ts", "packages/primitives/src/regex-ambiguity.ts", "packages/primitives/tests/regex-guard.test.ts", "packages/primitives/tests/regex-ambiguity.test.ts"],
+      "required": ["compileUserRegexGate"],
+      "why": "The agent must know this is the shared ReDoS gate and that its two parsers must agree."
+    },
+    {
+      "commit": "3020ec82aa32d5d55c7da840f01ae0621a5cea50",
+      "subject": "fix(telegram): advance poll offset past poison messages instead of wedging",
+      "task": "When onMessageUpdate throws, the Telegram poller breaks out of the update loop without advancing its offset past the failing update. The same poison message is fetched and fails on every poll forever, blocking every later update, and saveOffset() persists the stuck offset across restarts. Log the failure, move past it and continue the batch; add poller regression tests.",
+      "paths": ["packages/telegram/src/poller.ts", "packages/telegram/tests/unit/poller.test.ts"],
+      "required": ["telegramPollingModel"],
+      "why": "The fix depends on how getUpdates offsets and their persistence work."
+    },
+    {
+      "commit": "cd91858b6b512780195a904611b856cef66e5567",
+      "subject": "fix(worktree): thread identity fallback into --no-ff merge",
+      "task": "`git merge --no-ff` (MergeOpts.squash: false) fails with \"Committer identity unknown\" on machines with no git identity, and merge() then reports that as a conflict, parks the handle in needs-review, emits worktree.conflict and hard-resets the base tree. Thread the identity fallback into the --no-ff argv, keep the squash invocation unchanged, and add a stubbed argv test plus a real identity-less merge test.",
+      "paths": ["packages/core/src/worktree/worktree-manager.ts", "packages/core/tests/worktree/worktree-manager.test.ts"],
+      "required": ["worktreeGitIdentityFallback"],
+      "why": "The other commit-creating paths already use a helper the merge path must reuse."
+    },
+    {
+      "commit": "29960f0ebac585e7ee5423b52bc7f3af990eafc9",
+      "subject": "fix(cli): stop flag values leaking into positional args for auth local",
+      "task": "`wstack auth local --model <spec>` (and the -m short form) without --name fails with Unknown local server \"<spec>\", because the model spec leaks into positional[1], which the handler reads as the preset name. The same problem hits `export -f json` and `export -o <file>`, and parseAuthFlags skips unknown --flag tokens but not their values. Fix both parser layers and add unit and full-dispatch regression tests.",
+      "paths": ["packages/cli/src/arg-parser.ts", "packages/cli/tests/arg-parser.test.ts", "packages/cli/tests/subcommand-handlers.test.ts"],
+      "required": ["argParserFlagValues"],
+      "why": "The agent must know how parseArgs assigns values to long and short flags."
+    },
+    {
+      "commit": "a83141f77262d70511fc6be930f2277f60d7f10d",
+      "subject": "fix(core): contain stdin write errors in the shell-hook executor",
+      "task": "runShellHookDetailed feeds the hook payload with child.stdin.end() and no error listener. A hook command that exits without reading stdin (echo, git status, node -e process.exit(0)) leaves a write against a closed pipe, and once the payload exceeds the OS pipe buffer EPIPE/EOF becomes an uncaught exception that kills the whole agent process. Contain it and add a regression test.",
+      "paths": ["packages/core/src/hooks/shell-executor.ts", "packages/core/tests/hooks/shell-executor.test.ts"],
+      "required": ["hooksNeverCrash"],
+      "why": "The hook system's isolation guarantee defines what the executor must do with this error."
+    },
+    {
+      "commit": "da10fbec9abd1aef72a30e5dca348573b3ab0554",
+      "subject": "fix(paths): canonical escape predicate in display-path fallbacks",
+      "task": "Nine display-path fallbacks (codebase-index atlas-projection, atlas-brief, repo-map, index-service, embedding-pass and concept-enrichment; plug-lsp displayPath; core memory-curator and memory-consolidator) use a bare startsWith('..') to choose between relative and absolute rendering, so in-root names like ..configs render as absolute paths. Fix all nine while keeping real escapes absolute, with regression tests.",
+      "paths": ["packages/tools/src/codebase-index/repo-map.ts", "packages/plug-lsp/src/utils/uri.ts", "packages/tools/src/codebase-index/atlas-projection.ts", "packages/tools/src/codebase-index/atlas-brief.ts", "packages/tools/src/codebase-index/index-service.ts", "packages/core/src/storage/memory-curator.ts", "packages/core/src/storage/memory-consolidator.ts", "packages/plug-lsp/tests/unit/runtime.test.ts"],
+      "required": ["canonicalEscapeTest"],
+      "why": "The project already has a canonical escape test to mirror."
+    },
+    {
+      "commit": "450f1bd73ad020d1a532571bbdfe131561c23e10",
+      "subject": "fix(mcp): treat a rejected OAuth refresh as reauthorization",
+      "task": "A revoked or expired MCP OAuth refresh token makes getAccessToken throw on every request, reported as an opaque \"MCP OAuth discovery HTTP 400\", and reauth_required is never emitted. On a 4xx from the token endpoint, first check whether the stored token was replaced meanwhile, otherwise emit reauth_required once and stop retrying that refresh token; network faults and 5xx still throw. Label token-endpoint errors as such.",
+      "paths": ["packages/mcp/src/token-store.ts", "packages/mcp/src/authorization.ts", "packages/mcp/tests/token-store.test.ts"],
+      "required": ["mcpTokenStore"],
+      "why": "The store is shared across processes, which is why a re-read must come before giving up."
+    },
+    {
+      "commit": "de1406f59d05c6024cf9758755d2f1cff389808c",
+      "subject": "fix(core): break coordination-execution runtime dependency cycle",
+      "task": "The package-boundaries architecture gate flags a bidirectional runtime dependency: coordination's brain-explain imports BrainAutoRisk and resolveRiskCeiling from execution's autonomy-brain code, while execution imports coordination back. Break the cycle without breaking existing importers of those symbols.",
+      "paths": ["packages/core/src/coordination/brain-risk.ts", "packages/core/src/coordination/brain-explain.ts", "packages/core/src/execution/autonomy-brain.ts", "architecture/core-public-api-snapshot.json"],
+      "required": ["coreLayerRules", "coreApiSnapshotHook"],
+      "why": "Needs the layer direction to pick where the symbols go, and the moved surface must ship with a fresh API snapshot."
+    },
+    {
+      "commit": "1e477b224286401e587f40f0459a65e93fb98618",
+      "subject": "fix(sage): close session-GC tombstone TOCTOU with the in-mutation re-read convention",
+      "task": "The SAGE session-GC tombstone spreads the snapshot taken at listing time, so an updateSage that commits between the hygiene listing and the queued tombstone mutation is silently reverted: a session memory rescued by a refreshed updatedAt is tombstoned anyway, and concurrent field changes to an expired memory are lost. Close this race and add a deterministic real-store reproduction.",
+      "paths": ["packages/sage/src/sqlite-store-hygiene.ts", "packages/sage/tests/sqlite-store-hygiene-session-gc-toctou.test.ts"],
+      "required": ["sageInMutationReread"],
+      "why": "The other hygiene passes already follow the convention this one must adopt."
+    },
+    {
+      "commit": "86bc8eed9ac364fa438b480ddbfb527d21bd8ab9",
+      "subject": "fix(techstack): canonicalize adapter-emitted purl identities",
+      "task": "Techstack adapters emit purls that the package's own parser can't resolve: the python, rust, dotnet, php and dart adapters use the internal ecosystem id as purl type (pkg:python/, pkg:rust/, ...), maven and gradle put groupId:artifactId into a single name segment, and pypi names aren't PEP 503-normalized (Django). Canonicalize the purls every adapter emits so SBOM and OSV advisory queries match, keeping raw row names for display.",
+      "paths": ["packages/techstack/src/registry/purl.ts", "packages/techstack/src/adapters/python.ts", "packages/techstack/src/adapters/rust.ts", "packages/techstack/src/adapters/dotnet.ts", "packages/techstack/src/adapters/php.ts", "packages/techstack/src/adapters/dart.ts", "packages/techstack/src/adapters/maven.ts", "packages/techstack/src/adapters/gradle.ts"],
+      "required": ["purlConstruct"],
+      "why": "The registry already has the canonical builder and type mapping the adapters should route through."
+    },
+    {
+      "commit": "b8d54a0a7af9d097c9013ee5f96119ac7bed9e00",
+      "subject": "fix(providers): give MiniMax and Z.AI streams room to go quiet",
+      "task": "On the coding plans MiniMax-M3 sends nothing for over a minute while emitting one large tool call, and GLM-5.3 can take over a minute to send response headers, so the 60 s stream watchdogs fail those turns on all four attempts. When nobody chose a value, run MiniMax and Z.AI/BigModel backends (matched by catalog id family or API host) with 240 s between chunks and 180 s for headers; an explicit per-instance option or configured value must still win, including 0.",
+      "paths": ["packages/providers/src/stream-timeout-floors.ts", "packages/providers/src/wire-adapter.ts", "packages/core/src/types/config/runtime.ts", "packages/providers/tests/stream-timeout-floors.test.ts"],
+      "required": ["streamWatchdogConfig"],
+      "why": "The agent must know which two watchdogs exist, their defaults and how configuration overrides them."
+    },
+    {
+      "commit": "a5647cdd526f5d9e25562ddd8a03f1ebf74ac803",
+      "subject": "fix(mailbox): migrate v1 SQLite mailboxes and fence the database to one daemon",
+      "task": "A v1 mailbox database has no legacy_global_completion column, so every write against it fails after the version bump. Make schema initialization run explicit, idempotent migration steps (v1 to v2 folds completions and read marks into per-actor receipts), and stop mailbox daemons of different protocol versions, which use different endpoints over the same file, from co-owning the database.",
+      "paths": ["packages/coordination/src/sqlite-mailbox-schema.ts", "packages/coordination/src/sqlite-mailbox-owner.ts", "packages/coordination/src/mailbox-project-server.ts", "packages/coordination/src/sqlite-mailbox.ts", "packages/coordination/tests/sqlite-mailbox-migration.test.ts", "packages/coordination/tests/mailbox-owner-fencing.test.ts"],
+      "required": ["daemonBindElection", "mailboxSqliteModel"],
+      "why": "Needs the mailbox schema model and the single-writer ownership rule that the endpoint bind alone no longer guarantees here."
+    },
+    {
+      "commit": "bc3d83f5620be47c97fa079c9686566cc21add39",
+      "subject": "fix(governance): ignore the daemon's own attachment-broker grant in idle shutdown",
+      "task": "The governance project server never idles out: its idle check treats any active capability grant as a live session, but the daemon's attachment broker issues itself a grant (issuedBy governance-daemon-owner) and renews it for the daemon's whole life. Let hasActiveGrants() exclude an issuer and have the idle check exclude the daemon's own, while client-held grants still block shutdown.",
+      "paths": ["packages/governance/src/project-server.ts", "packages/governance/src/capability-grant.ts", "packages/governance/src/attachment-broker-controller.ts", "packages/governance/tests/project-server-idle.test.ts", "packages/governance/tests/capability-grant.test.ts"],
+      "required": ["daemonIdleExit"],
+      "why": "Project daemons are expected to exit once no clients remain."
+    },
+    {
+      "commit": "cc7ce2969c85d158f2483337722eba435ea5bbd3",
+      "subject": "fix(requirement-intake): re-check a suggestion is pending under the record lock before accepting",
+      "task": "acceptSuggestion checks status === 'pending' only on a record read before the record lock and then applies the proposal to the locked copy. A reject or a second accept that commits in between is overwritten: the suggestion flips from rejected to accepted against the user's decision, or a double accept applies twice. Make accept re-check like rejectSuggestion and the cancel/archive transitions do, and add race tests.",
+      "paths": ["packages/requirement-intake/src/service-suggestions.ts", "packages/requirement-intake/tests/suggestion-race.test.ts"],
+      "required": ["intakeProposalLocking"],
+      "why": "The package's proposal and locking model defines the correct accept behaviour."
+    },
+    {
+      "commit": "9781854ef57afe06c13c3944ed111c06729b3399",
+      "subject": "fix(telegram): keep notification truncation surrogate-safe",
+      "task": "fmtToolOutput (297-unit cut) and formatDelegateCompleted (159-unit task cut) truncate with a raw String.slice, so an emoji straddling the cut leaves a lone high surrogate in the tool.executed and delegate.completed Telegram notifications. Fix both and add boundary tests, including an emoji that fits whole before the cut.",
+      "paths": ["packages/telegram/src/format.ts", "packages/telegram/tests/unit/format.test.ts"],
+      "required": ["telegramUtf16Slice"],
+      "why": "The package already has the helper every other truncation site uses."
+    },
+    {
+      "commit": "fdcb479f2b728e05c6616f5bd7557db9b8c6b3ff",
+      "subject": "fix(fleet): absorb shadow-pass spawn rejections fired from event handlers",
+      "task": "requestShadowPass runs `void this.runShadowPass()` in a queueMicrotask triggered by a failed subagent task. runHostShadowPass only swallows FleetSpawnBudgetError and rethrows the rest, but the director also refuses spawns on the fleet cost cap, token cap and leader context pressure, so one failed task in a fleet past its spend cap produces an unhandled rejection in the host. onShadowTaskCompleted has the same shape for coordinator.stop(). Fix both and add a regression test that drives the real event path.",
+      "paths": ["packages/cli/src/fleet/host-shadow-manager.ts", "packages/cli/tests/fleet/shadow-pass-unhandled.test.ts"],
+      "required": ["fireAndForgetCatch", "structuredLogShape"],
+      "why": "Needs the rule for detached promises and the logging format for the failure."
+    },
+    {
+      "commit": "68f7729d6246faf84775de6ade22b22075eb02a2",
+      "subject": "fix(webui-server): unref browser-live and status-logger intervals; tolerate payload-less goal.* frames",
+      "task": "The per-watch details interval in browser-live.ts and the heartbeat interval in webui-status-logger.ts can keep the WebUI server process alive after shutdown, and payload-less goal.* board frames crash goal-ws-message-dispatch with a TypeError while destructuring instead of reaching handler validation. Fix both and add regression tests.",
+      "paths": ["packages/webui-server/src/server/browser-live.ts", "packages/webui-server/src/server/webui-status-logger.ts", "packages/webui-server/src/server/goal-ws-message-dispatch.ts", "packages/webui-server/tests/browser-live-watch-interval-unref.test.ts", "packages/webui-server/tests/webui-status-logger-heartbeat-unref.test.ts", "packages/webui-server/tests/goal-ws-message-dispatch.test.ts"],
+      "required": ["unrefBackgroundTimers"],
+      "why": "The project's convention for auxiliary timers gives the fix."
+    },
+    {
+      "commit": "30b8fac3b31c3ba969f1aa8c74077fcac4baddcf",
+      "subject": "fix(acp): a worker's turn ends on silence, not after five minutes",
+      "task": "Every ACP prompt turn has a fixed five-minute deadline. A coding agent's turn often runs longer, so the turn fails while the agent is still working, nothing tells it to stop, and it keeps editing files after WrongStack reported a broken bridge. Time a prompt turn by silence instead: any message from the agent restarts a ten-minute clock, and when it runs out send session/cancel and report a timeout; timeoutMs keeps bounding the other requests.",
+      "paths": ["packages/acp/src/client/acp-session-prompt.ts", "packages/acp/src/client/acp-session.ts", "packages/acp/src/client/acp-request-state.ts", "packages/acp/src/client/acp-session-messages.ts", "packages/acp/src/integration/acp-subagent-runner.ts", "packages/acp/src/integration/acp-subagent-runner-options.ts", "packages/acp/tests/acp-session-extra.test.ts", "docs/slash/acp.md"],
+      "required": ["subagentIdleWatchdogs"],
+      "why": "The new ACP turn timer should behave like the in-task activity watchdog native subagents have."
+    },
+    {
+      "commit": "f691ebf8f398d46b4d20100768923db8eebb267d",
+      "subject": "fix(core): see through 8.3 short names when gating agent-state reads",
+      "task": "isInsideAgentStateRoot misses Windows 8.3 aliases: <home>/WRONGS~1/config.json, the same file as ~/.wrongstack/config.json, counts as neither inside the root nor a sensitive read, so the leader policy auto-approves it and the subagent policy allows it. The subject's realpath is also skipped whenever the state root itself is not a link. Close the bypass and add a real-filesystem regression plus a stubbed one that runs on every platform.",
+      "paths": ["packages/core/src/security/permission-sensitive-read.ts", "packages/core/tests/security/agent-state-root-shortname.test.ts", "packages/core/tests/security/agent-state-root-native-realpath.test.ts"],
+      "required": ["windowsNativeRealpath"],
+      "why": "The agent must know which realpath variant expands short names, as a sibling module already does."
+    },
+    {
+      "commit": "0797cda00152fde099e06544700772f988def664",
+      "subject": "feat(tools): fail-closed backstop for kills that name a protected PID",
+      "task": "Seven review rounds on the kill guard each found another spelling of a kill that the static readings missed. Since the protected PIDs are known, add a final check that refuses any line naming a protected PID in any word (quotes, escapes and $'...' decoded) next to anything kill-shaped, however it is spelled, while reads like ps -p or /proc/<pid> stay allowed. Correct the threat model in the header and update tests that pinned quoted kill strings as allowed.",
+      "paths": ["packages/tools/src/bash-kill-guard.ts", "packages/tools/tests/bash-kill-guard-targets.test.ts", "packages/tools/tests/bash-kill-guard-unparsed-operands.test.ts"],
+      "required": ["killGuardStaticLimits", "yoloDestructiveKinds"],
+      "why": "Needs the guard's documented limits and the fact that no YOLO category covers kills, which makes this guard the last gate."
+    },
+    {
+      "commit": "36bf1d4f53e7adea5cd44359e16157feeebd962f",
+      "subject": "fix(release): filter the migration installer's env and clear release-check failures",
+      "task": "standalone-migration spawns the installer with the full process environment, handing provider keys and the vault passphrase to a child that needs neither. Filter its environment but still forward proxy variables so curl and Invoke-WebRequest reach GitHub behind an authenticated proxy. Also clear the current release:check failures: a stale update.ts child-env exemption, gitignored .temp_files proofs in memory-port-boundary, a test variable misread as a shell option, a mock session without an id, and several test typings.",
+      "paths": ["packages/cli/src/standalone-migration.ts", "packages/cli/tests/standalone-migration-installer.test.ts", "packages/core/tests/architecture/spawn-convention.test.ts", "packages/core/tests/architecture/memory-port-boundary.test.ts", "packages/core/tests/core/project-instructions.test.ts"],
+      "required": ["childEnvSanitized"],
+      "why": "The project has a required way to build child environments and a test that enforces it."
+    },
+    {
+      "commit": "d8aa584a407f832065338887aa2a03fff67495bf",
+      "subject": "fix(website): give every linked plugin and feature a detail page",
+      "task": "Plugin and feature cards on the website link to detail routes that have no content and render a blank main area. Fill in the missing plugin-details, plugin-operational and feature deep-dive entries, and add a test that fails when any catalog plugin or feature story has no detail content.",
+      "paths": ["website/src/data/plugin-details.ts", "website/src/data/plugin-operational.ts", "website/src/data/deep-dives.ts", "website/tests/detail-routes.test.tsx"],
+      "required": ["websiteSourceFromCode"],
+      "why": "Writing detail content requires reading the real plugin and feature sources rather than inventing text."
+    },
+    {
+      "commit": "680da81f32cdb93ab803a576d198604330aa6f0d",
+      "subject": "fix(sage): enforce session ownership on every candidate action and listing",
+      "task": "SAGE memory candidates ignore session ownership. Reject, accept and resolve must check the candidate's owner session and every memory it targets or supersedes, and refuse a session candidate without an owner. Listings must hide other sessions' candidates and candidates aimed at their memories, proposals against a session memory inherit its scope and owner, and reconciling accepted candidates must also match owner session and validity.",
+      "paths": ["packages/sage/src/sqlite-store-candidates.ts", "packages/sage/src/tools/memory-candidates-tool.ts", "packages/sage/tests/session-isolation.test.ts", "packages/sage/tests/session-isolation-tool-surface.test.ts"],
+      "required": ["sageSessionIsolation"],
+      "why": "The session privacy rule for SAGE records is what the candidate paths must enforce."
+    },
+    {
+      "commit": "9482c7eac55dc425c069caa21708a52a79353ad1",
+      "subject": "fix(persistence): slug truncation, endpoint bind retries and text index triggers",
+      "task": "Three persistence fixes: strip trailing hyphens after the 40-character slug truncation and normalize dot-padded profile names (F770); rerun a coalesced metadata write after a transient failure and clamp the endpoint bind helper's maxAttempts to at least 1 (F769); replace stale SQLite text-index triggers when source or field change, and stop re-folding rows whose fold result is nullish (F768).",
+      "paths": ["packages/persistence/src/project-endpoint.ts", "packages/persistence/src/wstack-paths.ts", "packages/persistence/src/sqlite-text-index.ts", "packages/persistence/tests/project-metadata-reassert.test.ts", "packages/persistence/tests/sqlite-text-index.test.ts", "packages/persistence/tests/persistence-100-coverage.test.ts"],
+      "required": ["bindProjectEndpointRule"],
+      "why": "Every daemon depends on this bind helper's outcomes, so the change must keep its contract."
+    },
+    {
+      "commit": "65acf7689bbdf43fa04adce515db837fbef51e6a",
+      "subject": "refactor(fleet): move the CLI multi-agent host into @wrongstack/fleet",
+      "task": "Move the subagent host in packages/cli/src/fleet (MultiAgentHost, routing, ACP/WrongForge runners, companions, supervisor, budget and learning) into a new @wrongstack/fleet package so the standalone desktop engine can use it next. Keep the WrongForge gateway in the CLI and inject it, make the package independent of the CLI, remove multi-agent.ts and update its importers, and register the new package wherever the repo's build, TypeScript and test configuration need to know about it.",
+      "paths": ["packages/fleet/package.json", "packages/fleet/src/index.ts", "scripts/build-package.mjs", "tsconfig.json", "scripts/vitest-core-aliases.mjs", "packages/cli/src/multi-agent.ts", "packages/cli/package.json", "packages/cli/src/fleet/wrongforge-gateway.ts"],
+      "required": ["newPackageRegistration", "buildPackageProfiles", "peelFeaturePackage"],
+      "why": "Needs the package-registration steps, the build profile mechanism and the extraction pattern used for earlier packages."
+    },
+    {
+      "commit": "fd612c4a7b0d081e9b3f9f55ce86a68952ad12b9",
+      "subject": "perf(core): capture the workspace checkpoint in the background; desktop performance measurements",
+      "task": "The workspace checkpoint taken before every prompt reads, hashes and fsync-stores every changed and untracked file on the turn's critical path; a first turn in a project with 20,000 untracked files reached the provider after 46.5 s. Capture it in the background: write the checkpoint marker at once and follow it with the manifest in a new workspace_checkpoint event, make sure no tool changes the workspace before the capture finishes, keep fork, close and truncate correct, and add desktop v2 performance measurements.",
+      "paths": ["packages/core/src/storage/file-session-writer.ts", "packages/core/src/core/agent-loop.ts", "packages/contracts/src/types/session-events.ts", "packages/core/src/storage/session-store/fork-session.ts", "packages/core/src/storage/session-writer-snapshot.ts", "packages/contracts/src/types/session-storage.ts", "packages/core/tests/core/agent.test.ts", "apps/desktop-v2/tests/native-performance.mjs"],
+      "required": ["perfContract", "sessionJournalWritePath"],
+      "why": "A performance change needs the measurement protocol and an understanding of how checkpoint events are written."
+    },
+    {
+      "commit": "ad9f79dbc2aad903b0348e65abd7449273ec1a1c",
+      "subject": "fix(webui-server): fence user-run MCP tool output with an unforgeable delimiter",
+      "task": "The note that carries a user-run MCP tool's result travels in a user-role message, and the server's output inside it can close the untrusted block early and continue in the user's voice. Enclose the output in a delimiter the server cannot forge and remove any copy of that delimiter from the output.",
+      "paths": ["packages/webui-server/src/server/mcp-tool-handlers.ts", "packages/webui-server/tests/mcp-tool-handlers.test.ts"],
+      "required": ["untrustedFenceNeutralize"],
+      "why": "The project already has a rule and reference implementation for fencing untrusted text."
+    },
+    {
+      "commit": "0536d7339707ba6e6004dfc131a11976c1c3f64f",
+      "subject": "refactor(architecture): break the fleet and kernel-event type cycles",
+      "task": "Three type-level module cycle exceptions lapsed their review on 2026-11-01. Remove the fleet cycle (routing.ts imports MultiAgentHost from host.ts, which builds its router from routing.ts) and the contracts kernel-event cycle (brain-events.ts and session-events.ts importing back from the events.ts hub), and shrink the contracts types cycle (Usage, TodoItem) rather than renewing it as-is. Public type names and import paths must stay unchanged.",
+      "paths": ["architecture/exceptions.json", "packages/fleet/src/routing.ts", "packages/contracts/src/kernel/events/shared-types.ts", "packages/contracts/src/kernel/events.ts", "packages/contracts/src/kernel/events/brain-events.ts", "packages/contracts/src/kernel/events/session-events.ts", "packages/contracts/src/types/usage.ts", "packages/contracts/src/types/todo.ts"],
+      "required": ["archExceptionsPolicy", "coreLayersMoveContractDown"],
+      "why": "Needs the exception lifecycle rules and the accepted technique for cutting type edges without changing import paths."
+    }
+  ]
+}
