@@ -170,18 +170,45 @@ mod tests {
         assert!(!marker.exists());
     }
 
-    #[cfg(unix)]
-    #[test]
-    fn adoption_marker_never_writes_through_a_planted_symlink() {
+    /// Plants `link(outside, name)` at the marker itself and at the fixed temp
+    /// name 0.1.1 before `06e5936` wrote through, then writes the marker and
+    /// checks that `outside` kept its content.
+    fn assert_marker_ignores_planted_links(link: impl Fn(&Path, &Path) -> io::Result<()>) {
         let tmp = tempfile::tempdir().unwrap();
         let outside = tmp.path().join("outside.txt");
         std::fs::write(&outside, "keep").unwrap();
         let dir = tmp.path().join("memories");
         std::fs::create_dir(&dir).unwrap();
-        std::os::unix::fs::symlink(&outside, dir.join(ADOPTION_MARKER_FILE)).unwrap();
+        let marker = dir.join(ADOPTION_MARKER_FILE);
+        for name in [
+            marker.clone(),
+            dir.join(format!("{ADOPTION_MARKER_FILE}.tmp")),
+        ] {
+            link(&outside, &name).unwrap();
+        }
         write_adoption_marker(&dir.join("sage.db"), "p_1", Path::new("/root")).unwrap();
         assert_eq!(std::fs::read_to_string(&outside).unwrap(), "keep");
-        let meta = std::fs::symlink_metadata(dir.join(ADOPTION_MARKER_FILE)).unwrap();
-        assert!(meta.file_type().is_file());
+        assert!(
+            std::fs::symlink_metadata(&marker)
+                .unwrap()
+                .file_type()
+                .is_file()
+        );
+        let value: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&marker).unwrap()).unwrap();
+        assert_eq!(value["projectId"], "p_1");
+    }
+
+    #[test]
+    fn adoption_marker_never_writes_through_a_planted_hard_link() {
+        assert_marker_ignores_planted_links(|outside, name| std::fs::hard_link(outside, name));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn adoption_marker_never_writes_through_a_planted_symlink() {
+        assert_marker_ignores_planted_links(|outside, name| {
+            std::os::unix::fs::symlink(outside, name)
+        });
     }
 }
