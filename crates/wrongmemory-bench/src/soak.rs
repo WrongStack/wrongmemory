@@ -1,7 +1,9 @@
 //! Soak mode (WM-604): a mixed read/write load over many projects and
 //! concurrent connections for a fixed duration. Reports throughput, error
 //! count, per-operation latency, and the daemon's RSS and handle count
-//! after seeding and at the end (leak indicators).
+//! after seeding and at the end (leak indicators). Long runs also sample
+//! RSS, handles, open stores and total WAL size every `SAMPLE_EVERY`, so a
+//! slow trend shows up, not only the two end points.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -14,6 +16,29 @@ use wrongmemory_contracts::method;
 use wrongmemory_ipc::{Client, DataRoot};
 
 use crate::{COMPONENTS, OBJECTS, Rng, VERBS, code_token, dist, rss_bytes, start};
+
+/// Interval of the in-run samples.
+const SAMPLE_EVERY: Duration = Duration::from_secs(60);
+
+/// Total size of the `*-wal` files under `dir` (every project store).
+fn wal_bytes(dir: &Path) -> u64 {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return 0;
+    };
+    entries
+        .filter_map(Result::ok)
+        .map(|e| {
+            let path = e.path();
+            match e.file_type() {
+                Ok(t) if t.is_dir() => wal_bytes(&path),
+                Ok(_) if path.to_string_lossy().ends_with("-wal") => {
+                    e.metadata().map_or(0, |m| m.len())
+                }
+                _ => 0,
+            }
+        })
+        .sum()
+}
 
 /// Open handle count of a process (Windows), via PowerShell.
 fn handle_count(pid: u32) -> Option<u64> {
@@ -141,6 +166,21 @@ pub async fn run(
     let tasks: Vec<_> = (0..clients)
         .map(|w| tokio::spawn(worker(root.clone(), projects.clone(), w, deadline)))
         .collect();
+    let mut samples = Vec::new();
+    while Instant::now() + SAMPLE_EVERY <= deadline {
+        tokio::time::sleep(SAMPLE_EVERY).await;
+        let health = c
+            .call_raw(method::DAEMON_HEALTH, None, json!({}), None)
+            .await
+            .unwrap_or(Value::Null);
+        samples.push(json!({
+            "elapsedSecs": started.elapsed().as_secs(),
+            "rssBytes": rss_bytes(pid),
+            "handles": handle_count(pid),
+            "openStores": health["openStores"],
+            "walBytes": wal_bytes(&home),
+        }));
+    }
     let mut all: Lat = BTreeMap::new();
     let mut errors = Vec::new();
     let mut ops = 0usize;
@@ -158,7 +198,7 @@ pub async fn run(
         .call_raw(method::DAEMON_HEALTH, None, json!({}), None)
         .await?;
     let report = json!({
-        "schema": "wrongmemory/soak@1",
+        "schema": "wrongmemory/soak@2",
         "seconds": elapsed,
         "projects": project_count,
         "clients": clients,
@@ -170,6 +210,8 @@ pub async fn run(
         "rssBytes": {"afterSeed": rss0, "end": rss_bytes(pid)},
         "handles": {"afterSeed": handles0, "end": handle_count(pid)},
         "openStoresAtEnd": health["openStores"],
+        "walBytesAtEnd": wal_bytes(&home),
+        "samples": samples,
         "machine": {
             "os": std::env::consts::OS,
             "logicalCpus": std::thread::available_parallelism().map(|v| v.get()).unwrap_or(0),
