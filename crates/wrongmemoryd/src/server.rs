@@ -126,16 +126,20 @@ struct Conn {
 
 struct BoundCheckout {
     project_id: String,
+    /// Canonical root: the files verification reads.
     root: std::path::PathBuf,
+    /// The root as the host spelled it. Its absolute paths use this spelling,
+    /// which can differ from the canonical one (8.3 short names, junctions),
+    /// and a lexical containment check must see the same spelling.
+    spelled: std::path::PathBuf,
 }
 
 impl Conn {
     /// The linked worktree this connection is bound to for `project_id`.
-    fn checkout_for(&self, project_id: &str) -> Option<&std::path::Path> {
+    fn checkout_for(&self, project_id: &str) -> Option<&BoundCheckout> {
         self.checkout
             .as_ref()
             .filter(|c| c.project_id == project_id)
-            .map(|c| c.root.as_path())
     }
 }
 
@@ -144,11 +148,14 @@ impl Conn {
 /// checkout's root would reject them as outside the project. Relative paths
 /// are already checkout-independent, and other absolute paths are left as
 /// they are (the store applies its own containment rules).
-fn rebase_checkout_paths(m: &str, params: &mut Value, root: &std::path::Path) {
+fn rebase_checkout_paths(m: &str, params: &mut Value, c: &BoundCheckout) {
     let rebase = |v: &mut Value| {
         if let Some(s) = v.as_str()
             && std::path::Path::new(s).is_absolute()
-            && let Ok(rel) = wrongmemory_storage::paths::normalize_project_path(root, s)
+            && let Ok(rel) = [&c.spelled, &c.root]
+                .iter()
+                .find_map(|root| wrongmemory_storage::paths::normalize_project_path(root, s).ok())
+                .ok_or(())
         {
             *v = Value::String(rel);
         }
@@ -944,8 +951,8 @@ async fn dispatch_inner(
         None
     };
     let mut req = req;
-    if let Some(root) = project_id.as_deref().and_then(|id| state.checkout_for(id)) {
-        rebase_checkout_paths(&req.method, &mut req.params, root);
+    if let Some(c) = project_id.as_deref().and_then(|id| state.checkout_for(id)) {
+        rebase_checkout_paths(&req.method, &mut req.params, c);
     }
 
     match req.method.as_str() {
@@ -1016,6 +1023,7 @@ async fn dispatch_inner(
             let p: BindCheckoutParams = parse(req.params)?;
             let id = project_id.expect("scoped");
             let lookup = id.clone();
+            let spelled = wrongmemory_storage::wrongstack_paths::node_resolve(std::path::Path::new(&p.root));
             let (project_root, linked) = shared
                 .blocking(move |s| {
                     let project = s
@@ -1038,6 +1046,7 @@ async fn dispatch_inner(
             state.checkout = linked.map(|root| BoundCheckout {
                 project_id: id,
                 root,
+                spelled,
             });
             to_value(json!({ "checkout": info }))
         }
@@ -1321,7 +1330,7 @@ async fn dispatch_inner(
                 .as_ref()
                 .is_none_or(|g| g.profile.allows(Action::Curate));
             let pid = project_id.expect("scoped");
-            let checkout = state.checkout_for(&pid).map(std::path::Path::to_path_buf);
+            let checkout = state.checkout_for(&pid).map(|c| c.root.clone());
             let m = req.method.clone();
             let params = obj(req.params)?;
             shared.inflight.fetch_add(1, Ordering::SeqCst);

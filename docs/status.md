@@ -290,6 +290,7 @@ Findings from the M run:
 | `cargo test -p wrongmemoryd -p wrongmemory-cli --tests` ×5 (new IPC method) | PASS 68/68 on each run; no leftover test daemons |
 | `bun run test:client` (contract parity, TS client) | PASS: 55 methods, 23 error codes; fails when the TS method is missing |
 | Mutation checks for checkout evidence: no path rebase, persisting worktree evidence, no label, accepting any directory, letting a grant bind | each fails `a_bound_linked_worktree_gets_its_own_evidence_without_changing_shared_state` |
+| Hosted CI on `127050a` | FAIL, then fixed. The runner's temp path is an 8.3 short name (`RUNNER~1`). The host's absolute paths use the root as the host spelled it, but rebasing compared them with the canonical long form, so the bound `forPath` found nothing. The daemon now keeps the host's spelling of the root and tries it before the canonical one. The same test now binds through a junction to the worktree; it fails when only the canonical root is tried. |
 | WrongStack adapter (PR #433): `packages/sage` suite; real-daemon worktree test against the local 0.1.4 build | PASS 1,613/1,613; the real-daemon test fails without the binding |
 | WrongStack WebUI fix (PR #432): `webui-server` and `cli` suites | 3 failures, none caused by the change: `git-handlers` (link project) and `acp-leader-context` fail on clean `main`; `cli-dispatch-journeys` passes alone (timeout under load) |
 | WM-705 addendum with downloaded v0.1.3 (WebUI path, worktree) | see WM-705 |
