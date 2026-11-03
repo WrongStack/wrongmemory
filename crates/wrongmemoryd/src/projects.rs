@@ -444,8 +444,12 @@ pub fn register(
         StoreKind::Adopted => {
             // SAGE resolves the store from the canonical repository root, so a
             // linked worktree shares its main checkout's store (WM-INV-14).
-            let root =
-                PathBuf::from(wrongmemory_storage::wrongstack_paths::canonical_project_root(&root));
+            // The worktree link is verified from both sides; a planted `.git`
+            // file keeps its directory's own identity.
+            let root = match wrongmemory_storage::wrongstack_paths::linked_worktree_main(&root) {
+                Some(main) => canonical_dir(&main)?,
+                None => root,
+            };
             let display = display_for(&root);
             let store = adopted_store_path(&root);
             if let Some(existing) = reg.find_project_by_store(&store).map_err(ErrorBody::from)? {

@@ -192,5 +192,30 @@ async fn managed_registration_from_a_linked_worktree_resolves_to_the_main_checko
         .unwrap();
     assert_eq!(listed["projects"].as_array().unwrap().len(), 2, "{listed}");
 
+    // 4. A `.git` file planted in an unrelated directory, naming a real
+    //    worktree's entry (`one`'s), does not borrow that project: Git's own
+    //    back-link (`worktrees/<n>/gitdir`) names the real worktree only.
+    let planted = tmp.path().join("planted");
+    std::fs::create_dir_all(&planted).unwrap();
+    std::fs::copy(one.join("linked").join(".git"), planted.join(".git")).unwrap();
+    for kind in ["managed", "adopted"] {
+        let own = register(&mut c, &planted, kind).await;
+        if let Ok(own) = &own {
+            assert_ne!(
+                own["project"]["projectId"], adopted["project"]["projectId"],
+                "{kind}: a planted .git file borrowed the main checkout's project"
+            );
+        }
+    }
+    let own = register(&mut c, &planted, "managed").await.unwrap();
+    assert!(
+        own["project"]["root"]
+            .as_str()
+            .unwrap()
+            .to_lowercase()
+            .ends_with("planted"),
+        "{own}"
+    );
+
     stop_daemon(child, c).await;
 }

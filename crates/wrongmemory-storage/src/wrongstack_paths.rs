@@ -173,10 +173,40 @@ pub fn canonical_project_root(abs_root: &Path) -> String {
 
 /// The main checkout a linked Git worktree belongs to (`gitIdentityRoot`),
 /// or `None` when `checkout` is not a linked worktree.
+///
+/// Unlike `gitIdentityRoot`, the link is checked from both sides, as Git
+/// does: the worktree's administrative directory must record this
+/// checkout's `.git` file in its `gitdir` file. A `.git` file planted in an
+/// unrelated directory and naming another checkout's worktree entry would
+/// otherwise borrow that project's identity.
 pub fn linked_worktree_main(checkout: &Path) -> Option<PathBuf> {
     let resolved = node_resolve(checkout);
     let main = git_identity_root(&resolved);
-    (main != resolved).then(|| PathBuf::from(on_disk_case(&main.to_string_lossy())))
+    if main == resolved {
+        return None;
+    }
+    let dot_git = resolved.join(".git");
+    // The checkout's own `.git` entry: a regular file, never a link to
+    // another worktree's (which would make both sides of the check agree).
+    if !std::fs::symlink_metadata(&dot_git)
+        .ok()?
+        .file_type()
+        .is_file()
+    {
+        return None;
+    }
+    let line = std::fs::read_to_string(&dot_git).ok()?;
+    let line = line.trim();
+    let admin = line
+        .get(..7)
+        .filter(|p| p.eq_ignore_ascii_case("gitdir:"))
+        .map(|_| node_resolve(&resolved.join(line[7..].trim())))?;
+    let recorded = std::fs::read_to_string(admin.join("gitdir")).ok()?;
+    let recorded = node_resolve(&admin.join(recorded.trim()));
+    // Compare with where this checkout itself is, not with a link target.
+    let own = std::fs::canonicalize(&resolved).ok()?.join(".git");
+    (std::fs::canonicalize(&recorded).ok()? == own)
+        .then(|| PathBuf::from(on_disk_case(&main.to_string_lossy())))
 }
 
 /// `wstackGlobalRoot`: `WRONGSTACK_HOME` (trimmed, resolved) or `~/.wrongstack`.
@@ -295,5 +325,79 @@ mod tests {
         let upper = PathBuf::from(checkout.to_string_lossy().to_uppercase());
         let b = resolve_index_dir(&upper, &global);
         assert_eq!(a.index_dir, b.index_dir);
+    }
+
+    /// A linked worktree as Git lays it out (`git worktree add`), built
+    /// without running Git: `main/.git/worktrees/wt/{commondir,gitdir}` and
+    /// `wt/.git` naming that entry.
+    fn worktree_layout(tmp: &Path) -> (PathBuf, PathBuf) {
+        let main = tmp.join("main");
+        let admin = main.join(".git").join("worktrees").join("wt");
+        std::fs::create_dir_all(&admin).unwrap();
+        let wt = tmp.join("wt");
+        std::fs::create_dir_all(&wt).unwrap();
+        std::fs::write(
+            admin.join("commondir"),
+            "../..
+",
+        )
+        .unwrap();
+        std::fs::write(
+            admin.join("gitdir"),
+            format!(
+                "{}
+",
+                wt.join(".git").display()
+            ),
+        )
+        .unwrap();
+        std::fs::write(
+            wt.join(".git"),
+            format!(
+                "gitdir: {}
+",
+                admin.display()
+            ),
+        )
+        .unwrap();
+        (main, wt)
+    }
+
+    fn real(p: &Path) -> PathBuf {
+        std::fs::canonicalize(p).unwrap()
+    }
+
+    #[test]
+    fn linked_worktree_main_requires_gits_back_link() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (main, wt) = worktree_layout(tmp.path());
+        let got = linked_worktree_main(&wt).expect("a real linked worktree");
+        assert_eq!(real(&got), real(&main));
+        assert_eq!(linked_worktree_main(&main), None);
+        // The same `.git` file copied into an unrelated directory: the
+        // worktree entry names `wt`, not this directory.
+        let planted = tmp.path().join("planted");
+        std::fs::create_dir_all(&planted).unwrap();
+        std::fs::copy(wt.join(".git"), planted.join(".git")).unwrap();
+        assert_eq!(linked_worktree_main(&planted), None);
+    }
+
+    #[test]
+    fn linked_worktree_main_refuses_a_symlinked_git_entry() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (_, wt) = worktree_layout(tmp.path());
+        let planted = tmp.path().join("planted");
+        std::fs::create_dir_all(&planted).unwrap();
+        #[cfg(unix)]
+        let linked = std::os::unix::fs::symlink(wt.join(".git"), planted.join(".git"));
+        #[cfg(windows)]
+        let linked = std::os::windows::fs::symlink_file(wt.join(".git"), planted.join(".git"));
+        if let Err(e) = linked {
+            // Windows without the symlink privilege (no Developer Mode, not
+            // elevated): nothing can be planted this way here.
+            eprintln!("skipped: cannot create a symlink: {e}");
+            return;
+        }
+        assert_eq!(linked_worktree_main(&planted), None);
     }
 }
