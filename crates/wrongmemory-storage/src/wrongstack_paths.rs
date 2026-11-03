@@ -125,10 +125,20 @@ pub fn on_disk_case(root: &str) -> String {
 /// `gitIdentityRoot`: map a linked Git worktree to its main checkout.
 /// Submodules, separate-git-dir layouts, and malformed metadata keep the
 /// checkout root.
+///
+/// The link is checked from both sides, as Git does (WrongStack PR #431): the
+/// checkout's `.git` must be a regular file, and the worktree entry's `gitdir`
+/// file must record this checkout's own `.git`. A `.git` file planted in an
+/// unrelated directory, or a symlink to a real worktree's, keeps its own
+/// identity instead of borrowing another project's.
 fn git_identity_root(checkout: &Path) -> PathBuf {
     let dot_git = checkout.join(".git");
     let attempt = || -> Option<PathBuf> {
-        if !std::fs::metadata(&dot_git).ok()?.is_file() {
+        if !std::fs::symlink_metadata(&dot_git)
+            .ok()?
+            .file_type()
+            .is_file()
+        {
             return None;
         }
         let line = std::fs::read_to_string(&dot_git).ok()?;
@@ -160,6 +170,16 @@ fn git_identity_root(checkout: &Path) -> PathBuf {
         if basename(&common_dir.to_string_lossy()).to_lowercase() != ".git" {
             return None;
         }
+        // Git's back-link, compared with where this checkout itself is.
+        let recorded = std::fs::read_to_string(git_dir.join("gitdir")).ok()?;
+        let recorded = recorded.trim();
+        if recorded.is_empty() {
+            return None;
+        }
+        let target = std::fs::canonicalize(node_resolve(&git_dir.join(recorded))).ok()?;
+        if target != std::fs::canonicalize(checkout).ok()?.join(".git") {
+            return None;
+        }
         common_dir.parent().map(Path::to_path_buf)
     };
     attempt().unwrap_or_else(|| checkout.to_path_buf())
@@ -171,42 +191,12 @@ pub fn canonical_project_root(abs_root: &Path) -> String {
     on_disk_case(&git_identity_root(&resolved).to_string_lossy())
 }
 
-/// The main checkout a linked Git worktree belongs to (`gitIdentityRoot`),
-/// or `None` when `checkout` is not a linked worktree.
-///
-/// Unlike `gitIdentityRoot`, the link is checked from both sides, as Git
-/// does: the worktree's administrative directory must record this
-/// checkout's `.git` file in its `gitdir` file. A `.git` file planted in an
-/// unrelated directory and naming another checkout's worktree entry would
-/// otherwise borrow that project's identity.
+/// The main checkout a linked Git worktree belongs to (`gitIdentityRoot`,
+/// back-link verified), or `None` when `checkout` is not a linked worktree.
 pub fn linked_worktree_main(checkout: &Path) -> Option<PathBuf> {
     let resolved = node_resolve(checkout);
     let main = git_identity_root(&resolved);
-    if main == resolved {
-        return None;
-    }
-    let dot_git = resolved.join(".git");
-    // The checkout's own `.git` entry: a regular file, never a link to
-    // another worktree's (which would make both sides of the check agree).
-    if !std::fs::symlink_metadata(&dot_git)
-        .ok()?
-        .file_type()
-        .is_file()
-    {
-        return None;
-    }
-    let line = std::fs::read_to_string(&dot_git).ok()?;
-    let line = line.trim();
-    let admin = line
-        .get(..7)
-        .filter(|p| p.eq_ignore_ascii_case("gitdir:"))
-        .map(|_| node_resolve(&resolved.join(line[7..].trim())))?;
-    let recorded = std::fs::read_to_string(admin.join("gitdir")).ok()?;
-    let recorded = node_resolve(&admin.join(recorded.trim()));
-    // Compare with where this checkout itself is, not with a link target.
-    let own = std::fs::canonicalize(&resolved).ok()?.join(".git");
-    (std::fs::canonicalize(&recorded).ok()? == own)
-        .then(|| PathBuf::from(on_disk_case(&main.to_string_lossy())))
+    (main != resolved).then(|| PathBuf::from(on_disk_case(&main.to_string_lossy())))
 }
 
 /// `wstackGlobalRoot`: `WRONGSTACK_HOME` (trimmed, resolved) or `~/.wrongstack`.
