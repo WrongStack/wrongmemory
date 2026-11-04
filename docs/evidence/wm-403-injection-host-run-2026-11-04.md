@@ -1,6 +1,6 @@
 # WM-403: memory injection in a released WrongStack host, 2026-11-04
 
-WM-403 asks for parity in what the model actually receives: tool-result and turn renders, and the use credit recorded for injected memories. This run drove the same released WrongStack host sessions in `wrongmemory` and `local` mode and compared every request the model received, line by line. It found one rendering difference, the key order of a returned record. That is fixed in `main` after 0.1.8.
+WM-403 asks for parity in what the model actually receives: tool-result and turn renders, and the use credit recorded for injected memories. This run drove the same released WrongStack host sessions in `wrongmemory` and `local` mode and compared every request the model received, line by line. It found one rendering difference, the key order of a returned record. That is fixed in 0.1.9.
 
 The environment is the one from the WM-404 run (`docs/evidence/wm-404-capture-host-run-2026-11-04.md`): disposable homes and data roots, released `wstack` 1.4.0 and a scripted OpenAI-compatible provider that logs every request. WrongMemory was the attested v0.1.8 draft package, and then the fix built from the working tree.
 
