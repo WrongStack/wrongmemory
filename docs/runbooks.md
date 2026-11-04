@@ -95,6 +95,7 @@ Read-only commands used throughout:
 
 ## Maintenance backlog
 
+- Schedule: the daemon runs a hygiene pass on every writable project 90 s after the project is registered and then every 6 hours, like the baseline project server. Overdue passes run after a daemon restart, a few seconds apart. The project page of `wrongmemory ui` shows the schedule, the next run and the last outcome.
 - Diagnose: `memory_hygiene` with `dryRun: true` reports the work that would run, without writing.
 - Fix: **MUTATES** run `memory_hygiene` (curator). It runs in a single transaction per project.
 

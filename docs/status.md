@@ -290,7 +290,7 @@ Findings from the M run:
 | Fixed build installed with `--from target/release --stop-daemon`: two projects with 0.1.7 schedules, one new project | PASS: first passes 90 s and 95 s after start, and 100 s after registration |
 | `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
 | `cargo test --workspace --locked --no-fail-fast` | PASS 186 (1 ignored). In the first full run `concurrent_bridges_share_one_native_daemon` failed once: its WMI process listing came back empty after 132 s. A bare `Get-CimInstance Win32_Process` took 1 min 52 s on this machine at the time (1,073 processes). The test passed on rerun and in all five runs below. |
-| `cargo test -p wrongmemoryd -p wrongmemory-cli --tests` ×5 | PASS 70/70 on each run |
+| `cargo test -p wrongmemoryd -p wrongmemory-cli --tests` ×5, twice: after the cadence fix and after the bridge tests got the `StopDaemon` guard (a deliberate panic in the test left no daemon behind) | PASS 70/70 on every run |
 
 ## Verification run (2026-11-04, WM-802 Linux and macOS)
 
