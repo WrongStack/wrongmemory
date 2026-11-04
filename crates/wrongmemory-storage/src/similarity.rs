@@ -82,29 +82,69 @@ fn share_structural_anchor(a: &[MemoryAnchor], b: &[MemoryAnchor]) -> bool {
         .any(|k| keys.contains(&k))
 }
 
+/// A text's tokens, computed once for repeated comparisons (hygiene compares
+/// every pair in a bucket).
+pub struct TextTokens {
+    count: usize,
+    set: HashSet<String>,
+}
+
+impl TextTokens {
+    pub fn new(text: &str) -> Self {
+        let tokens = tokenize_default(text);
+        Self {
+            count: tokens.len(),
+            set: tokens.into_iter().collect(),
+        }
+    }
+}
+
 pub fn is_near_duplicate(
     left_text: &str,
     left_kind: &str,
     left_anchors: &[MemoryAnchor],
     right: &SageRecord,
 ) -> bool {
-    if left_kind != right.kind {
+    left_kind == right.kind
+        && is_near_duplicate_tokens(
+            &TextTokens::new(left_text),
+            left_anchors,
+            &TextTokens::new(&right.text),
+            &right.anchors,
+        )
+}
+
+/// [`is_near_duplicate`] for two texts of the same kind, on tokens computed
+/// once.
+pub fn is_near_duplicate_tokens(
+    left: &TextTokens,
+    left_anchors: &[MemoryAnchor],
+    right: &TextTokens,
+    right_anchors: &[MemoryAnchor],
+) -> bool {
+    if left.count < NEAR_DUP_MIN_TOKENS || right.count < NEAR_DUP_MIN_TOKENS {
         return false;
     }
-    if tokenize_default(left_text).len() < NEAR_DUP_MIN_TOKENS
-        || tokenize_default(&right.text).len() < NEAR_DUP_MIN_TOKENS
-    {
-        return false;
-    }
-    let overlap = text_token_overlap(left_text, &right.text);
+    // `text_token_overlap` on the same sets.
+    let overlap = if left.set.is_empty() || right.set.is_empty() {
+        0.0
+    } else {
+        left.set.intersection(&right.set).count() as f64
+            / left.set.len().min(right.set.len()) as f64
+    };
     overlap >= NEAR_DUP_OVERLAP_THRESHOLD
-        || (overlap >= 0.72 && share_structural_anchor(left_anchors, &right.anchors))
+        || (overlap >= 0.72 && share_structural_anchor(left_anchors, right_anchors))
 }
 
 /// `foldNegationPhrases`: `no longer` -> `no_longer` (case-insensitive).
+/// The pattern is compiled once: hygiene calls this for every pair it
+/// compares, and compiling it per call made a pass over a 16k-row store
+/// take about 20 s.
 fn fold_negation(text: &str) -> String {
-    let re = fancy_regex::Regex::new(r"(?i)\bno\s+longer\b").expect("pattern");
-    re.replace_all(text, "no_longer").into_owned()
+    static NO_LONGER: std::sync::LazyLock<fancy_regex::Regex> = std::sync::LazyLock::new(|| {
+        fancy_regex::Regex::new(r"(?i)\bno\s+longer\b").expect("pattern")
+    });
+    NO_LONGER.replace_all(text, "no_longer").into_owned()
 }
 
 pub fn is_possibly_contradictory(a: &str, b: &str) -> bool {
@@ -272,6 +312,82 @@ mod tests {
             "The build pipeline uses cached docker layers for speed",
             "The build pipeline uses cached docker layers for speed today",
         ));
+    }
+
+    /// Hygiene compares every pair in a bucket of up to 80 records, in each
+    /// bucket. Compiling the negation pattern per call made a pass over a
+    /// 16k-row store take about 20 s (5,000 calls take over 20 s in a debug
+    /// build that way); compiled once, they take well under a second.
+    #[test]
+    fn contradiction_checks_are_cheap_enough_for_hygiene() {
+        let t = std::time::Instant::now();
+        for i in 0..5_000 {
+            is_possibly_contradictory(
+                &format!("The build pipeline no longer uses cached docker layers {i}"),
+                "The build pipeline uses cached docker layers for every release build",
+            );
+        }
+        let took = t.elapsed();
+        assert!(took < std::time::Duration::from_secs(5), "{took:?}");
+    }
+
+    /// The token-based check gives the same answers as the text-based one.
+    #[test]
+    fn near_duplicate_on_tokens_matches_the_text_check() {
+        let anchor = |p: &str| MemoryAnchor {
+            kind: "file".into(),
+            path: Some(p.into()),
+            ..Default::default()
+        };
+        let texts = [
+            "Release builds use cargo build --locked on the release runner",
+            "Release builds use cargo build --locked on the release runner today",
+            "Release builds always use cargo build --locked on runners",
+            "Tests run with cargo test --workspace --locked",
+            "short text",
+        ];
+        for a in texts {
+            for b in texts {
+                for (la, ra) in [
+                    (vec![], vec![]),
+                    (vec![anchor("Cargo.toml")], vec![anchor("cargo.toml")]),
+                ] {
+                    let right: SageRecord = serde_json::from_value(serde_json::json!({
+                        "id": "r", "revision": 1, "text": b, "kind": "fact", "scope": "project",
+                        "status": "active", "importance": 0.5, "confidence": 0.5, "freshness": 1.0,
+                        "createdAt": "", "updatedAt": "", "anchors": ra.clone(),
+                    }))
+                    .unwrap();
+                    let by_text = {
+                        let (l, r) = (token_set(a), token_set(b));
+                        let overlap = if l.is_empty() || r.is_empty() {
+                            0.0
+                        } else {
+                            l.intersection(&r).count() as f64 / l.len().min(r.len()) as f64
+                        };
+                        tokenize_default(a).len() >= NEAR_DUP_MIN_TOKENS
+                            && tokenize_default(b).len() >= NEAR_DUP_MIN_TOKENS
+                            && (overlap >= NEAR_DUP_OVERLAP_THRESHOLD
+                                || (overlap >= 0.72 && share_structural_anchor(&la, &ra)))
+                    };
+                    assert_eq!(
+                        is_near_duplicate(a, "fact", &la, &right),
+                        by_text,
+                        "{a} / {b}"
+                    );
+                    assert_eq!(
+                        is_near_duplicate_tokens(
+                            &TextTokens::new(a),
+                            &la,
+                            &TextTokens::new(b),
+                            &ra
+                        ),
+                        by_text,
+                        "{a} / {b}"
+                    );
+                }
+            }
+        }
     }
 
     #[test]

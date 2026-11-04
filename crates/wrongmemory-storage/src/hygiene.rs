@@ -34,7 +34,9 @@ use crate::MutationCtx;
 use crate::mutate::{cascade_delete_edges, clean_referencing, read_raw, sync_edges, upsert_raw};
 use crate::recovery::all_memories;
 use crate::rules;
-use crate::similarity::{is_near_duplicate, is_possibly_contradictory};
+use crate::similarity::{
+    TextTokens, is_near_duplicate, is_near_duplicate_tokens, is_possibly_contradictory,
+};
 use crate::store::{SageStore, StoreResult, audit, sql_err};
 use crate::text::{js_length, normalize_text, normalize_text_key, parse_iso_ms};
 
@@ -760,6 +762,8 @@ fn run_pass(
             });
             capped.truncate(NEAR_DUP_BUCKET_CAP);
             let n = capped.len();
+            // One bucket shares a kind; tokenize each text once, not per pair.
+            let tokens: Vec<TextTokens> = capped.iter().map(|m| TextTokens::new(&m.text)).collect();
             let mut parent: Vec<usize> = (0..n).collect();
             fn find(p: &mut [usize], mut i: usize) -> usize {
                 while p[i] != i {
@@ -771,7 +775,7 @@ fn run_pass(
             for i in 0..n {
                 for j in i + 1..n {
                     let (l, r) = (&capped[i], &capped[j]);
-                    if is_near_duplicate(&l.text, &l.kind, &l.anchors, r)
+                    if is_near_duplicate_tokens(&tokens[i], &l.anchors, &tokens[j], &r.anchors)
                         && !is_possibly_contradictory(&l.text, &r.text)
                     {
                         let (ri, rj) = (find(&mut parent, i), find(&mut parent, j));
