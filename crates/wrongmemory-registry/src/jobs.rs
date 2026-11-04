@@ -37,8 +37,57 @@ CREATE INDEX idx_jobs_state ON jobs(state, priority DESC, created_at_ms);
 CREATE INDEX idx_jobs_project ON jobs(project_id, created_at_ms DESC);
 "#;
 
-/// Default maintenance cadence: once a day.
-pub const DEFAULT_CADENCE_MS: i64 = 24 * 60 * 60 * 1000;
+/// Default maintenance cadence: every 6 hours, the baseline project server's
+/// `MAINTENANCE_INTERVAL_MS` (`project-server-hygiene.ts`).
+pub const DEFAULT_CADENCE_MS: i64 = 6 * 60 * 60 * 1000;
+/// A new schedule's first run comes this long after it is created: the
+/// baseline's `MAINTENANCE_SETTLE_MS`, which runs a never-run store's first
+/// pass 90 s after a host registers its schedule, once boot traffic settles.
+pub const FIRST_RUN_DELAY_MS: i64 = 90_000;
+/// The default cadence up to 0.1.7 (once a day, first run a day after
+/// registration). [`upgrade_default_cadence`] moves schedules still on it.
+const LEGACY_DEFAULT_CADENCE_MS: i64 = 24 * 60 * 60 * 1000;
+/// `registry_meta` key recording that schedules were moved to the current
+/// default cadence, so a cadence set later through `maintenance.configure`
+/// is never rewritten.
+const CADENCE_UPGRADE_KEY: &str = "maintenance.default_cadence_ms";
+
+/// One-time data step on open, without a schema version change, so an older
+/// daemon restored from `.old` still opens the registry. Schedules on the
+/// legacy default move to [`DEFAULT_CADENCE_MS`]. Their next run comes no
+/// later than one new cadence after the last run, or [`FIRST_RUN_DELAY_MS`]
+/// from now when none ran yet.
+pub(crate) fn upgrade_default_cadence(
+    conn: &mut rusqlite::Connection,
+) -> Result<(), RegistryError> {
+    let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+    let done: Option<String> = tx
+        .query_row(
+            "SELECT value FROM registry_meta WHERE key = ?1",
+            [CADENCE_UPGRADE_KEY],
+            |r| r.get(0),
+        )
+        .optional()?;
+    if done.is_none() {
+        tx.execute(
+            "UPDATE maintenance_schedules SET cadence_ms = ?1,
+               next_due_ms = MIN(next_due_ms, COALESCE(last_run_ms + ?1, ?2 + ?3))
+             WHERE cadence_ms = ?4",
+            params![
+                DEFAULT_CADENCE_MS,
+                now_ms(),
+                FIRST_RUN_DELAY_MS,
+                LEGACY_DEFAULT_CADENCE_MS
+            ],
+        )?;
+        tx.execute(
+            "INSERT INTO registry_meta(key, value) VALUES (?1, ?2)",
+            params![CADENCE_UPGRADE_KEY, DEFAULT_CADENCE_MS.to_string()],
+        )?;
+    }
+    tx.commit()?;
+    Ok(())
+}
 /// At most this many queued jobs; further admissions coalesce or are refused.
 pub const MAX_QUEUED_JOBS: i64 = 32;
 
@@ -105,7 +154,8 @@ impl Registry {
             .optional()?)
     }
 
-    /// Create the default schedule if absent (first run one cadence later).
+    /// Create the default schedule if absent (first run
+    /// [`FIRST_RUN_DELAY_MS`] later, then every [`DEFAULT_CADENCE_MS`]).
     pub fn ensure_schedule(&mut self, project_id: &str) -> Result<ScheduleInfo, RegistryError> {
         self.conn.execute(
             "INSERT INTO maintenance_schedules (project_id, cadence_ms, next_due_ms)
@@ -113,7 +163,7 @@ impl Registry {
             params![
                 project_id,
                 DEFAULT_CADENCE_MS,
-                now_ms() + DEFAULT_CADENCE_MS
+                now_ms() + FIRST_RUN_DELAY_MS
             ],
         )?;
         Ok(self.get_schedule(project_id)?.expect("schedule exists"))
@@ -418,8 +468,15 @@ mod tests {
             r.admit_job("px", "hygiene", 0, &json!({})).unwrap(),
             JobAdmission::Saturated
         ));
+        let before = now_ms();
         let s = r.ensure_schedule("p1").unwrap();
         assert_eq!(s.cadence_ms, DEFAULT_CADENCE_MS);
+        assert_eq!(s.cadence_ms, 6 * 60 * 60 * 1000, "baseline interval");
+        assert!(
+            s.next_due_ms >= before + FIRST_RUN_DELAY_MS
+                && s.next_due_ms <= now_ms() + FIRST_RUN_DELAY_MS,
+            "first run one settle delay after creation"
+        );
         assert_eq!(s.options_revision, 1);
         let s2 = r
             .configure_schedule(
@@ -464,5 +521,56 @@ mod tests {
         }
         let mut r = Registry::open(&path).unwrap();
         r.ensure_schedule("p").unwrap();
+    }
+
+    /// Schedules written by 0.1.7 and earlier (24h cadence, first run a day
+    /// after registration) move to the baseline cadence once; a cadence set
+    /// afterwards, or any other cadence, is left alone.
+    #[test]
+    fn legacy_default_cadence_is_upgraded_once() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("registry.db");
+        let day = LEGACY_DEFAULT_CADENCE_MS;
+        let now = now_ms();
+        drop(Registry::open(&path).unwrap());
+        {
+            // What an older daemon left: no upgrade marker, three schedules.
+            let c = rusqlite::Connection::open(&path).unwrap();
+            c.execute(
+                "DELETE FROM registry_meta WHERE key = ?1",
+                [CADENCE_UPGRADE_KEY],
+            )
+            .unwrap();
+            let ins = "INSERT INTO maintenance_schedules
+                (project_id, cadence_ms, next_due_ms, last_run_ms) VALUES (?1, ?2, ?3, ?4)";
+            // Never ran: first run was a day after registration.
+            c.execute(ins, params!["never", day, now + day, None::<i64>])
+                .unwrap();
+            // Ran an hour ago: next run a day after that.
+            let ran = now - 60 * 60 * 1000;
+            c.execute(ins, params!["ran", day, ran + day, ran]).unwrap();
+            // A cadence someone chose.
+            c.execute(ins, params!["custom", 1000, now + 1000, None::<i64>])
+                .unwrap();
+        }
+        let mut r = Registry::open(&path).unwrap();
+        let never = r.get_schedule("never").unwrap().unwrap();
+        assert_eq!(never.cadence_ms, DEFAULT_CADENCE_MS);
+        assert!(never.next_due_ms <= now_ms() + FIRST_RUN_DELAY_MS);
+        assert!(never.next_due_ms >= now + FIRST_RUN_DELAY_MS);
+        let ran = r.get_schedule("ran").unwrap().unwrap();
+        assert_eq!(ran.cadence_ms, DEFAULT_CADENCE_MS);
+        assert_eq!(ran.next_due_ms, now - 60 * 60 * 1000 + DEFAULT_CADENCE_MS);
+        let custom = r.get_schedule("custom").unwrap().unwrap();
+        assert_eq!((custom.cadence_ms, custom.next_due_ms), (1000, now + 1000));
+
+        // A day cadence chosen after the upgrade survives a reopen.
+        r.configure_schedule("ran", Some(day), None, None, None)
+            .unwrap()
+            .unwrap();
+        drop(r);
+        let r = Registry::open(&path).unwrap();
+        assert_eq!(r.get_schedule("ran").unwrap().unwrap().cadence_ms, day);
+        assert_eq!(r.version().unwrap(), crate::REGISTRY_SCHEMA_VERSION);
     }
 }

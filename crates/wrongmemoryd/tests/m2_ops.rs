@@ -136,9 +136,15 @@ async fn scheduler_runs_due_jobs_and_recovers_interrupted_ones() {
     let (pid, _) = register(&mut h, &proj).await;
     remember(&mut h, &pid, "Builds run on the release runner", json!({})).await;
 
-    // Default schedule: 24h cadence, not due yet.
+    // Default schedule: the baseline's 6h cadence; the first run waits the
+    // 90 s settle delay, so nothing is due yet.
     let st = call(&mut h, method::MAINTENANCE_STATUS, Some(&pid), json!({})).await;
-    assert_eq!(st["schedule"]["cadenceMs"], 86_400_000);
+    assert_eq!(st["schedule"]["cadenceMs"], 21_600_000);
+    let due_in = st["schedule"]["nextDueMs"].as_i64().unwrap() - wrongmemory_registry::now_ms();
+    assert!(
+        due_in > 60_000 && due_in <= 90_000,
+        "first run after the settle delay, got {due_in} ms"
+    );
     assert!(st["schedule"]["lastRunMs"].is_null());
 
     // Options changes bump the revision; a stale revision is refused.

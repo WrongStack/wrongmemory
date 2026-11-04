@@ -190,7 +190,7 @@ impl Registry {
             )?;
             tx.commit()?;
         }
-        Ok(())
+        jobs::upgrade_default_cadence(&mut self.conn)
     }
 
     // ─── Semantic provider (WM-508) ─────────────────────────────────────────

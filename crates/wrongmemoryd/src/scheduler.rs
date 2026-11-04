@@ -3,7 +3,9 @@
 //! Schedules and jobs live in the registry, so they survive restarts. The
 //! scheduler loop ticks on a fixed interval and:
 //!
-//! * gives every writable project a schedule (default cadence 24h);
+//! * gives every writable project a schedule (first run 90 s after it is
+//!   created, then every 6 h: the baseline project server's settle delay
+//!   and interval);
 //! * admits a hygiene job for each due schedule (single-flight per project,
 //!   queue cap with coalescing, see `Registry::admit_job`);
 //! * runs at most one heavy job at a time, and only when no interactive
