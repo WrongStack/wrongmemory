@@ -58,6 +58,7 @@ Re-run on the fixed build, same scratch data root:
 | Daemon restart with two projects registered under 0.1.7 (24-hour schedules that had never run) | PASS: their first passes ran 90 s and 95 s after the daemon was ready (one scheduler tick apart) |
 | A project registered on the fixed build | PASS: first pass 100 s after registration |
 | Five-step scenario in both modes, compared after both passes | PASS: identical apart from the `wrongmemory` attribution |
+| The downloaded, attested v0.1.8 Windows package (`5d0ad53`) installed through `wstack sage service install --from <package>\bin --stop-daemon`, then one capture session in a new project | PASS: installed executables byte-identical to the attested bare assets; the `tool_outcome` record was written, and the first maintenance pass ran 95 s after registration and verified it |
 
 ## Not covered
 
