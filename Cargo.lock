@@ -1457,6 +1457,7 @@ dependencies = [
  "http-body-util",
  "hyper",
  "hyper-util",
+ "libc",
  "rmcp",
  "serde",
  "serde_json",
@@ -1484,6 +1485,7 @@ version = "0.1.6"
 dependencies = [
  "getrandom 0.3.4",
  "hex",
+ "libc",
  "serde",
  "serde_json",
  "sha2",

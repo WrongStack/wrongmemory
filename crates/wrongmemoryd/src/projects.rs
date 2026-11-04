@@ -326,9 +326,9 @@ fn process_alive(pid: u32) -> bool {
     wrongmemory_ipc::win::process_alive(pid)
 }
 
-#[cfg(not(windows))]
+#[cfg(unix)]
 fn process_alive(pid: u32) -> bool {
-    Path::new(&format!("/proc/{pid}")).exists()
+    wrongmemory_ipc::unix::process_alive(pid)
 }
 
 /// Admission reason of an adopted store held read-only because a legacy SAGE

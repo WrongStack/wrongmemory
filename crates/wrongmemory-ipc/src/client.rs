@@ -227,12 +227,9 @@ async fn open(endpoint: &str) -> Result<Stream, CallError> {
         .map_err(|e| CallError::Unavailable(format!("cannot open {endpoint}: {e}")))
 }
 
-/// Unix sockets are later platform work (M8); the client side is wired so
-/// portable crates build, but no daemon listens on Unix yet.
 #[cfg(unix)]
 async fn open(endpoint: &str) -> Result<Stream, CallError> {
-    let _ = Duration::ZERO;
-    tokio::net::UnixStream::connect(endpoint)
+    crate::unix::connect(endpoint, Duration::from_secs(5))
         .await
         .map_err(|e| CallError::Unavailable(format!("cannot open {endpoint}: {e}")))
 }

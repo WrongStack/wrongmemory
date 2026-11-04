@@ -1,10 +1,11 @@
 //! `wrongmemoryd`: the persistent per-user WrongMemory service.
 //!
 //! Startup order (architecture §1, §9): private directories -> OS-backed
-//! singleton (first named-pipe instance) -> registry open/migrate ->
-//! credential and discovery publication -> accept authenticated clients.
-//! Client EOF never stops the daemon; only an authenticated host
-//! `daemon.shutdown` or a console signal does (WM-INV-12).
+//! singleton (first named-pipe instance on Windows, a `flock` beside the
+//! socket on Unix) -> registry open/migrate -> credential and discovery
+//! publication -> accept authenticated clients. Client EOF never stops the
+//! daemon; only an authenticated host `daemon.shutdown`, a console signal, or
+//! SIGTERM on Unix does (WM-INV-12).
 
 mod events;
 mod fault;

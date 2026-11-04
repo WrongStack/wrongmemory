@@ -2,6 +2,8 @@
 //! bridge (`wrongmemory mcp`). JSON output goes to stdout, diagnostics to
 //! stderr; exit codes follow `wrongmemory_contracts::exit_code`.
 
+#[cfg(unix)]
+mod autostart_unix;
 mod connect;
 mod http;
 mod mcp;
@@ -139,7 +141,8 @@ enum Cmd {
         #[command(subcommand)]
         action: ops::DiagnosticsCmd,
     },
-    /// Per-user start at sign-in (Windows Run key).
+    /// Per-user start at sign-in (Windows Run key, systemd user unit, or
+    /// macOS LaunchAgent).
     Autostart {
         #[command(subcommand)]
         action: ops::AutostartCmd,

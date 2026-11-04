@@ -1,6 +1,7 @@
 /**
  * Integration against the real `wrongmemoryd` binary built by cargo
- * (`target/debug/wrongmemoryd.exe`); nothing is mocked.
+ * (`target/debug/wrongmemoryd(.exe)`); nothing is mocked. Runs on Windows
+ * (named pipe) and Unix (socket in the data root's private runtime directory).
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -21,8 +22,12 @@ import {
 } from '../src/index.ts';
 
 const repo = resolve(import.meta.dir, '../../..');
-const daemonPath = join(repo, 'target', 'debug', 'wrongmemoryd.exe');
-const isWindows = process.platform === 'win32';
+const daemonPath = join(
+  repo,
+  'target',
+  'debug',
+  process.platform === 'win32' ? 'wrongmemoryd.exe' : 'wrongmemoryd',
+);
 
 let tmp = '';
 let dataRoot = '';
@@ -41,7 +46,7 @@ async function expectCode(p: Promise<unknown>, code: string) {
   throw new Error(`expected ${code}`);
 }
 
-describe.skipIf(!isWindows)('wrongmemoryd integration', () => {
+describe('wrongmemoryd integration', () => {
   beforeAll(async () => {
     if (!existsSync(daemonPath)) {
       execFileSync('cargo', ['build', '-p', 'wrongmemoryd'], { cwd: repo, stdio: 'inherit' });

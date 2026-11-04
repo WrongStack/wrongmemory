@@ -269,8 +269,11 @@ mod tests {
 
     #[test]
     fn identity_slug_is_basename_plus_sha_prefix() {
-        // sha256("D:\\Codebox\\PROJECTS\\WrongStack") computed independently.
+        // The basename is the platform's own, as Node's `path.basename`.
+        #[cfg(windows)]
         let id = r"D:\Codebox\PROJECTS\WrongStack";
+        #[cfg(not(windows))]
+        let id = "/home/dev/Codebox/PROJECTS/WrongStack";
         let s = slug_for_identity(id);
         assert!(s.starts_with("wrongstack-"), "{s}");
         assert_eq!(s.len(), "wrongstack-".len() + 6);

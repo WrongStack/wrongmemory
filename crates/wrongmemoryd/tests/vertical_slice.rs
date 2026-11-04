@@ -2,7 +2,7 @@
 //! real registry, and real SAGE SQLite stores (one of them built by the
 //! WrongStack oracle). Nothing here mocks the transport, policy, or store.
 
-#![cfg(windows)]
+#![cfg(any(windows, unix))]
 
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};

@@ -9,7 +9,7 @@
 //! * a daemon killed while idle leaves stale discovery and an owner lock that
 //!   a fresh daemon recovers from.
 
-#![cfg(all(windows, debug_assertions))]
+#![cfg(all(any(windows, unix), debug_assertions))]
 
 use std::path::Path;
 use std::process::{Child, Command, Stdio};

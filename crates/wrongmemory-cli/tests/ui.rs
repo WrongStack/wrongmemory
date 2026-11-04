@@ -5,7 +5,7 @@
 //! rebinding), GET only, read-only method allowlist, and no secret in any
 //! response.
 
-#![cfg(windows)]
+#![cfg(any(windows, unix))]
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;

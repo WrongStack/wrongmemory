@@ -2,10 +2,12 @@
 //! redacted diagnostics, per-user autostart, install, uninstall.
 //!
 //! Every system-touching path is overridable so tests never modify the real
-//! machine: `--prefix` for binaries, `--data-root` for data, and
-//! `WRONGMEMORY_AUTOSTART_KEY_OVERRIDE` for the registry Run key.
+//! machine: `--prefix` for binaries, `--data-root` for data,
+//! `WRONGMEMORY_AUTOSTART_KEY_OVERRIDE` for the Windows Run key, and
+//! `WRONGMEMORY_AUTOSTART_DIR_OVERRIDE` for the Unix unit or agent directory.
 
 use std::path::{Path, PathBuf};
+#[cfg(windows)]
 use std::process::Command;
 use std::time::{Duration, Instant};
 
@@ -15,8 +17,11 @@ use wrongmemory_contracts::{exit_code, method};
 use wrongmemory_ipc::{Client, DataRoot};
 use wrongmemory_storage::inspect::Verdict;
 
+#[cfg(windows)]
 pub const AUTOSTART_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
+#[cfg(windows)]
 pub const AUTOSTART_KEY_ENV: &str = "WRONGMEMORY_AUTOSTART_KEY_OVERRIDE";
+#[cfg(windows)]
 pub const AUTOSTART_VALUE: &str = "WrongMemory";
 const BINARIES: [&str; 2] = ["wrongmemory", "wrongmemoryd"];
 const MAX_LOG_LINES: usize = 500;
@@ -51,20 +56,22 @@ pub enum DiagnosticsCmd {
 
 #[derive(Debug, Subcommand)]
 pub enum AutostartCmd {
-    /// Start the daemon at sign-in (per-user Run key). Idempotent.
+    /// Start the daemon at sign-in: a per-user Run value (Windows), systemd
+    /// user unit (Linux) or LaunchAgent (macOS). Idempotent; does not start it now.
     Enable {
         #[arg(long)]
         prefix: Option<PathBuf>,
     },
-    /// Remove the Run value. Idempotent.
+    /// Remove the sign-in entry. Idempotent.
     Disable,
-    /// Show the current Run value.
+    /// Show the current sign-in entry.
     Status,
 }
 
 #[derive(Debug, Args)]
 pub struct InstallArgs {
-    /// Install directory (default %LOCALAPPDATA%\WrongMemory\bin).
+    /// Install directory (default %LOCALAPPDATA%\WrongMemory\bin on Windows,
+    /// $XDG_DATA_HOME/wrongmemory/bin or ~/.local/share/wrongmemory/bin on Unix).
     #[arg(long)]
     pub prefix: Option<PathBuf>,
     /// Stop a running daemon first (otherwise install refuses).
@@ -96,19 +103,48 @@ fn exe_name(base: &str) -> String {
     format!("{base}{}", std::env::consts::EXE_SUFFIX)
 }
 
+#[cfg(windows)]
 pub fn default_prefix() -> Option<PathBuf> {
     std::env::var_os("LOCALAPPDATA")
         .filter(|v| !v.is_empty())
         .map(|p| PathBuf::from(p).join("WrongMemory").join("bin"))
 }
 
+/// `$XDG_DATA_HOME/wrongmemory/bin`, else `~/.local/share/wrongmemory/bin`.
+#[cfg(unix)]
+pub fn default_prefix() -> Option<PathBuf> {
+    let data = std::env::var_os("XDG_DATA_HOME")
+        .filter(|v| !v.is_empty())
+        .map(PathBuf::from)
+        .filter(|p| p.is_absolute())
+        .or_else(|| {
+            std::env::var_os("HOME")
+                .filter(|v| !v.is_empty())
+                .map(|h| PathBuf::from(h).join(".local").join("share"))
+        })?;
+    Some(data.join("wrongmemory").join("bin"))
+}
+
 fn resolve_prefix(p: Option<&Path>) -> Result<PathBuf, String> {
     match p {
         Some(p) => std::path::absolute(p).map_err(|e| e.to_string()),
-        None => {
-            default_prefix().ok_or_else(|| "cannot determine %LOCALAPPDATA%; pass --prefix".into())
-        }
+        None => default_prefix().ok_or_else(|| {
+            if cfg!(windows) {
+                "cannot determine %LOCALAPPDATA%; pass --prefix".into()
+            } else {
+                "cannot determine $HOME; pass --prefix".into()
+            }
+        }),
     }
+}
+
+/// `path` with `.tag` appended: `wrongmemory.exe.old` on Windows,
+/// `wrongmemory.old` on Unix.
+fn tagged(path: &Path, tag: &str) -> PathBuf {
+    let mut s = path.as_os_str().to_owned();
+    s.push(".");
+    s.push(tag);
+    PathBuf::from(s)
 }
 
 // ─── backup ────────────────────────────────────────────────────────────────
@@ -365,6 +401,7 @@ pub async fn run_diagnostics(root: &DataRoot, json_mode: bool, cmd: DiagnosticsC
 
 // ─── autostart ─────────────────────────────────────────────────────────────
 
+#[cfg(windows)]
 fn autostart_key() -> String {
     std::env::var(AUTOSTART_KEY_ENV)
         .ok()
@@ -373,6 +410,7 @@ fn autostart_key() -> String {
 }
 
 /// Current Run value data, if any.
+#[cfg(windows)]
 pub fn autostart_query() -> Option<String> {
     let out = Command::new("reg")
         .args(["query", &autostart_key(), "/v", AUTOSTART_VALUE])
@@ -387,6 +425,7 @@ pub fn autostart_query() -> Option<String> {
         .and_then(|l| l.split_once("REG_SZ").map(|(_, d)| d.trim().to_string()))
 }
 
+#[cfg(windows)]
 fn autostart_command(root: &DataRoot, daemon: &Path) -> String {
     let mut cmd = format!("\"{}\"", daemon.display());
     let default = DataRoot::resolve(None).ok();
@@ -396,11 +435,118 @@ fn autostart_command(root: &DataRoot, daemon: &Path) -> String {
     cmd
 }
 
-pub fn run_autostart(root: &DataRoot, json_mode: bool, cmd: AutostartCmd) -> i32 {
-    if !cfg!(windows) {
-        eprintln!("wrongmemory autostart: only Windows is supported in this release");
-        return exit_code::UNSUPPORTED;
+/// The daemon's sign-in arguments: the data root is passed only when it is
+/// not the default one.
+#[cfg(unix)]
+fn autostart_args(root: &DataRoot, daemon: &Path) -> Vec<String> {
+    let mut args = vec![daemon.display().to_string()];
+    if DataRoot::resolve(None).ok().as_ref() != Some(root) {
+        args.push("--data-root".into());
+        args.push(root.path().display().to_string());
     }
+    args
+}
+
+/// The daemon `autostart enable` points at: under `--prefix`, else the
+/// installed one, else the one next to this executable.
+fn autostart_daemon(prefix: Option<PathBuf>) -> Result<PathBuf, i32> {
+    let daemon = match prefix {
+        Some(p) => std::path::absolute(p)
+            .unwrap_or_default()
+            .join(exe_name("wrongmemoryd")),
+        None => {
+            let installed = default_prefix().map(|p| p.join(exe_name("wrongmemoryd")));
+            match installed.filter(|p| p.exists()) {
+                Some(p) => p,
+                None => match crate::spawn::daemon_exe() {
+                    Ok(p) => p,
+                    Err(e) => {
+                        eprintln!("wrongmemory autostart: {e}");
+                        return Err(exit_code::FAILED);
+                    }
+                },
+            }
+        }
+    };
+    if !daemon.exists() {
+        eprintln!("wrongmemory autostart: {} does not exist", daemon.display());
+        return Err(exit_code::INVALID_INPUT);
+    }
+    Ok(daemon)
+}
+
+#[cfg(unix)]
+pub fn run_autostart(root: &DataRoot, json_mode: bool, cmd: AutostartCmd) -> i32 {
+    use crate::autostart_unix as unit;
+    let file = match unit::file() {
+        Ok(f) => f.display().to_string(),
+        Err(e) => {
+            eprintln!("wrongmemory autostart: {e}");
+            return exit_code::FAILED;
+        }
+    };
+    match cmd {
+        AutostartCmd::Status => {
+            let cur = unit::query().map(|a| unit::display(&a));
+            print(
+                json_mode,
+                &json!({"file": file, "command": cur}),
+                match &cur {
+                    Some(c) => format!("enabled: {c}\n  {file}"),
+                    None => "disabled".into(),
+                },
+            );
+            exit_code::SUCCESS
+        }
+        AutostartCmd::Enable { prefix } => {
+            let daemon = match autostart_daemon(prefix) {
+                Ok(d) => d,
+                Err(code) => return code,
+            };
+            let args = autostart_args(root, &daemon);
+            let command = unit::display(&args);
+            match unit::enable(&args) {
+                Ok(changed) => {
+                    print(
+                        json_mode,
+                        &json!({"changed": changed, "command": command, "file": file}),
+                        if changed {
+                            format!("enabled: {command}\n  {file}")
+                        } else {
+                            format!("already enabled: {command}")
+                        },
+                    );
+                    exit_code::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("wrongmemory autostart: {e}");
+                    exit_code::FAILED
+                }
+            }
+        }
+        AutostartCmd::Disable => match unit::disable() {
+            Ok(changed) => {
+                print(
+                    json_mode,
+                    &json!({"changed": changed, "file": file}),
+                    if changed {
+                        "disabled".into()
+                    } else {
+                        "already disabled".into()
+                    },
+                );
+                exit_code::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("wrongmemory autostart: {e}");
+                exit_code::FAILED
+            }
+        },
+    }
+}
+
+#[cfg(windows)]
+pub fn run_autostart(root: &DataRoot, json_mode: bool, cmd: AutostartCmd) -> i32 {
     match cmd {
         AutostartCmd::Status => {
             let cur = autostart_query();
@@ -416,28 +562,10 @@ pub fn run_autostart(root: &DataRoot, json_mode: bool, cmd: AutostartCmd) -> i32
             exit_code::SUCCESS
         }
         AutostartCmd::Enable { prefix } => {
-            let daemon = match prefix {
-                Some(p) => std::path::absolute(p)
-                    .unwrap_or_default()
-                    .join(exe_name("wrongmemoryd")),
-                None => {
-                    let installed = default_prefix().map(|p| p.join(exe_name("wrongmemoryd")));
-                    match installed.filter(|p| p.exists()) {
-                        Some(p) => p,
-                        None => match crate::spawn::daemon_exe() {
-                            Ok(p) => p,
-                            Err(e) => {
-                                eprintln!("wrongmemory autostart: {e}");
-                                return exit_code::FAILED;
-                            }
-                        },
-                    }
-                }
+            let daemon = match autostart_daemon(prefix) {
+                Ok(d) => d,
+                Err(code) => return code,
             };
-            if !daemon.exists() {
-                eprintln!("wrongmemory autostart: {} does not exist", daemon.display());
-                return exit_code::INVALID_INPUT;
-            }
             let data = autostart_command(root, &daemon);
             if autostart_query().as_deref() == Some(data.as_str()) {
                 print(
@@ -516,8 +644,8 @@ async fn stop_daemon(root: &DataRoot) -> Result<bool, String> {
 }
 
 fn replace_atomically(src: &Path, dst: &Path) -> std::io::Result<()> {
-    let new = dst.with_extension("exe.new");
-    let old = dst.with_extension("exe.old");
+    let new = tagged(dst, "new");
+    let old = tagged(dst, "old");
     std::fs::copy(src, &new)?;
     if dst.exists() {
         let _ = std::fs::remove_file(&old);
@@ -591,7 +719,7 @@ pub async fn run_install(root: &DataRoot, json_mode: bool, a: InstallArgs) -> i3
         if let Err(e) = replace_atomically(&src_dir.join(exe_name(b)), &dst) {
             // Roll back the binaries already replaced in this run.
             for d in &done {
-                let old = d.with_extension("exe.old");
+                let old = tagged(d, "old");
                 if old.exists() {
                     let _ = std::fs::remove_file(d);
                     let _ = std::fs::rename(&old, d);
@@ -609,7 +737,10 @@ pub async fn run_install(root: &DataRoot, json_mode: bool, a: InstallArgs) -> i3
         "version": env!("CARGO_PKG_VERSION"),
         "installedFrom": src_dir.display().to_string(),
         "binaries": done.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
-        "rollback": "previous binaries (if any) are kept as *.exe.old",
+        "rollback": format!(
+            "previous binaries (if any) are kept as *{}.old",
+            std::env::consts::EXE_SUFFIX
+        ),
     });
     let _ = std::fs::write(
         prefix.join("install.json"),
@@ -662,8 +793,8 @@ pub async fn run_uninstall(root: &DataRoot, json_mode: bool, a: UninstallArgs) -
             return exit_code::FAILED;
         }
     }
-    if cfg!(windows)
-        && let Some(cmd) = autostart_query()
+    #[cfg(windows)]
+    if let Some(cmd) = autostart_query()
         && cmd
             .to_lowercase()
             .contains(&prefix.display().to_string().to_lowercase())
@@ -675,19 +806,34 @@ pub async fn run_uninstall(root: &DataRoot, json_mode: bool, a: UninstallArgs) -
     {
         removed.push(format!("autostart value {AUTOSTART_VALUE}"));
     }
+    // Only an entry that starts a daemon from this prefix.
+    #[cfg(unix)]
+    if let Some(args) = crate::autostart_unix::query()
+        && args
+            .first()
+            .is_some_and(|d| Path::new(d).parent() == Some(prefix.as_path()))
+        && crate::autostart_unix::disable().unwrap_or(false)
+    {
+        removed.push(format!(
+            "autostart entry {}",
+            crate::autostart_unix::file()
+                .map(|f| f.display().to_string())
+                .unwrap_or_default()
+        ));
+    }
     let me = std::env::current_exe()
         .ok()
         .and_then(|p| std::fs::canonicalize(p).ok());
     for b in BINARIES {
-        for suffix in ["exe", "exe.old", "exe.new"] {
-            let p = prefix.join(b).with_extension(suffix);
+        let base = prefix.join(exe_name(b));
+        for p in [base.clone(), tagged(&base, "old"), tagged(&base, "new")] {
             if !p.exists() {
                 continue;
             }
             // A running executable cannot delete itself on Windows: move it
-            // aside and leave a note instead of failing.
-            if std::fs::canonicalize(&p).ok() == me {
-                let aside = p.with_extension("exe.delete-me");
+            // aside and leave a note instead of failing. Unix unlinks it.
+            if cfg!(windows) && std::fs::canonicalize(&p).ok() == me {
+                let aside = tagged(&p, "delete-me");
                 if std::fs::rename(&p, &aside).is_ok() {
                     removed.push(format!("{} (renamed; delete after exit)", p.display()));
                 }

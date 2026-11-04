@@ -118,23 +118,30 @@ impl DataRoot {
     }
 
     /// Endpoint name: unique per OS user and per data root, so test and
-    /// portable roots never collide with the normal daemon.
+    /// portable roots never collide with the normal daemon. On Windows it is
+    /// a pipe name derived from both; on Unix it is a socket inside the data
+    /// root's private runtime directory, which is per root by construction.
     pub fn endpoint_name(&self) -> io::Result<String> {
-        let user = user_identity()?;
-        let mut key = self.root.to_string_lossy().into_owned();
-        if cfg!(windows) {
-            key = key.replace('/', "\\").to_lowercase();
-        }
-        let digest = Sha256::digest(format!("{user}\0{key}").as_bytes());
-        let short = hex::encode(&digest[..8]);
-        Ok(if cfg!(windows) {
-            format!(r"\\.\pipe\wrongmemory-{short}")
-        } else {
-            self.runtime_dir()
-                .join(format!("wrongmemory-{short}.sock"))
+        #[cfg(windows)]
+        {
+            let user = user_identity()?;
+            let key = self
+                .root
                 .to_string_lossy()
-                .into_owned()
-        })
+                .replace('/', "\\")
+                .to_lowercase();
+            let digest = Sha256::digest(format!("{user}\0{key}").as_bytes());
+            let short = hex::encode(&digest[..8]);
+            Ok(format!(r"\\.\pipe\wrongmemory-{short}"))
+        }
+        #[cfg(not(windows))]
+        {
+            Ok(self
+                .runtime_dir()
+                .join("daemon.sock")
+                .to_string_lossy()
+                .into_owned())
+        }
     }
 }
 
@@ -146,11 +153,11 @@ pub fn user_identity() -> io::Result<String> {
     }
     #[cfg(not(windows))]
     {
-        Ok(std::env::var("USER").unwrap_or_default())
+        Ok(crate::unix::current_uid().to_string())
     }
 }
 
-fn create_private_dir(dir: &Path) -> io::Result<()> {
+pub(crate) fn create_private_dir(dir: &Path) -> io::Result<()> {
     if dir.is_dir() {
         // Never trust a pre-existing directory's ACL: refuse one owned by
         // another account, re-apply the owner-only DACL to our own.
@@ -160,9 +167,7 @@ fn create_private_dir(dir: &Path) -> io::Result<()> {
         {
             use std::os::unix::fs::{MetadataExt, PermissionsExt};
             let meta = std::fs::metadata(dir)?;
-            // SAFETY: getuid has no preconditions.
-            let uid = unsafe { libc_getuid() };
-            if meta.uid() != uid {
+            if meta.uid() != crate::unix::current_uid() {
                 return Err(io::Error::new(
                     io::ErrorKind::PermissionDenied,
                     format!("{} is not owned by the current user", dir.display()),
@@ -192,12 +197,6 @@ fn create_private_dir(dir: &Path) -> io::Result<()> {
             other => other,
         }
     }
-}
-
-#[cfg(not(windows))]
-unsafe extern "C" {
-    #[link_name = "getuid"]
-    fn libc_getuid() -> u32;
 }
 
 fn temp_sibling(path: &Path) -> io::Result<std::path::PathBuf> {

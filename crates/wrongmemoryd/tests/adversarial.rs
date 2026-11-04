@@ -7,7 +7,7 @@
 //! of another session, nor anything of a project outside its allowlist, and
 //! hidden records are indistinguishable from absent ones.
 
-#![cfg(windows)]
+#![cfg(any(windows, unix))]
 
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
@@ -730,15 +730,22 @@ async fn hidden_candidates_do_not_starve_visible_ones() {
     }
 }
 
-async fn raw_conn(
-    root: &Path,
-    token: Option<&str>,
-) -> BufReader<tokio::net::windows::named_pipe::NamedPipeClient> {
+#[cfg(windows)]
+type RawStream = tokio::net::windows::named_pipe::NamedPipeClient;
+#[cfg(unix)]
+type RawStream = tokio::net::UnixStream;
+
+async fn raw_conn(root: &Path, token: Option<&str>) -> BufReader<RawStream> {
     let disc = Discovery::load(&dr(root)).unwrap();
-    let pipe = wrongmemory_ipc::win::connect(&disc.info.endpoint, Duration::from_secs(5))
+    #[cfg(windows)]
+    let stream = wrongmemory_ipc::win::connect(&disc.info.endpoint, Duration::from_secs(5))
         .await
         .unwrap();
-    let mut conn = BufReader::new(pipe);
+    #[cfg(unix)]
+    let stream = wrongmemory_ipc::unix::connect(&disc.info.endpoint, Duration::from_secs(5))
+        .await
+        .unwrap();
+    let mut conn = BufReader::new(stream);
     if let Some(token) = token {
         let auth = AuthRequest {
             protocol_major: PROTOCOL_MAJOR,
@@ -1195,7 +1202,10 @@ async fn legacy_import_only_reads_project_files() {
     }
     // A symlinked directory inside the project that points outside it.
     #[cfg(windows)]
-    if std::os::windows::fs::symlink_dir(tmp.path(), proj_a.join("escape")).is_ok() {
+    let linked = std::os::windows::fs::symlink_dir(tmp.path(), proj_a.join("escape")).is_ok();
+    #[cfg(unix)]
+    let linked = std::os::unix::fs::symlink(tmp.path(), proj_a.join("escape")).is_ok();
+    if linked {
         let (code, _) = fail(
             &mut wr,
             method::MEMORY_IMPORT_LEGACY,

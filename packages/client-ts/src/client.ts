@@ -1,13 +1,14 @@
 /**
- * WrongMemory IPC client for Bun/Node: Windows named pipe, newline-delimited
- * JSON, authentication handshake, sequential request/response.
+ * WrongMemory IPC client for Bun/Node: Windows named pipe or Unix socket (the
+ * endpoint named in discovery), newline-delimited JSON, authentication
+ * handshake, sequential request/response.
  *
- * Anti-squatting: Node cannot query the pipe server's OS identity (the Rust
- * client checks the server SID). Instead, before any credential is sent,
- * the client sends a random nonce and requires the daemon to return
+ * Anti-squatting: Node cannot query the endpoint server's OS identity (the
+ * Rust client checks the server SID or uid). Instead, before any credential
+ * is sent, the client sends a random nonce and requires the daemon to return
  * HMAC-SHA256(hostToken, "wrongmemory-server-proof-v1:" + nonce). Only the
- * real daemon holds the owner-private host token, so a pipe name squatted
- * by another account never receives a host token or grant secret.
+ * real daemon holds the owner-private host token, so an endpoint squatted by
+ * another account never receives a host token or grant secret.
  */
 
 import { spawn } from 'node:child_process';

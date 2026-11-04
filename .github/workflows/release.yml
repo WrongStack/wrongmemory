@@ -4,14 +4,26 @@ on:
   push:
     tags: ['v*']
 
-# Least privilege: the build job (which runs project code and Bun scripts)
-# is read-only; only the publish job, which runs no project code, can write.
+# Least privilege: the build jobs (which run project code and Bun scripts)
+# are read-only; only the publish job, which runs no project code, can write.
 permissions:
   contents: read
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows-x64
+          # The oldest supported Ubuntu runner, so the binaries need only the
+          # glibc it ships (2.35).
+          - os: ubuntu-22.04
+            platform: linux-x64
+          - os: macos-latest
+            platform: darwin-arm64
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
     steps:
@@ -31,13 +43,22 @@ jobs:
         run: cargo test --workspace --locked
       - name: Package
         run: bun scripts/release/package.ts
+      - name: Check the platform's checksums
+        shell: bash
+        run: |
+          cd dist
+          if command -v sha256sum >/dev/null; then sha256sum -c SHA256SUMS; else shasum -a 256 -c SHA256SUMS; fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: dist
+          name: dist-${{ matrix.platform }}
+          # The archive and the two bare executables. The staging directory
+          # (wrongmemory-<version>-<platform>/) and the per-platform
+          # SHA256SUMS stay behind; publish writes one SHA256SUMS for all.
           path: |
             dist/*.zip
-            dist/*.exe
-            dist/SHA256SUMS
+            dist/*.tar.gz
+            dist/wrongmemory-${{ matrix.platform }}*
+            dist/wrongmemoryd-${{ matrix.platform }}*
           if-no-files-found: error
 
   publish:
@@ -50,15 +71,20 @@ jobs:
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: dist
+          pattern: dist-*
+          merge-multiple: true
           path: dist
+      - name: Checksums
+        shell: bash
+        run: |
+          cd dist
+          ls -l
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
       - name: Build provenance
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
-          subject-path: |
-            dist/*.zip
-            dist/*.exe
-            dist/SHA256SUMS
+          subject-path: dist/*
       - name: Draft release
         shell: bash
         env:
@@ -66,11 +92,11 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           cat > notes.md <<EOF
-          WrongMemory ${GITHUB_REF_NAME} (Windows x64, per-user).
+          WrongMemory ${GITHUB_REF_NAME}, per-user: Windows x64, Linux x64 (glibc 2.35+), macOS arm64.
 
-          - Binaries are **unsigned** (no Authenticode signature). Verify the zip against SHA256SUMS and the GitHub build-provenance attestation:
-            \`gh attestation verify <zip> --repo ${GITHUB_REPOSITORY}\`
-          - Install: unzip, then \`bin\\wrongmemory.exe install\`. See docs/operations.md.
+          - Binaries are **unsigned**: no Authenticode signature, no Apple notarization. Verify each archive or executable against SHA256SUMS and the GitHub build-provenance attestation:
+            \`gh attestation verify <file> --repo ${GITHUB_REPOSITORY}\`
+          - Install: unpack, then \`bin/wrongmemory install\` (\`bin\\wrongmemory.exe install\` on Windows). See docs/operations.md.
           - Scope and verification status: docs/status.md.
           EOF
-          gh release create "$GITHUB_REF_NAME" dist/*.zip dist/*.exe dist/SHA256SUMS --draft --title "WrongMemory $GITHUB_REF_NAME" --notes-file notes.md
+          gh release create "$GITHUB_REF_NAME" dist/* --draft --title "WrongMemory $GITHUB_REF_NAME" --notes-file notes.md

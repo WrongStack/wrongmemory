@@ -4,7 +4,7 @@
 //! attributed, delete needs a destructive grant, recover restores, graph and
 //! listing never disclose a session-private memory.
 
-#![cfg(windows)]
+#![cfg(any(windows, unix))]
 
 use std::path::Path;
 use std::process::{Child, Command, Stdio};

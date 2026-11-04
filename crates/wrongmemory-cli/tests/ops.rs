@@ -1,8 +1,9 @@
 //! Operations commands against real binaries and a real daemon. Everything
-//! uses temp data roots, a temp install prefix, and an override registry key
-//! under HKCU\Software\WrongMemoryTest that is removed afterwards.
+//! uses temp data roots, a temp install prefix, and an override autostart
+//! location: a registry key under HKCU\Software\WrongMemoryTest that is
+//! removed afterwards (Windows), or a temp unit/agent directory (Unix).
 
-#![cfg(windows)]
+#![cfg(any(windows, unix))]
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -28,6 +29,16 @@ fn json(home: &Path, args: &[&str]) -> Value {
         String::from_utf8_lossy(&out.stderr)
     );
     serde_json::from_slice(&out.stdout).unwrap()
+}
+
+/// Executable file name on this platform.
+fn exe(base: &str) -> String {
+    format!("{base}{}", std::env::consts::EXE_SUFFIX)
+}
+
+/// Rollback or staging sibling: `wrongmemory.exe.old`, `wrongmemory.old`.
+fn tagged(base: &str, tag: &str) -> String {
+    format!("{}.{tag}", exe(base))
 }
 
 fn sha(path: &Path) -> Option<Vec<u8>> {
@@ -160,9 +171,9 @@ fn install_refuses_running_daemon_then_installs_and_uninstalls() {
         ],
     );
     assert_eq!(r["daemonStopped"], true);
-    assert!(prefix.join("wrongmemory.exe").exists() && prefix.join("wrongmemoryd.exe").exists());
+    assert!(prefix.join(exe("wrongmemory")).exists() && prefix.join(exe("wrongmemoryd")).exists());
     // The installed CLI starts its own installed daemon on demand.
-    let installed = prefix.join("wrongmemory.exe");
+    let installed = prefix.join(exe("wrongmemory"));
     let st = Command::new(&installed)
         .args([
             "--data-root",
@@ -188,7 +199,7 @@ fn install_refuses_running_daemon_then_installs_and_uninstalls() {
             "--stop-daemon",
         ],
     );
-    assert!(prefix.join("wrongmemory.exe.old").exists());
+    assert!(prefix.join(tagged("wrongmemory", "old")).exists());
     json(&home, &["daemon", "start"]);
     let refuse_data = run(
         &home,
@@ -206,8 +217,8 @@ fn install_refuses_running_daemon_then_installs_and_uninstalls() {
     );
     let u = json(&home, &["uninstall", "--prefix", prefix.to_str().unwrap()]);
     assert_eq!(u["dataKept"], true);
-    assert!(!prefix.join("wrongmemory.exe").exists());
-    assert!(!prefix.join("wrongmemoryd.exe.old").exists());
+    assert!(!prefix.join(exe("wrongmemory")).exists());
+    assert!(!prefix.join(tagged("wrongmemoryd", "old")).exists());
     assert!(Path::new(&store).exists(), "uninstall must keep memory");
     assert!(
         !home.join("runtime").join("endpoint.json").exists(),
@@ -215,6 +226,7 @@ fn install_refuses_running_daemon_then_installs_and_uninstalls() {
     );
 }
 
+#[cfg(windows)]
 #[test]
 fn autostart_enable_status_disable_with_override_key() {
     let tmp = tempfile::tempdir().unwrap();
@@ -259,6 +271,87 @@ fn autostart_enable_status_disable_with_override_key() {
         .output();
 }
 
+/// WM-802: the sign-in entry is a systemd user unit linked into
+/// `default.target.wants` (Linux) or a LaunchAgent (macOS). The directory is
+/// overridden, which also keeps `systemctl`/`launchctl` out of the test.
+#[cfg(unix)]
+#[test]
+fn autostart_enable_status_disable_and_uninstall_with_override_dir() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let prefix = tmp.path().join("my bin");
+    let units = tmp.path().join("units");
+    std::fs::create_dir_all(&prefix).unwrap();
+    std::fs::copy(
+        Path::new(env!("CARGO_BIN_EXE_wrongmemory")).with_file_name("wrongmemoryd"),
+        prefix.join("wrongmemoryd"),
+    )
+    .unwrap();
+    let with_dir = |args: &[&str]| -> Value {
+        let out = wm(&home)
+            .env("WRONGMEMORY_AUTOSTART_DIR_OVERRIDE", &units)
+            .arg("--json")
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        serde_json::from_slice(&out.stdout).unwrap()
+    };
+    #[cfg(target_os = "macos")]
+    let file = units.join("com.wrongstack.wrongmemory.plist");
+    #[cfg(not(target_os = "macos"))]
+    let file = units.join("wrongmemory.service");
+
+    assert!(with_dir(&["autostart", "status"])["command"].is_null());
+    let e = with_dir(&["autostart", "enable", "--prefix", prefix.to_str().unwrap()]);
+    assert_eq!(e["changed"], true);
+    assert_eq!(e["file"], file.display().to_string());
+    let cmd = e["command"].as_str().unwrap().to_string();
+    assert!(
+        cmd.contains("my bin/wrongmemoryd") && cmd.contains("--data-root"),
+        "{cmd}"
+    );
+    let text = std::fs::read_to_string(&file).unwrap();
+    assert!(text.contains(&home.display().to_string()), "{text}");
+    #[cfg(not(target_os = "macos"))]
+    {
+        let link = units
+            .join("default.target.wants")
+            .join("wrongmemory.service");
+        assert_eq!(
+            std::fs::read_link(&link).unwrap(),
+            Path::new("..").join("wrongmemory.service")
+        );
+        assert!(text.contains("WantedBy=default.target"), "{text}");
+    }
+    assert_eq!(
+        with_dir(&["autostart", "enable", "--prefix", prefix.to_str().unwrap()])["changed"],
+        false
+    );
+    assert_eq!(with_dir(&["autostart", "status"])["command"], cmd.as_str());
+    assert_eq!(with_dir(&["autostart", "disable"])["changed"], true);
+    assert!(!file.exists());
+    assert_eq!(with_dir(&["autostart", "disable"])["changed"], false);
+
+    // Uninstall removes an entry that starts the daemon from its prefix.
+    with_dir(&["autostart", "enable", "--prefix", prefix.to_str().unwrap()]);
+    let u = with_dir(&["uninstall", "--prefix", prefix.to_str().unwrap()]);
+    assert!(
+        u["removed"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|r| r.as_str().unwrap().starts_with("autostart entry")),
+        "{u}"
+    );
+    assert!(!file.exists());
+    assert!(!prefix.join("wrongmemoryd").exists());
+}
+
 /// WM-701: an install interrupted after the first binary was replaced
 /// rolls that binary back, so the prefix never holds a mixed CLI/daemon
 /// pair. The second replacement is made to fail by occupying its staging
@@ -269,11 +362,11 @@ fn interrupted_install_rolls_back_to_the_previous_binaries() {
     let home = tmp.path().join("home");
     let prefix = tmp.path().join("prefix");
     std::fs::create_dir_all(&prefix).unwrap();
-    let cli = prefix.join("wrongmemory.exe");
-    let daemon = prefix.join("wrongmemoryd.exe");
+    let cli = prefix.join(exe("wrongmemory"));
+    let daemon = prefix.join(exe("wrongmemoryd"));
     std::fs::write(&cli, b"previous cli").unwrap();
     std::fs::write(&daemon, b"previous daemon").unwrap();
-    std::fs::create_dir_all(prefix.join("wrongmemoryd.exe.new")).unwrap();
+    std::fs::create_dir_all(prefix.join(tagged("wrongmemoryd", "new"))).unwrap();
 
     let out = run(&home, &["install", "--prefix", prefix.to_str().unwrap()]);
     assert!(!out.status.success(), "install must fail");
@@ -287,11 +380,11 @@ fn interrupted_install_rolls_back_to_the_previous_binaries() {
     assert!(!prefix.join("install.json").exists());
 
     // Clearing the obstruction lets the same install complete.
-    std::fs::remove_dir(prefix.join("wrongmemoryd.exe.new")).unwrap();
+    std::fs::remove_dir(prefix.join(tagged("wrongmemoryd", "new"))).unwrap();
     json(&home, &["install", "--prefix", prefix.to_str().unwrap()]);
     assert_eq!(sha(&cli), sha(Path::new(env!("CARGO_BIN_EXE_wrongmemory"))));
     assert_eq!(
-        sha(&prefix.join("wrongmemory.exe.old")).as_deref(),
+        sha(&prefix.join(tagged("wrongmemory", "old"))).as_deref(),
         Some(&b"previous cli"[..])
     );
 }

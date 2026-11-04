@@ -274,11 +274,21 @@ pub async fn run(cfg: Config) -> Result<(), StartError> {
         }
         Err(e) => return Err(anyhow::Error::new(e).context("binding endpoint").into()),
     };
-    #[cfg(not(windows))]
-    return Err(anyhow::anyhow!(
-        "the WrongMemory daemon currently supports Windows only (Unix sockets are M8)"
-    )
-    .into());
+    // On Unix the guard is a `flock` next to the socket in the private
+    // runtime directory, so its holder is this user's daemon for this root.
+    #[cfg(unix)]
+    let listener =
+        match wrongmemory_ipc::unix::SocketListener::bind(std::path::Path::new(&endpoint)) {
+            Ok(l) => l,
+            Err(wrongmemory_ipc::unix::BindError::Held) => {
+                return Err(StartError::AlreadyRunning(endpoint));
+            }
+            Err(wrongmemory_ipc::unix::BindError::Io(e)) => {
+                return Err(anyhow::Error::new(e).context("binding endpoint").into());
+            }
+        };
+    #[cfg(not(any(windows, unix)))]
+    return Err(anyhow::anyhow!("the WrongMemory daemon supports Windows and Unix only").into());
 
     // 2. Registry.
     let registry = Registry::open(&cfg.root.registry_db())
@@ -358,6 +368,47 @@ pub async fn run(cfg: Config) -> Result<(), StartError> {
                 }
             }
         }
+    }
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{SignalKind, signal};
+        // SIGTERM (service managers, `kill`) drains like a shutdown request.
+        // SIGHUP is logged and ignored: a daemon started from a terminal must
+        // outlive it.
+        let mut term = signal(SignalKind::terminate()).context("installing SIGTERM handler")?;
+        let mut hup = signal(SignalKind::hangup()).context("installing SIGHUP handler")?;
+        loop {
+            tokio::select! {
+                accepted = listener.accept() => match accepted {
+                    Ok(conn) => {
+                        tokio::spawn(handle_connection(shared.clone(), conn));
+                    }
+                    Err(e) => {
+                        warn!("accept_failed", {"error": e.to_string()});
+                        // Back off so a persistent error (EMFILE) cannot spin.
+                        if e.kind() != std::io::ErrorKind::PermissionDenied {
+                            tokio::time::sleep(Duration::from_millis(50)).await;
+                        }
+                    }
+                },
+                _ = shutdown_rx.changed() => break,
+                _ = tokio::signal::ctrl_c() => {
+                    info!("signal_shutdown");
+                    break;
+                }
+                _ = term.recv() => {
+                    info!("signal_shutdown", {"signal": "SIGTERM"});
+                    break;
+                }
+                _ = hup.recv() => {
+                    info!("signal_ignored", {"signal": "SIGHUP"});
+                }
+            }
+        }
+        // Stop accepting and give up the data root before draining, as on
+        // Windows, where the pipe has no instance left after the loop: the
+        // socket file goes first, then the lock.
+        drop(listener);
     }
 
     // 5. Drain: refuse new work, wait for in-flight mutations, close stores

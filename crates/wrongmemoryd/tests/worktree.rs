@@ -2,7 +2,7 @@
 //! checkout's SAGE store (shared memory identity), exactly as WrongStack's
 //! `resolveProjectSageStorageRoot` resolves it.
 
-#![cfg(windows)]
+#![cfg(any(windows, unix))]
 
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -337,9 +337,11 @@ async fn a_bound_linked_worktree_gets_its_own_evidence_without_changing_shared_s
     assert!(r["results"][0].get("checkout").is_none(), "{r}");
 
     // A host may spell its root differently from the canonical path (an 8.3
-    // short name, as on hosted CI, or a junction); its absolute paths use
-    // that spelling. A junction to the worktree reproduces it.
+    // short name, as on hosted CI, a junction, or a symlink such as macOS's
+    // /var -> /private/var); its absolute paths use that spelling. A junction
+    // (Windows) or symlink (Unix) to the worktree reproduces it.
     let alias = tmp.path().join("alias");
+    #[cfg(windows)]
     let made = Command::new("cmd")
         .args(["/C", "mklink", "/J"])
         .arg(&alias)
@@ -348,7 +350,9 @@ async fn a_bound_linked_worktree_gets_its_own_evidence_without_changing_shared_s
         .stderr(Stdio::null())
         .status()
         .is_ok_and(|s| s.success());
-    assert!(made, "mklink /J failed");
+    #[cfg(unix)]
+    let made = std::os::unix::fs::symlink(&wt, &alias).is_ok();
+    assert!(made, "creating the alias failed");
     let mut a = Client::connect_host(&root, "alias-host").await.unwrap();
     let alias_root = json!({"root": alias.display().to_string()});
     let bound = ok(&mut a, method::PROJECT_BIND_CHECKOUT, p, alias_root).await;

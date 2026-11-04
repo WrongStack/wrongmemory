@@ -226,7 +226,10 @@ fn command_exists(root: &Path, real_root: &Path, exe: &str) -> Option<bool> {
             return None;
         }
         let p = Path::new(exe);
-        if p.is_absolute() || p.has_root() || exe.contains(':') {
+        // A leading backslash is a rooted Windows path even where the OS
+        // reads it as a file name: anchors travel between machines (HQ sync),
+        // so a Unix daemon must not report one as a missing project file.
+        if p.is_absolute() || p.has_root() || exe.starts_with('\\') || exe.contains(':') {
             return None;
         }
         let target = crate::wrongstack_paths::node_resolve(&root.join(p));

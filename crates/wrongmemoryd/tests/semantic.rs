@@ -2,7 +2,7 @@
 //! search modes, grant limits, session privacy through the vector channel,
 //! re-embedding after edits, and cache removal on disable/detach.
 
-#![cfg(windows)]
+#![cfg(any(windows, unix))]
 
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};

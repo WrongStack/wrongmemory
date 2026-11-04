@@ -6,12 +6,16 @@ import { join } from 'node:path';
 import { WrongMemoryClient } from '../src/client.ts';
 
 // A process squatting the endpoint name cannot produce the HMAC proof, so the
-// client must refuse before writing any credential.
-test.skipIf(process.platform !== 'win32')('squatted endpoint never receives a credential', async () => {
+// client must refuse before writing any credential. On Unix the squatter
+// listens on the socket path that discovery names.
+test('squatted endpoint never receives a credential', async () => {
   const root = mkdtempSync(join(tmpdir(), 'wm-squat-'));
   mkdirSync(join(root, 'runtime'), { recursive: true });
   mkdirSync(join(root, 'grants'), { recursive: true });
-  const endpoint = `\\\\.\\pipe\\wm-squat-test-${process.pid}-${Date.now()}`;
+  const endpoint =
+    process.platform === 'win32'
+      ? `\\\\.\\pipe\\wm-squat-test-${process.pid}-${Date.now()}`
+      : join(root, 'runtime', 'daemon.sock');
   const received: string[] = [];
   const server = createServer((sock) => {
     sock.on('data', (d) => {

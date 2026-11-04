@@ -12,7 +12,7 @@
 //! - oversized bodies refused; revocation takes effect on the next request;
 //! - no credential in any response.
 
-#![cfg(windows)]
+#![cfg(any(windows, unix))]
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;

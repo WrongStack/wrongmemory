@@ -1,6 +1,8 @@
-# Operations guide (Windows, per-user)
+# Operations guide (per-user: Windows, Linux, macOS)
 
-All commands accept `--data-root <dir>` (default `WRONGMEMORY_HOME`, else `%USERPROFILE%\.wrongmemory`) and `--json`. JSON goes to stdout and diagnostics to stderr.
+All commands accept `--data-root <dir>` (default `WRONGMEMORY_HOME`, else `%USERPROFILE%\.wrongmemory` on Windows and `~/.wrongmemory` on Linux and macOS) and `--json`. JSON goes to stdout and diagnostics to stderr.
+
+Windows is the primary platform: its packages, the live store handoff and the WrongStack integration were run there. Linux x64 and macOS arm64 run the same daemon, CLI and MCP bridge (WM-802); see [Linux and macOS](#linux-and-macos) for what differs and what has not been run.
 
 ## Exit codes
 
@@ -47,16 +49,35 @@ wstack sage service status
   - External MCP clients always verify against the main checkout.
 - `use local` detaches the project. A later `use wrongmemory` registers it again under a **new project id**: reconnect external clients (`wrongmemory connect … --create-grant`), since their entries carry the old id.
 
+### Linux and macOS
+
+1. Unpack `wrongmemory-<version>-linux-x64.tar.gz` or `wrongmemory-<version>-darwin-arm64.tar.gz` and verify it first: `sha256sum <archive>` (Linux) or `shasum -a 256 <archive>` (macOS) must match its line in `SHA256SUMS`. The binaries are **unsigned** and not notarized: on macOS, a file downloaded by a browser carries a quarantine flag, so Gatekeeper blocks it until you clear the flag (`xattr -d com.apple.quarantine <file>`) after verifying it. Files fetched with `curl` or `gh release download` carry no flag. The Linux binaries need glibc 2.35 or newer.
+2. Run `bin/wrongmemory install`. This copies `wrongmemory` and `wrongmemoryd` to `$XDG_DATA_HOME/wrongmemory/bin`, else `~/.local/share/wrongmemory/bin` (override with `--prefix`), and writes `install.json`. Put that directory on `PATH` or call it by full path.
+3. Optional: `wrongmemory autostart enable` starts the daemon at sign-in. Like the Windows `Run` value, it never starts the daemon now.
+   - **Linux:** it writes the systemd user unit `~/.config/systemd/user/wrongmemory.service` (or under `$XDG_CONFIG_HOME`) and links it into `default.target.wants/`, which is what `systemctl --user enable` does. It works without a reachable user manager; when one is reachable, `systemctl --user daemon-reload` runs so `systemctl --user status wrongmemory` sees it. Exit status 3 (another daemon already serves the data root) counts as success.
+   - **macOS:** it writes the LaunchAgent `~/Library/LaunchAgents/com.wrongstack.wrongmemory.plist` with `RunAtLoad`; launchd loads it at the next sign-in. `autostart disable` also unloads it from the running session.
+4. Run `wrongmemory daemon start`, then `wrongmemory doctor`.
+
+How the daemon differs on Unix:
+
+- **Endpoint.** A Unix socket at `<data-root>/runtime/daemon.sock`, mode 0600, inside the owner-only (0700) `runtime/` directory. A `runtime/` directory owned by another account is refused. Socket paths are limited to 107 bytes on Linux and 103 on macOS; a data root too deep for that is refused with a hint to use a shorter one.
+- **One daemon per data root.** An exclusive `flock` on `runtime/daemon.lock` elects it. The kernel drops the lock when the daemon exits, so a socket file left by a crash never blocks a restart.
+- **Who may connect.** The daemon drops any peer whose uid is not its own, and the Rust client refuses a socket served by another uid before sending a credential. The TypeScript client (used by WrongStack) proves the server through the same HMAC challenge as on Windows.
+- **Signals.** SIGTERM and SIGINT drain like `daemon stop`. SIGHUP is ignored. An on-demand start runs the daemon in its own session (`setsid`), with stdio on `/dev/null` and no inherited descriptors.
+- **Update.** The previous binaries are kept as `wrongmemory.old` and `wrongmemoryd.old`.
+
+Not run on Linux or macOS yet: installation from inside WrongStack (`wstack sage service install` accepts Windows x64 only and downloads the `*-windows-x64.exe` assets), real MCP clients, a soak, and an autostart through a real systemd or launchd session (the tests write the unit and agent to a temporary directory).
+
 ## Update and rollback
 
-- `wrongmemory install --stop-daemon` (run from the new version's `bin`) drains and stops the running daemon, then replaces both binaries atomically. The previous binaries are kept as `*.exe.old`. Without `--stop-daemon`, install refuses with exit 6 while a daemon is running.
-- Binary rollback: stop the daemon, rename `wrongmemory*.exe.old` back over `wrongmemory*.exe`, then start the daemon.
+- `wrongmemory install --stop-daemon` (run from the new version's `bin`) drains and stops the running daemon, then replaces both binaries atomically. The previous binaries are kept as `*.exe.old` (`*.old` on Linux and macOS). Without `--stop-daemon`, install refuses with exit 6 while a daemon is running.
+- Binary rollback: stop the daemon, rename `wrongmemory*.exe.old` back over `wrongmemory*.exe` (`wrongmemory*.old` over `wrongmemory*`), then start the daemon.
   - Data and binary rollback are separate. An older binary refuses a newer registry (`registry schema … is newer`) instead of downgrading it.
   - Never restore an old memory backup just to roll back binaries; that discards newer memories.
 
 ## Uninstall
 
-- `wrongmemory uninstall` stops the daemon, which releases store ownership. It removes the `Run` value if it points into the prefix, then removes the installed binaries, the `.old` copies, and `install.json`.
+- `wrongmemory uninstall` stops the daemon, which releases store ownership. It removes the `Run` value (Windows), systemd user unit (Linux) or LaunchAgent (macOS) if it starts a daemon from the prefix, then removes the installed binaries, the `.old` copies, and `install.json`.
 - Memories, grants, logs, and configuration are kept.
 - `wrongmemory uninstall --remove-data --yes` also deletes the data root: registry, grants, logs, and **service-managed stores** under `projects\`. It refuses a directory that does not look like a WrongMemory data root.
 - Adopted project stores (`<project>\.wrongstack\memories\sage.db`) are never deleted.
@@ -156,6 +177,6 @@ wrongmemory http header --grant <grant-id>    # prints the Authorization header 
 ## Daemon
 
 - `wrongmemory daemon start|status|stop`.
-- The daemon is a per-user singleton on a private named pipe. Closing a client or MCP bridge never stops it.
+- The daemon is a per-user singleton per data root, on a private named pipe (Windows) or a private Unix socket (Linux, macOS). Closing a client or MCP bridge never stops it.
 - `stop` drains in-flight mutations and releases store ownership.
-- Logs are in `<data-root>\logs\wrongmemoryd.log`, rotated at 5 MiB.
+- Logs are in `<data-root>/logs/wrongmemoryd.log`, rotated at 5 MiB.

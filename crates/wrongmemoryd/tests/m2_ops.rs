@@ -2,7 +2,7 @@
 //! interrupted-job recovery, single-flight jobs, the scoped change feed,
 //! the open-store cap, and missing-store recovery (WM-205..208).
 
-#![cfg(windows)]
+#![cfg(any(windows, unix))]
 
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};

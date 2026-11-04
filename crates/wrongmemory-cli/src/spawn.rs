@@ -1,12 +1,10 @@
 //! Daemon discovery and on-demand start (mcp-and-client-integration §2.1).
 //!
 //! The daemon is started detached from the caller so that a coding tool's
-//! process-tree cleanup (Windows Job Objects) does not kill the shared
-//! service when the bridge exits.
+//! process-tree cleanup (Windows Job Objects, Unix process groups) does not
+//! kill the shared service when the bridge exits.
 
 use std::path::PathBuf;
-#[cfg(not(windows))]
-use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 use wrongmemory_ipc::{CallError, Client, DataRoot};
@@ -33,16 +31,86 @@ pub fn spawn_daemon(root: &DataRoot) -> anyhow::Result<u32> {
             &[std::ffi::OsStr::new("--data-root"), root.path().as_os_str()],
         )
     }
-    #[cfg(not(windows))]
+    #[cfg(unix)]
     {
-        let child = Command::new(&exe)
-            .arg("--data-root")
-            .arg(root.path())
+        unix::spawn_detached(&exe, root.path())
+    }
+}
+
+/// Unix start in a new session without inherited descriptors.
+///
+/// The daemon gets its own session (`setsid`), so neither a terminal hangup
+/// nor a signal to the caller's process group reaches it. Every descriptor
+/// above stdio is marked close-on-exec first: a harness that leaked a pipe
+/// into this CLI would otherwise wait on it for as long as the daemon runs.
+/// Stdio is `/dev/null`; the daemon logs to its own file.
+#[cfg(unix)]
+mod unix {
+    use std::os::unix::process::CommandExt;
+    use std::path::Path;
+    use std::process::{Command, Stdio};
+
+    pub(super) fn spawn_detached(exe: &Path, root: &Path) -> anyhow::Result<u32> {
+        let mut cmd = Command::new(exe);
+        cmd.arg("--data-root")
+            .arg(root)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()?;
-        Ok(child.id())
+            .stderr(Stdio::null());
+        // SAFETY: the closure runs in the forked child before exec and only
+        // makes async-signal-safe calls (setsid, close_range, sysconf, fcntl);
+        // it allocates nothing and takes no locks.
+        unsafe {
+            cmd.pre_exec(|| {
+                if libc::setsid() == -1 {
+                    return Err(std::io::Error::last_os_error());
+                }
+                cloexec_from(3);
+                Ok(())
+            });
+        }
+        let mut child = cmd.spawn()?;
+        let pid = child.id();
+        // Reap the child if it exits while this process lives (a losing
+        // starter exits at once); after this process exits, init adopts it.
+        std::thread::spawn(move || {
+            let _ = child.wait();
+        });
+        Ok(pid)
+    }
+
+    /// Mark every descriptor from `first` up close-on-exec.
+    fn cloexec_from(first: libc::c_int) {
+        #[cfg(target_os = "linux")]
+        {
+            const CLOSE_RANGE_CLOEXEC: libc::c_uint = 1 << 2;
+            // SAFETY: a plain syscall on integers. Kernels before 5.11 fail
+            // it, and the loop below covers them.
+            let done = unsafe {
+                libc::syscall(
+                    libc::SYS_close_range,
+                    first as libc::c_uint,
+                    libc::c_uint::MAX,
+                    CLOSE_RANGE_CLOEXEC,
+                )
+            } == 0;
+            if done {
+                return;
+            }
+        }
+        // SAFETY: sysconf has no preconditions.
+        let max = unsafe { libc::sysconf(libc::_SC_OPEN_MAX) };
+        let max = if max <= 0 { 1024 } else { max.min(65_536) } as libc::c_int;
+        for fd in first..max {
+            // SAFETY: F_GETFD/F_SETFD on an arbitrary integer only fail with
+            // EBADF for a closed descriptor.
+            unsafe {
+                let flags = libc::fcntl(fd, libc::F_GETFD);
+                if flags >= 0 && flags & libc::FD_CLOEXEC == 0 {
+                    libc::fcntl(fd, libc::F_SETFD, flags | libc::FD_CLOEXEC);
+                }
+            }
+        }
     }
 }
 

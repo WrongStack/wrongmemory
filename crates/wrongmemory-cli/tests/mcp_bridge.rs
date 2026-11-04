@@ -3,7 +3,7 @@
 //! JSON-RPC over pipes. Covers discovery vs. enforcement, stdout cleanliness,
 //! idempotent proposals, and "bridge EOF leaves the daemon running".
 
-#![cfg(windows)]
+#![cfg(any(windows, unix))]
 
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
@@ -248,7 +248,9 @@ fn bridge_serves_scoped_tools_and_exits_on_eof() {
     assert!(out.status.success());
 }
 
-/// Processes whose command line mentions `needle`: (image name, pid).
+/// Processes whose command line mentions `needle`: (image name, pid). Image
+/// names are compared without the `.exe` suffix.
+#[cfg(windows)]
 fn processes_mentioning(needle: &str) -> Vec<(String, u32)> {
     let script = format!(
         "Get-CimInstance Win32_Process | Where-Object {{ $_.CommandLine -and $_.CommandLine.Contains('{}') }} | ForEach-Object {{ \"$($_.Name)|$($_.ProcessId)\" }}",
@@ -262,9 +264,34 @@ fn processes_mentioning(needle: &str) -> Vec<(String, u32)> {
         .lines()
         .filter_map(|l| {
             let (name, pid) = l.trim().split_once('|')?;
-            Some((name.to_lowercase(), pid.parse().ok()?))
+            let name = name.to_lowercase();
+            let name = name.strip_suffix(".exe").unwrap_or(&name).to_string();
+            Some((name, pid.parse().ok()?))
         })
-        .filter(|(name, _)| name != "powershell.exe")
+        .filter(|(name, _)| name != "powershell")
+        .collect()
+}
+
+#[cfg(unix)]
+fn processes_mentioning(needle: &str) -> Vec<(String, u32)> {
+    let me = std::process::id();
+    let out = Command::new("ps")
+        .args(["-Ao", "pid=,args="])
+        .output()
+        .unwrap();
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter_map(|l| {
+            let (pid, args) = l.trim().split_once(' ')?;
+            let pid: u32 = pid.parse().ok()?;
+            if pid == me || !args.contains(needle) {
+                return None;
+            }
+            let exe = args.split_whitespace().next()?;
+            let name = Path::new(exe).file_name()?.to_string_lossy().into_owned();
+            Some((name, pid))
+        })
+        .filter(|(name, _)| name != "ps")
         .collect()
 }
 
@@ -313,20 +340,14 @@ fn concurrent_bridges_share_one_native_daemon() {
     }
 
     let procs = processes_mentioning(&home.to_string_lossy());
-    let daemons: Vec<_> = procs
-        .iter()
-        .filter(|(n, _)| n == "wrongmemoryd.exe")
-        .collect();
-    let bridge_procs: Vec<_> = procs
-        .iter()
-        .filter(|(n, _)| n == "wrongmemory.exe")
-        .collect();
+    let daemons: Vec<_> = procs.iter().filter(|(n, _)| n == "wrongmemoryd").collect();
+    let bridge_procs: Vec<_> = procs.iter().filter(|(n, _)| n == "wrongmemory").collect();
     assert_eq!(daemons.len(), 1, "exactly one daemon: {procs:?}");
     assert_eq!(bridge_procs.len(), 3, "the three bridges: {procs:?}");
     assert!(
         procs
             .iter()
-            .all(|(n, _)| n == "wrongmemoryd.exe" || n == "wrongmemory.exe"),
+            .all(|(n, _)| n == "wrongmemoryd" || n == "wrongmemory"),
         "no other engine (Bun/Node) in the tree: {procs:?}"
     );
 
@@ -337,10 +358,7 @@ fn concurrent_bridges_share_one_native_daemon() {
     }
     let after = processes_mentioning(&home.to_string_lossy());
     assert_eq!(
-        after
-            .iter()
-            .filter(|(n, _)| n == "wrongmemoryd.exe")
-            .count(),
+        after.iter().filter(|(n, _)| n == "wrongmemoryd").count(),
         1,
         "{after:?}"
     );
