@@ -17,8 +17,8 @@ jobs:
         include:
           - os: windows-latest
             platform: windows-x64
-          # The oldest supported Ubuntu runner, so the binaries need only the
-          # glibc it ships (2.35).
+          # The oldest supported Ubuntu runner, so the binaries need no newer
+          # glibc than it ships (2.35); v0.1.7 references up to GLIBC_2.34.
           - os: ubuntu-22.04
             platform: linux-x64
           - os: macos-latest
@@ -92,7 +92,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           cat > notes.md <<EOF
-          WrongMemory ${GITHUB_REF_NAME}, per-user: Windows x64, Linux x64 (glibc 2.35+), macOS arm64.
+          WrongMemory ${GITHUB_REF_NAME}, per-user: Windows x64, Linux x64 (glibc 2.34+), macOS arm64.
 
           - Binaries are **unsigned**: no Authenticode signature, no Apple notarization. Verify each archive or executable against SHA256SUMS and the GitHub build-provenance attestation:
             \`gh attestation verify <file> --repo ${GITHUB_REPOSITORY}\`
