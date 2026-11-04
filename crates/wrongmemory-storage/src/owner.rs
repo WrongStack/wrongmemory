@@ -63,6 +63,13 @@ impl OwnerGuard {
 
 impl Drop for OwnerGuard {
     fn drop(&mut self) {
+        // Clear the diagnostic pid while the lock is still ours. Where locks
+        // are advisory, a cooperating host that cannot test the lock
+        // (WrongStack's SAGE on Unix) reads a live pid here as a live owner,
+        // and this daemon keeps running after it releases one store. A
+        // crashed owner leaves its pid behind, which then names a dead
+        // process.
+        let _ = self.file.set_len(0);
         let _ = self.file.unlock();
     }
 }
@@ -147,6 +154,28 @@ mod tests {
         assert_eq!(err.kind(), io::ErrorKind::WouldBlock);
         drop(a);
         let _b = OwnerGuard::acquire(&store, 2, "b").unwrap();
+    }
+
+    /// WrongStack's SAGE checks a released store on Unix by the pid in the
+    /// lock file, since Node cannot test a `flock`. A daemon that releases
+    /// one store keeps running, so its pid must not stay behind.
+    #[test]
+    fn release_clears_the_diagnostic_pid() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = tmp.path().join("sage.db");
+        let lock = tmp.path().join(OWNER_LOCK_FILE);
+        let guard = OwnerGuard::acquire(&store, 7, "d_x").unwrap();
+        // Windows locks the whole file, so only the owner can read it there.
+        #[cfg(unix)]
+        assert!(
+            std::fs::read_to_string(&lock)
+                .unwrap()
+                .contains(&format!("\"pid\":{}", std::process::id()))
+        );
+        drop(guard);
+        assert_eq!(std::fs::read_to_string(&lock).unwrap(), "");
+        // Reacquiring writes the new owner's record.
+        let _again = OwnerGuard::acquire(&store, 8, "d_y").unwrap();
     }
 
     #[test]
