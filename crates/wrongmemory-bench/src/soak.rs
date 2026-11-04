@@ -2,17 +2,23 @@
 //! concurrent connections for a fixed duration. Reports throughput, error
 //! count, per-operation latency, and the daemon's RSS, handle and thread
 //! count after seeding and at the end (leak indicators). Long runs also
-//! sample RSS, handles, threads, CPU time, open stores, total WAL size and
-//! total data size every `SAMPLE_EVERY`, so a slow trend shows up, not only
-//! the two end points.
+//! sample RSS, handles, threads, CPU time, open stores, total WAL size,
+//! total data size and the running operation and error counts every
+//! `SAMPLE_EVERY`, so a slow trend shows up, not only the two end points.
+//! With `--out`, each sample is also appended and synced to
+//! `<stem>.samples.jsonl` as it is taken, so a run cut short keeps its
+//! trend. The report ends with the daemon's own maintenance jobs.
 //!
 //! `rate` paces the load to a total number of operations per second (0 runs
 //! flat out). `idle_secs` adds an idle phase after the load: the daemon keeps
 //! its stores open and the report gives its average CPU use over that phase.
 
 use std::collections::BTreeMap;
+use std::io::Write;
 use std::path::Path;
 use std::process::Command;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::bail;
@@ -96,12 +102,69 @@ fn unix_secs() -> u64 {
 
 type Lat = BTreeMap<&'static str, Vec<f64>>;
 
+/// Running totals across workers, read by every sample.
+#[derive(Default)]
+struct Progress {
+    ops: AtomicU64,
+    errors: AtomicU64,
+}
+
+/// `<out stem>.samples.jsonl` next to the report: a header line, then one
+/// line per sample, each synced to disk, so a run cut short by a crash or a
+/// power loss still leaves its trend behind.
+struct Journal(std::fs::File);
+
+impl Journal {
+    fn create(out: &Path, header: &Value) -> anyhow::Result<Self> {
+        if let Some(d) = out.parent() {
+            std::fs::create_dir_all(d)?;
+        }
+        let stem = out.file_stem().unwrap_or_default().to_string_lossy();
+        let path = out.with_file_name(format!("{stem}.samples.jsonl"));
+        let mut j = Journal(std::fs::File::create(path)?);
+        j.append(header)?;
+        Ok(j)
+    }
+
+    fn append(&mut self, line: &Value) -> anyhow::Result<()> {
+        writeln!(self.0, "{line}")?;
+        self.0.sync_data()?;
+        Ok(())
+    }
+}
+
+/// The daemon's own maintenance during the run: jobs per state across the
+/// projects, and how many projects had at least one successful pass.
+async fn maintenance_jobs(c: &mut Client, projects: &[String]) -> Value {
+    let mut by_state: BTreeMap<String, u64> = BTreeMap::new();
+    let mut with_run = 0u64;
+    for p in projects {
+        let Ok(v) = c
+            .call_raw(method::JOBS_LIST, Some(p), json!({"limit": 50}), None)
+            .await
+        else {
+            *by_state.entry("unreadable".into()).or_default() += 1;
+            continue;
+        };
+        let jobs = v["jobs"].as_array().cloned().unwrap_or_default();
+        if jobs.iter().any(|j| j["state"] == "succeeded") {
+            with_run += 1;
+        }
+        for j in &jobs {
+            let state = j["state"].as_str().unwrap_or("unknown").to_string();
+            *by_state.entry(state).or_default() += 1;
+        }
+    }
+    json!({"jobsByState": by_state, "projectsWithASucceededPass": with_run})
+}
+
 async fn worker(
     root: DataRoot,
     projects: Vec<String>,
     w: usize,
     deadline: Instant,
     every: Option<Duration>,
+    progress: Arc<Progress>,
 ) -> anyhow::Result<(Lat, Vec<String>, usize)> {
     let mut c = Client::connect_host(&root, "soak").await?;
     let mut rng = Rng(0xC11E + w as u64);
@@ -163,8 +226,10 @@ async fn worker(
                     errors.push(format!("{op}: {e}"));
                 }
                 lat.entry("error").or_default().push(0.0);
+                progress.errors.fetch_add(1, Ordering::Relaxed);
             }
         }
+        progress.ops.fetch_add(1, Ordering::Relaxed);
         n += 1;
     }
     Ok((lat, errors, n))
@@ -217,12 +282,49 @@ pub async fn run(exe: &Path, o: &Options, out: Option<&Path>) -> anyhow::Result<
     }
     let rss0 = rss_bytes(pid);
     let stats0 = proc_stats(pid);
+    let daemon_version = c
+        .call_raw(method::DAEMON_HEALTH, None, json!({}), None)
+        .await?["daemonVersion"]
+        .clone();
+    let machine = json!({
+        "os": std::env::consts::OS,
+        "logicalCpus": std::thread::available_parallelism().map(|v| v.get()).unwrap_or(0),
+    });
     let started = Instant::now();
     let started_unix = unix_secs();
     let deadline = started + Duration::from_secs(secs);
+    let mut journal = match out {
+        Some(out) => Some(Journal::create(
+            out,
+            &json!({
+                "schema": "wrongmemory/soak-samples@1",
+                "startedUnixSecs": started_unix,
+                "plannedSecs": secs,
+                "projects": project_count,
+                "clients": clients,
+                "targetRate": o.rate,
+                "daemonVersion": daemon_version,
+                "rssBytesAfterSeed": rss0,
+                "handlesAfterSeed": stats0.map(|s| s.handles),
+                "threadsAfterSeed": stats0.map(|s| s.threads),
+                "machine": machine,
+            }),
+        )?),
+        None => None,
+    };
     let root = DataRoot::resolve(Some(&home))?;
+    let progress = Arc::new(Progress::default());
     let tasks: Vec<_> = (0..clients)
-        .map(|w| tokio::spawn(worker(root.clone(), projects.clone(), w, deadline, every)))
+        .map(|w| {
+            tokio::spawn(worker(
+                root.clone(),
+                projects.clone(),
+                w,
+                deadline,
+                every,
+                progress.clone(),
+            ))
+        })
         .collect();
     let mut samples = Vec::new();
     while Instant::now() + SAMPLE_EVERY <= deadline {
@@ -232,9 +334,11 @@ pub async fn run(exe: &Path, o: &Options, out: Option<&Path>) -> anyhow::Result<
             .await
             .unwrap_or(Value::Null);
         let stats = proc_stats(pid);
-        samples.push(json!({
+        let sample = json!({
             "elapsedSecs": started.elapsed().as_secs(),
             "unixSecs": unix_secs(),
+            "ops": progress.ops.load(Ordering::Relaxed),
+            "errors": progress.errors.load(Ordering::Relaxed),
             "rssBytes": rss_bytes(pid),
             "handles": stats.map(|s| s.handles),
             "threads": stats.map(|s| s.threads),
@@ -242,7 +346,11 @@ pub async fn run(exe: &Path, o: &Options, out: Option<&Path>) -> anyhow::Result<
             "openStores": health["openStores"],
             "walBytes": wal_bytes(&home),
             "dataBytes": data_bytes(&home),
-        }));
+        });
+        if let Some(j) = journal.as_mut() {
+            j.append(&sample)?;
+        }
+        samples.push(sample);
     }
     let mut all: Lat = BTreeMap::new();
     let mut errors = Vec::new();
@@ -283,8 +391,10 @@ pub async fn run(exe: &Path, o: &Options, out: Option<&Path>) -> anyhow::Result<
     } else {
         Value::Null
     };
+    let maintenance = maintenance_jobs(&mut c, &projects).await;
     let report = json!({
-        "schema": "wrongmemory/soak@3",
+        "schema": "wrongmemory/soak@4",
+        "daemonVersion": daemon_version,
         "startedUnixSecs": started_unix,
         "seconds": elapsed,
         "projects": project_count,
@@ -302,11 +412,9 @@ pub async fn run(exe: &Path, o: &Options, out: Option<&Path>) -> anyhow::Result<
         "walBytesAtEnd": wal_bytes(&home),
         "dataBytesAtEnd": data_bytes(&home),
         "idle": idle,
+        "maintenance": maintenance,
         "samples": samples,
-        "machine": {
-            "os": std::env::consts::OS,
-            "logicalCpus": std::thread::available_parallelism().map(|v| v.get()).unwrap_or(0),
-        },
+        "machine": machine,
     });
     let text = serde_json::to_string_pretty(&report)?;
     if let Some(out) = out {
