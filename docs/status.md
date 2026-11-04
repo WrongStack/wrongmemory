@@ -11,7 +11,10 @@ Last updated: 2026-11-04.
   - the plan's final demonstration with downloaded, attested binaries (WM-705);
   - Linux and macOS (WM-802): the daemon, CLI and MCP bridge in hosted CI on Ubuntu and macOS, and a packaged Linux install in WSL Ubuntu, including under systemd.
 - Still open before native 1.0 (see the matrix):
-  - WrongStack PRs #431, #432 and #433, which are not merged. All three are combined on branch `wrongmemory/sage-integration` (`c4ec64f`), with full CI green. Opening and merging its PR is the owner's step. Two branches stack on it: `wrongmemory/unix-install` (Linux and macOS install) and `wrongmemory/vector-mirror` (vector memory in `wrongmemory` mode, WM-405);
+  - WrongStack PR #434, which is open and not merged. It carries #431, #432 and #433, the Linux and macOS install, and the vector-mirror fix (WM-405), on branch `wrongmemory/vector-mirror`. The owner opened it on 2026-11-04.
+    - Two merges bring the branch up to `main` `ab9645e`. `main`'s `9e26fc8` fixed the WebUI ranked search store on its own, so only #432's test remains in the diff.
+    - CI run 41915706867 fails Build, TypeCheck, Lint and the TUI heap soak. Every error is in files the branch does not change and that are identical on `main`: the `packages/webui` declaration build pulls in `packages/project-surfaces/src` outside its `rootDir` (TS6059), and three `noThenProperty` errors in `apps/desktop-v2/tests`. `main` gained these since its last CI run on 2026-11-02.
+    - Merging needs an admin merge, or a `main` that builds again;
   - the plan's 24-hour soak, which is running on the v0.1.9 draft daemon since 2026-11-04 19:54 (UTC+2). The first run was cut off after 15 hours by an unexpected shutdown of the machine. A run on v0.1.8 still runs alongside for comparison: 0.1.8 lacks the hygiene fix (WM-507). A 2-hour soak passed: 3.36 M operations, 0 errors.
 - Not required for 1.0 but done: Linux and macOS packages (WM-802) in the v0.1.9 draft, which supersedes the v0.1.7 and v0.1.8 drafts. WrongStack branch `wrongmemory/unix-install` (CI green) lets `wstack sage service install` use them.
 
