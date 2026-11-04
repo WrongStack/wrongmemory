@@ -178,47 +178,57 @@ pub struct MemoryValidity {
 }
 
 /// A SAGE memory record (`Sage` in memory-model.ts).
+///
+/// Fields are declared in the order the baseline's `remember` builds a new
+/// record (`sqlite-store-remember.ts`), so a record WrongMemory creates
+/// serializes with the same key order, and hosts that render a record's keys
+/// in order (the `remember` tool result) show it the same way. Fields the
+/// baseline only adds later follow, as later patches append them.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SageRecord {
     pub id: String,
     #[serde(default)]
     pub revision: i64,
+    pub text: String,
+    pub kind: String,
     pub scope: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub legacy_scope: Option<String>,
-    pub kind: String,
     pub status: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub context_policy: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub persistence: Option<String>,
-    pub text: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub summary: Option<String>,
-    pub importance: f64,
-    pub confidence: f64,
-    pub freshness: f64,
     #[serde(default)]
     pub tags: Vec<String>,
     #[serde(default)]
     pub anchors: Vec<MemoryAnchor>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub audience: Option<MemoryAudience>,
     #[serde(default)]
     pub sources: Vec<MemorySource>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub validity: Option<MemoryValidity>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub feedback: Option<Vec<Value>>,
+    pub audience: Option<MemoryAudience>,
+    pub importance: f64,
+    pub confidence: f64,
+    pub freshness: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub persistence: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub supersedes: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub superseded_by: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub contradicts: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub superseded_by: Option<String>,
     pub created_at: String,
     pub updated_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner_session_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_policy: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub feedback: Option<Vec<Value>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_accessed_at: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -228,13 +238,9 @@ pub struct SageRecord {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_used_at: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub expires_at: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub injection_count: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub use_count: Option<i64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub owner_session_id: Option<String>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }

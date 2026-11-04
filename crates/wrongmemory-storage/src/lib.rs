@@ -43,7 +43,8 @@ pub fn sqlite_version() -> &'static str {
 mod tests {
     use super::*;
     use rusqlite::Connection;
-    use serde_json::json;
+    use serde_json::{Value, json};
+    use std::path::Path;
     use wrongmemory_contracts::{
         ErrorCode, MemoryAnchor, ProposeParams, RememberParams, SAGE_SQLITE_SCHEMA_VERSION,
     };
@@ -95,6 +96,55 @@ mod tests {
         assert_eq!(insp.wrongmemory_extension, Some(1));
         // Baseline: the revision row appears on the first LIKE refresh, not at creation.
         assert!(insp.text_index_revisions.is_empty());
+    }
+
+    /// A new record is stored with the key order the baseline's `remember`
+    /// gives it, as found in a record the baseline wrote (oracle `basic`
+    /// fixture), so hosts that render keys in order show the same text. The
+    /// daemon's `wrongmemory` attribution comes last.
+    #[test]
+    fn new_records_keep_the_baseline_key_order() {
+        let keys = |data: &str| -> Vec<String> {
+            serde_json::from_str::<serde_json::Map<String, Value>>(data)
+                .unwrap()
+                .keys()
+                .cloned()
+                .collect()
+        };
+        let (_t, mut store) = managed();
+        let id = remember(&mut store, "Builds run on the release runner", None);
+        let conn = Connection::open(store.path()).unwrap();
+        let ours: String = conn
+            .query_row("SELECT data FROM memories WHERE id=?1", [&id], |r| r.get(0))
+            .unwrap();
+        let mut ours = keys(&ours);
+        assert_eq!(ours.pop().as_deref(), Some("wrongmemory"), "{ours:?}");
+
+        let oracle =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/oracle/basic/sage.db");
+        let conn = wrongmemory_test_read_only(&oracle);
+        let baseline: Vec<Vec<String>> = conn
+            .prepare("SELECT data FROM memories")
+            .unwrap()
+            .query_map([], |r| r.get::<_, String>(0))
+            .unwrap()
+            .map(|d| keys(&d.unwrap()))
+            .collect();
+        let mut sorted_ours = ours.clone();
+        sorted_ours.sort();
+        let same_keys = baseline
+            .iter()
+            .find(|k| {
+                let mut k = (*k).clone();
+                k.sort();
+                k == sorted_ours
+            })
+            .unwrap_or_else(|| panic!("no baseline record with keys {ours:?}"));
+        assert_eq!(&ours, same_keys);
+    }
+
+    fn wrongmemory_test_read_only(path: &Path) -> Connection {
+        Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap()
     }
 
     #[test]
