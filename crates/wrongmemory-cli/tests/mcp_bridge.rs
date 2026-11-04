@@ -439,3 +439,81 @@ fn bridge_waits_out_a_stale_discovery_during_restart() {
     }
     run_json(&home, &["daemon", "stop"]);
 }
+
+/// A daemon that commits a feedback and dies before replying makes the
+/// bridge reconnect and retry. The retry must not record the feedback a
+/// second time: the bridge sends one idempotency key per tool call, so the
+/// new daemon replays the first commit's receipt.
+#[cfg(debug_assertions)]
+#[test]
+fn feedback_retried_after_a_crash_is_recorded_once() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let _stop = StopDaemon(&home);
+    let proj = tmp.path().join("proj");
+    std::fs::create_dir_all(&proj).unwrap();
+    let reg = run_json(
+        &home,
+        &["project", "add", proj.to_str().unwrap(), "--managed"],
+    );
+    let project = reg["project"]["projectId"].as_str().unwrap().to_string();
+    run_json(&home, &["remember", &project, "Deploys go out on Tuesdays"]);
+    let g = run_json(
+        &home,
+        &[
+            "grants",
+            "create",
+            "--label",
+            "agent",
+            "--project",
+            &project,
+        ],
+    );
+    let grant = g["grant"]["grantId"].as_str().unwrap().to_string();
+    // The bridge starts the next daemon itself, with the fault armed once.
+    run_json(&home, &["daemon", "stop"]);
+    let marker = tmp.path().join("fault-fired");
+    let marker = marker.to_str().unwrap();
+    let mut mcp = Mcp::start_with_env(
+        &home,
+        &project,
+        &grant,
+        &[
+            (
+                "WRONGMEMORY_FAULT",
+                "after_commit_before_reply:memory.feedback",
+            ),
+            ("WRONGMEMORY_FAULT_ONCE", marker),
+        ],
+    );
+    let init = mcp.send(
+        "initialize",
+        json!({"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "0"}}),
+    );
+    assert!(init.get("result").is_some(), "{init}");
+    mcp.notify("notifications/initialized");
+    let hit = mcp.tool("memory_search", json!({"query": "deploys tuesdays"}))["structuredContent"]
+        ["hits"][0]["memory"]
+        .clone();
+    let id = hit["id"].as_str().unwrap().to_string();
+
+    let r = mcp.tool(
+        "memory_feedback",
+        json!({"id": id, "observedRevision": hit["revision"], "verdict": "useful",
+               "evidence": "The release calendar lists Tuesday deploys."}),
+    );
+    assert_eq!(r["isError"], false, "{r}\n{}", mcp.diagnostics());
+    assert!(Path::new(marker).exists(), "the fault fired");
+
+    let got = mcp.tool("memory_get", json!({"id": id}));
+    let memory = &got["structuredContent"];
+    let memory = if memory["memory"].is_object() {
+        &memory["memory"]
+    } else {
+        memory
+    };
+    let feedback = memory["feedback"].as_array().cloned().unwrap_or_default();
+    assert_eq!(feedback.len(), 1, "feedback recorded once: {got}");
+    drop(mcp.stdin.take());
+    assert!(mcp.child.wait().unwrap().success());
+}

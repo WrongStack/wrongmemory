@@ -408,3 +408,128 @@ fn loopback_http_mcp_is_authenticated_scoped_and_stateless() {
     );
     assert_eq!(after.status, 401, "{}", after.body);
 }
+
+/// Starts `http serve` and returns it with its port. `fault` arms a debug
+/// fault in the daemon the listener starts on demand.
+fn serve(home: &Path, fault: Option<&str>) -> (Server, u16) {
+    let mut cmd = wm(home);
+    if let Some(f) = fault {
+        cmd.env("WRONGMEMORY_FAULT", f);
+    }
+    let mut child = cmd
+        .args(["http", "serve"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    let stdout = child.stdout.take().unwrap();
+    let server = Server(child);
+    let mut line = String::new();
+    BufReader::new(stdout).read_line(&mut line).unwrap();
+    let port = line
+        .trim()
+        .strip_prefix("http://127.0.0.1:")
+        .and_then(|r| r.split('/').next())
+        .and_then(|p| p.parse().ok())
+        .unwrap_or_else(|| panic!("unexpected first line {line:?}"));
+    (server, port)
+}
+
+/// Sends a current-protocol tool call and closes the connection without
+/// reading the reply, as a client that gives up does.
+fn abandon(port: u16, project: &str, auth: &str, params: Value) {
+    let mut params = params;
+    params["_meta"] = meta();
+    let name = params["name"].as_str().unwrap().to_string();
+    let body =
+        json!({"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": params}).to_string();
+    let req = format!(
+        "POST /mcp/{project} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\
+         Content-Type: application/json\r\nAccept: application/json, text/event-stream\r\n\
+         Authorization: {auth}\r\nMCP-Protocol-Version: 2026-07-28\r\nMcp-Method: tools/call\r\n\
+         Mcp-Name: {name}\r\nContent-Length: {}\r\n\r\n{body}",
+        body.len()
+    );
+    let mut s = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    s.write_all(req.as_bytes()).unwrap();
+    std::thread::sleep(Duration::from_millis(300));
+    drop(s);
+}
+
+/// WM-308 cancellation and reconnect. A client that gives up on a call
+/// (closes the connection while the daemon still holds it) does not put its
+/// grant out of step: every later call gets its own reply, and the
+/// abandoned change is applied once. Calls keep working after the daemon
+/// restarts, and after the listener restarts, without any initialize,
+/// because no session is kept.
+#[cfg(debug_assertions)]
+#[test]
+fn abandoned_calls_and_restarts_keep_http_calls_in_step() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let _stop = StopDaemon(&home);
+    let dir = tmp.path().join("p");
+    std::fs::create_dir_all(&dir).unwrap();
+    let p = run_json(
+        &home,
+        &["project", "add", dir.to_str().unwrap(), "--managed"],
+    )["project"]["projectId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    run_json(&home, &["remember", &p, "Deploys go out on Tuesdays"]);
+    let g = run_json(
+        &home,
+        &["grants", "create", "--label", "agent", "--project", &p],
+    )["grant"]["grantId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let auth = run_json(&home, &["http", "header", "--grant", &g])["Authorization"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    // The listener starts the daemon itself, with feedback held 1.5 s.
+    run_json(&home, &["daemon", "stop"]);
+    let (server, port) = serve(&home, Some("slow_call:memory.feedback"));
+    let search = json!({"name": "memory_search", "arguments": {"query": "deploys tuesdays"}});
+    let hit =
+        tool_text(&modern(port, &p, &auth, "tools/call", search.clone()))["hits"][0]["memory"]
+            .clone();
+    let id = hit["id"].as_str().unwrap().to_string();
+    let get = json!({"name": "memory_get", "arguments": {"id": id}});
+
+    abandon(
+        port,
+        &p,
+        &auth,
+        json!({"name": "memory_feedback", "arguments": {"id": id, "observedRevision": hit["revision"],
+               "verdict": "useful", "evidence": "The release calendar lists Tuesday deploys."}}),
+    );
+    // Every later call answers for itself; the abandoned feedback lands once.
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    let feedback = loop {
+        let got = tool_text(&modern(port, &p, &auth, "tools/call", get.clone()));
+        assert_eq!(got["id"], json!(id), "a reply for another call: {got}");
+        let n = got["feedback"].as_array().map_or(0, Vec::len);
+        if n > 0 || std::time::Instant::now() > deadline {
+            break n;
+        }
+        std::thread::sleep(Duration::from_millis(200));
+    };
+    assert_eq!(feedback, 1, "the abandoned feedback was applied once");
+    let again = tool_text(&modern(port, &p, &auth, "tools/call", search.clone()));
+    assert_eq!(again["hits"][0]["memory"]["id"], json!(id));
+
+    // The daemon restarts between two calls: the listener reconnects.
+    run_json(&home, &["daemon", "stop"]);
+    let got = tool_text(&modern(port, &p, &auth, "tools/call", get.clone()));
+    assert_eq!(got["id"], json!(id), "{got}");
+
+    // The listener restarts: the next request needs no initialize.
+    drop(server);
+    let (_server, port) = serve(&home, None);
+    let got = tool_text(&modern(port, &p, &auth, "tools/call", get));
+    assert_eq!(got["id"], json!(id), "{got}");
+    assert_eq!(got["feedback"].as_array().map_or(0, Vec::len), 1);
+}

@@ -26,7 +26,12 @@
 //!   window in which a newly elected daemon finds a store still owned by its
 //!   predecessor (WM-606).
 //!
+//! * `slow_call` — the daemon holds each request 1.5 s before dispatching it,
+//!   so a client can abandon a call that the daemon still completes.
+//!
 //! The optional `<method>` restricts the fault to one IPC method.
+//! `WRONGMEMORY_FAULT_ONCE=<file>` limits `after_commit_before_reply` to
+//! the first daemon that reaches it, so a restarted daemon serves a retry.
 
 use std::sync::OnceLock;
 
@@ -60,15 +65,41 @@ const MUTATIONS: &[&str] = &[
     "candidate.resolve",
 ];
 
+/// `WRONGMEMORY_FAULT_ONCE=<file>` makes the fault fire once across daemon
+/// restarts: only the process that creates the file fires it. Without the
+/// variable it fires every time.
+fn first_time() -> bool {
+    match std::env::var_os("WRONGMEMORY_FAULT_ONCE") {
+        None => true,
+        Some(marker) => std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(marker)
+            .is_ok(),
+    }
+}
+
 /// Called after dispatch returned success and before the reply is written.
 pub fn after_commit_before_reply(method: &str) {
     if let Some((point, filter)) = spec()
         && point == "after_commit_before_reply"
         && MUTATIONS.contains(&method)
         && filter.as_deref().is_none_or(|f| f == method)
+        && first_time()
     {
         eprintln!("wrongmemoryd: injected fault after_commit_before_reply ({method})");
         std::process::abort();
+    }
+}
+
+/// Called before a request is dispatched: holds a matching request for
+/// 1.5 s, so a client can give up on it while the daemon still runs it.
+pub async fn call_pause(method: &str) {
+    if let Some((point, filter)) = spec()
+        && point == "slow_call"
+        && filter.as_deref().is_none_or(|f| f == method)
+    {
+        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
     }
 }
 

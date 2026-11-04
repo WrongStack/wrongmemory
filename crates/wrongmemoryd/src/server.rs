@@ -672,6 +672,7 @@ where
         let is_shutdown = request.method == method::DAEMON_SHUTDOWN;
         let request_id = request.request_id.clone();
         let method_name = request.method.clone();
+        crate::fault::call_pause(&method_name).await;
         let response = match dispatch(&shared, &mut state, request).await {
             Ok(v) => {
                 crate::fault::after_commit_before_reply(&method_name);

@@ -44,27 +44,7 @@ pub struct Bridge {
 
 impl Bridge {
     async fn call(&self, method: &str, params: Value) -> Result<Value, CallError> {
-        let mut guard = self.client.lock().await;
-        for attempt in 0..2 {
-            if guard.is_none() {
-                *guard = Some(
-                    spawn::connect_grant(&self.root, &self.grant_id, &self.label, true).await?,
-                );
-            }
-            let client = guard.as_mut().expect("connected");
-            match client
-                .call_raw(method, Some(&self.project_id), params.clone(), None)
-                .await
-            {
-                // Reconnect once on transport loss; reads are safe to retry and
-                // proposals carry an idempotency key (see `tool_propose`).
-                Err(CallError::Transport(_)) | Err(CallError::Protocol(_)) if attempt == 0 => {
-                    *guard = None;
-                }
-                other => return other,
-            }
-        }
-        unreachable!("loop returns on the second attempt")
+        self.call_keyed(method, params, None).await
     }
 
     async fn call_with_key(
@@ -73,25 +53,62 @@ impl Bridge {
         params: Value,
         key: &str,
     ) -> Result<Value, CallError> {
-        let mut guard = self.client.lock().await;
+        self.call_keyed(method, params, Some(key)).await
+    }
+
+    /// One request on the grant's connection. Reconnects once on transport
+    /// loss: reads are safe to retry, and mutations carry an idempotency key
+    /// (see `call_once`), except candidate review, recovery, backfill and
+    /// hygiene, which the daemon keeps no receipt for.
+    ///
+    /// The connection leaves its slot while the request is in flight. If the
+    /// call is abandoned (its future dropped), the connection is closed with
+    /// it, so the next call reconnects instead of reading the abandoned
+    /// call's reply as its own. A connection that failed is never reused.
+    async fn call_keyed(
+        &self,
+        method: &str,
+        params: Value,
+        key: Option<&str>,
+    ) -> Result<Value, CallError> {
+        let mut slot = self.client.lock().await;
         for attempt in 0..2 {
-            if guard.is_none() {
-                *guard = Some(
-                    spawn::connect_grant(&self.root, &self.grant_id, &self.label, true).await?,
-                );
-            }
-            let client = guard.as_mut().expect("connected");
+            let mut client = match slot.take() {
+                Some(c) => c,
+                None => spawn::connect_grant(&self.root, &self.grant_id, &self.label, true).await?,
+            };
             match client
-                .call_raw(method, Some(&self.project_id), params.clone(), Some(key))
+                .call_raw(method, Some(&self.project_id), params.clone(), key)
                 .await
             {
-                Err(CallError::Transport(_)) | Err(CallError::Protocol(_)) if attempt == 0 => {
-                    *guard = None;
+                Err(e @ (CallError::Transport(_) | CallError::Protocol(_))) => {
+                    if attempt == 1 {
+                        return Err(e);
+                    }
                 }
-                other => return other,
+                other => {
+                    *slot = Some(client);
+                    return other;
+                }
             }
         }
         unreachable!("loop returns on the second attempt")
+    }
+
+    /// A mutation the daemon keeps a receipt for, sent with a key of its
+    /// own: when the daemon commits and dies before replying, the retry in
+    /// [`Bridge::call_with_key`] replays the receipt instead of applying the
+    /// change a second time. Each tool call draws a new key, so a later call
+    /// with the same arguments is a new change. Without randomness the call
+    /// goes out unkeyed, as before.
+    async fn call_once(&self, tool: &str, method: &str, params: Value) -> Result<Value, CallError> {
+        let mut raw = [0u8; 16];
+        if getrandom::fill(&mut raw).is_err() {
+            return self.call(method, params).await;
+        }
+        let nonce: String = raw.iter().map(|b| format!("{b:02x}")).collect();
+        self.call_with_key(method, params, &format!("mcp-{tool}-{nonce}"))
+            .await
     }
 }
 
@@ -603,15 +620,19 @@ impl Bridge {
                     "observedRevision": args.get("observedRevision").cloned().unwrap_or(Value::Null),
                     "evidence": args.get("evidence").cloned().unwrap_or(Value::Null),
                 });
-                self.call(method::MEMORY_FEEDBACK, json!({"id": id, "feedback": fb}))
-                    .await
+                self.call_once(
+                    "feedback",
+                    method::MEMORY_FEEDBACK,
+                    json!({"id": id, "feedback": fb}),
+                )
+                .await
             }
             "memory_update" => {
-                self.call(method::MEMORY_UPDATE, Value::Object(args.clone()))
+                self.call_once("update", method::MEMORY_UPDATE, Value::Object(args.clone()))
                     .await
             }
             "memory_delete" => {
-                self.call(method::MEMORY_DELETE, Value::Object(args.clone()))
+                self.call_once("delete", method::MEMORY_DELETE, Value::Object(args.clone()))
                     .await
             }
             "memory_recover" => {
