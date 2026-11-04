@@ -36,6 +36,18 @@ fn run_json_env(home: &Path, args: &[&str], env: &[(&str, &str)]) -> Value {
     serde_json::from_slice(&out.stdout).unwrap()
 }
 
+/// Stops the test's daemon when the test ends, also after a failed
+/// assertion, so a red run leaves no daemon holding the binary or the temp
+/// directory. Declared after the `TempDir`, so it runs before the directory
+/// goes. (A bridge exits on its own when its `Mcp` drops and closes stdin.)
+struct StopDaemon<'a>(&'a Path);
+
+impl Drop for StopDaemon<'_> {
+    fn drop(&mut self) {
+        let _ = wm(self.0).args(["daemon", "stop"]).output();
+    }
+}
+
 struct Mcp {
     child: Child,
     stdin: Option<ChildStdin>,
@@ -135,6 +147,7 @@ impl Mcp {
 fn bridge_serves_scoped_tools_and_exits_on_eof() {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
+    let _stop = StopDaemon(&home);
     let proj = tmp.path().join("proj");
     std::fs::create_dir_all(&proj).unwrap();
 
@@ -302,6 +315,7 @@ fn processes_mentioning(needle: &str) -> Vec<(String, u32)> {
 fn concurrent_bridges_share_one_native_daemon() {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
+    let _stop = StopDaemon(&home);
     let proj = tmp.path().join("proj");
     std::fs::create_dir_all(&proj).unwrap();
     let reg = run_json(
@@ -378,6 +392,7 @@ fn bridge_waits_out_a_stale_discovery_during_restart() {
     let fault = [("WRONGMEMORY_FAULT", "slow_lifecycle")];
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
+    let _stop = StopDaemon(&home);
     let proj = tmp.path().join("proj");
     std::fs::create_dir_all(&proj).unwrap();
     let reg = run_json_env(
