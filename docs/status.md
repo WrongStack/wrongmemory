@@ -20,7 +20,11 @@ Last updated: 2026-11-05.
       Both came into `main` after its last CI run on 2026-11-02.
     - On the merged tree, locally: `vector-memory` 236, `wrongmemory-client` 6, the cli install and memory-search tests 8, core `wstack-paths` 21 passed, and the branch packages typecheck clean. `sage` passed 1,616 of 1,617 and `webui-server` 3,458 of 3,459. The two failures are timing-bound tests in code identical to `main` (a 250 ms source-check budget; a 60 s timeout), and each passes 3 of 3 when run alone.
     - Merging needs an admin merge, or a `main` that builds again;
-  - the plan's 24-hour soak, which is running on the v0.1.9 draft daemon since 2026-11-04 19:54 (UTC+2). The first run was cut off after 15 hours by an unexpected shutdown of the machine. A run on v0.1.8 still runs alongside for comparison: 0.1.8 lacks the hygiene fix (WM-507). A 2-hour soak passed: 3.36 M operations, 0 errors.
+  - the plan's 24-hour soak, which is running on the v0.1.9 draft daemon since 2026-11-05 10:15 (UTC+2) and ends on 2026-11-06 about 10:20. A helper process holds a system-required power request for the run, so idle sleep cannot pause it. Earlier runs:
+    - The first run was cut off after 15 hours by an unexpected shutdown of the machine.
+    - The second run on v0.1.9, from 2026-11-04 19:54, lost 7 hours of load: the machine slept from 2026-11-05 01:58 to 09:01 (System log, Kernel-Power events 42 and 107). It keeps running and counts as a 17-hour run.
+    - A run on v0.1.8 runs alongside for comparison and was paused by the same sleep. 0.1.8 lacks the hygiene fix (WM-507).
+    - A 2-hour soak passed: 3.36 M operations, 0 errors.
 - Not required for 1.0 but done: Linux and macOS packages (WM-802) in the v0.1.9 draft, which supersedes the v0.1.7 and v0.1.8 drafts. WrongStack branch `wrongmemory/unix-install` (CI green) lets `wstack sage service install` use them.
 
 Legend: **Done**, meaning implemented and covered by an automated test or recorded command; **Partial**; **Not started**; **NOT RUN**, meaning implemented but never exercised in a real external environment.
@@ -373,8 +377,9 @@ Findings from the M run:
 | `heldout_quality.rs` without the new variables | Unchanged: lexical recall@10 0.917, hybrid MRR 0.870 |
 | Soak smoke `--soak-secs 130 --soak-rate 100 --soak-idle-secs 60` with the released v0.1.6 daemon | PASS: 13,002 operations, 0 errors, idle CPU 0.26% of one core |
 | 24-hour soak `--soak-secs 86400 --soak-projects 40 --soak-clients 4 --soak-rate 100 --soak-idle-secs 300`, released v0.1.6 daemon | NOT COMPLETED: the machine shut down unexpectedly 15 h 5 min in (2026-11-04 16:27), and the bench wrote no report. That daemon schedules a project's first maintenance pass 24 hours after registration (WM-507), so no scheduled maintenance ran during the load. |
-| The same soak, v0.1.9 draft daemon (`c55578e`), bench built from the same tree | RUNNING since 2026-11-04 19:54 (UTC+2) |
-| The same soak, v0.1.8 draft daemon, bench with the on-disk sample journal (`soak@4`) | RUNNING since 2026-11-04 16:52 (UTC+2), kept for comparison. A 150-second smoke of the new bench on 0.1.8: 15,002 operations, 0 errors; 13 of 40 projects had their first maintenance pass by the end, the rest queued (the scheduler runs one job per 5-second tick and yields to interactive requests). |
+| The same soak, v0.1.9 draft daemon (`c55578e`), bench built from the same tree | RUNNING since 2026-11-04 19:54 (UTC+2). The machine slept from 2026-11-05 01:58 to 09:01, pausing the load for 7 hours, so the run gives about 17 hours of load. At 14.3 hours elapsed: 3,757,439 operations, 0 errors, handles 294 to 303, WAL at most 4.4 MB. |
+| The same soak again, same binaries, while a helper PowerShell process holds a system-required power request (`SetThreadExecutionState`) until the bench exits | RUNNING since 2026-11-05 10:15 (UTC+2) |
+| The same soak, v0.1.8 draft daemon, bench with the on-disk sample journal (`soak@4`) | RUNNING since 2026-11-04 16:52 (UTC+2), kept for comparison; paused by the same 7-hour sleep. A 150-second smoke of the new bench on 0.1.8: 15,002 operations, 0 errors; 13 of 40 projects had their first maintenance pass by the end, the rest queued (the scheduler runs one job per 5-second tick and yields to interactive requests). |
 | Live HQ round trip (WM-408), released WrongStack 1.4.0 and WrongMemory 0.1.6 | PASS, 7/7 steps (`docs/evidence/wm-408-hq-round-trip-2026-11-04.md`) |
 | WrongStack branch `wrongmemory/sage-integration` (`c4ec64f`): #431, #432 and #433 merged onto `main` `c2ecf60`, architecture report regenerated | `check:architecture` PASS. Vitest: sage 1,616/1,616; persistence 193 (16 skipped); the PRs' webui-server, cli, core and codebase-index tests 32/32. Full CI (run 41789489834): 15/15 jobs green, including CI Gate |
 
