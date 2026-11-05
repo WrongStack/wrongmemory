@@ -48,7 +48,21 @@ A per-user local memory service that keeps WrongStack's SAGE knowledge (structur
 
 ## Install
 
-Releases ship Windows x64, Linux x64 and macOS arm64 builds: https://github.com/WrongStack/wrongmemory/releases/latest. The binaries are unsigned. Check each download against `SHA256SUMS`, or with `gh attestation verify <file> --repo WrongStack/wrongmemory`.
+Releases ship Windows x64, Linux x64 and macOS arm64 builds: https://github.com/WrongStack/wrongmemory/releases/latest. The binaries are unsigned; each has a SHA-256 checksum and a GitHub build provenance attestation.
+
+```powershell
+# Windows (PowerShell 5.1 or 7)
+irm https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install.ps1 | iex
+```
+
+```sh
+# Linux x64, macOS arm64
+curl -fsSL https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install.sh | sh
+```
+
+The installers download `wrongmemory` and `wrongmemoryd` from the latest release, check both against `SHA256SUMS`, and run `wrongmemory install`. They do not start the daemon. On Windows the install directory is also appended to the user `PATH`; on Linux and macOS the script prints the line to add. Run the same command again to update: a running daemon is left alone unless `WRONGMEMORY_STOP_DAEMON=1` is set. Other settings: `WRONGMEMORY_VERSION`, `WRONGMEMORY_INSTALL_DIR`, `WRONGMEMORY_AUTOSTART=1`, `WRONGMEMORY_VERIFY_ATTESTATION=1` (needs a signed-in `gh`), `WRONGMEMORY_NO_MODIFY_PATH=1` (Windows). Read [install.ps1](install.ps1) or [install.sh](install.sh) first if you prefer.
+
+Or by hand, after checking the archive against `SHA256SUMS` (or with `gh attestation verify <file> --repo WrongStack/wrongmemory`):
 
 ```text
 # Windows: unzip wrongmemory-<version>-windows-x64.zip
@@ -61,7 +75,7 @@ wrongmemory autostart enable       # optional: start the daemon at sign-in
 wrongmemory doctor
 ```
 
-`install` changes nothing else on the system and does not edit `PATH`: add the directory to `PATH` or call the binaries by full path.
+`wrongmemory install` changes nothing else on the system and does not edit `PATH`: add the directory to `PATH` or call the binaries by full path.
 
 ### Use it instead of SAGE in WrongStack
 

@@ -1,0 +1,84 @@
+name: install scripts
+
+# install.sh and install.ps1 download the published release, so they run
+# against it: on every change to them, and whenever a release is published.
+
+on:
+  push:
+    branches: [main]
+    paths: [install.sh, install.ps1, .github/workflows/install-scripts.yml]
+  pull_request:
+    paths: [install.sh, install.ps1, .github/workflows/install-scripts.yml]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unix:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: ShellCheck
+        if: runner.os == 'Linux'
+        run: shellcheck install.sh
+      - name: Install the latest release, piped into sh
+        run: sh < install.sh
+      - name: Use the installed binaries
+        run: |
+          set -eu
+          bin="$HOME/.local/share/wrongmemory/bin"
+          "$bin/wrongmemory" --version
+          "$bin/wrongmemoryd" --version
+          mkdir -p "$RUNNER_TEMP/proj"
+          project=$("$bin/wrongmemory" --json project add "$RUNNER_TEMP/proj" --managed | jq -r .project.projectId)
+          "$bin/wrongmemory" --json remember "$project" "install.sh smoke on $RUNNER_OS" > /dev/null
+          "$bin/wrongmemory" --json search "$project" "install smoke" | grep -q "install.sh smoke on $RUNNER_OS"
+      - name: Update while the daemon runs
+        run: |
+          set -eu
+          if sh install.sh; then echo "expected a refusal while the daemon runs" >&2; exit 1; fi
+          WRONGMEMORY_STOP_DAEMON=1 sh install.sh
+          test -f "$HOME/.local/share/wrongmemory/bin/wrongmemoryd.old"
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Install the latest release with Windows PowerShell 5.1, piped into Invoke-Expression
+        shell: powershell
+        run: |
+          $env:WRONGMEMORY_NO_MODIFY_PATH = '1'
+          Get-Content -Raw install.ps1 | Invoke-Expression
+      - name: Use the installed binaries
+        shell: pwsh
+        run: |
+          $bin = Join-Path $env:LOCALAPPDATA 'WrongMemory\bin'
+          & "$bin\wrongmemory.exe" --version
+          & "$bin\wrongmemoryd.exe" --version
+          $proj = Join-Path $env:RUNNER_TEMP 'proj'
+          New-Item -ItemType Directory -Force $proj | Out-Null
+          $project = (& "$bin\wrongmemory.exe" --json project add $proj --managed | ConvertFrom-Json).project.projectId
+          & "$bin\wrongmemory.exe" --json remember $project "install.ps1 smoke on Windows" | Out-Null
+          $hits = & "$bin\wrongmemory.exe" --json search $project "install smoke" | Out-String
+          if ($hits -notmatch 'install.ps1 smoke on Windows') { throw 'search did not find the record' }
+      - name: Update while the daemon runs, with PowerShell 7
+        shell: pwsh
+        run: |
+          $env:WRONGMEMORY_NO_MODIFY_PATH = '1'
+          $refused = $false
+          try { ./install.ps1 } catch { $refused = $_.Exception.Message -match 'WRONGMEMORY_STOP_DAEMON' }
+          if (-not $refused) { throw 'expected a refusal while the daemon runs' }
+          $env:WRONGMEMORY_STOP_DAEMON = '1'
+          ./install.ps1
+          if (-not (Test-Path (Join-Path $env:LOCALAPPDATA 'WrongMemory\bin\wrongmemoryd.exe.old'))) { throw 'no rollback copy' }

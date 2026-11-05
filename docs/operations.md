@@ -20,6 +20,8 @@ Windows is the primary platform: its packages, the live store handoff and the Wr
 
 ## Install
 
+The installers in the repository root do the work of steps 1 and 2 below for the latest release (or `WRONGMEMORY_VERSION`): `irm https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install.ps1 | iex` on Windows, `curl -fsSL https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install.sh | sh` on Linux and macOS. They download the two bare executables, refuse any whose SHA-256 is not the single matching entry in `SHA256SUMS`, and run `wrongmemory install` with them. `WRONGMEMORY_STOP_DAEMON=1` adds `--stop-daemon`; without it a running daemon makes them stop with that hint (exit 6 from `install`). `WRONGMEMORY_AUTOSTART=1` runs step 3. `WRONGMEMORY_VERIFY_ATTESTATION=1` also runs `gh attestation verify` on each executable. The Windows installer appends the install directory to the user `PATH` (`REG_EXPAND_SZ`, other entries left unexpanded; `WRONGMEMORY_NO_MODIFY_PATH=1` skips it). The Unix installer edits no shell profile.
+
 1. Unzip `wrongmemory-<version>-windows-x64.zip` and verify it first: `Get-FileHash <zip>` must match `SHA256SUMS`. The binaries are **unsigned**.
 2. Run `bin\wrongmemory.exe install`. This copies `wrongmemory.exe` and `wrongmemoryd.exe` to `%LOCALAPPDATA%\WrongMemory\bin` (override with `--prefix`) and writes `install.json`. Nothing else on the system is changed.
 3. Optional: `wrongmemory autostart enable` starts the daemon at sign-in. It adds a per-user `Run` value named `WrongMemory`; `autostart status` shows it, `autostart disable` removes it. Enabling autostart never opens a GUI and never enables memory capture.
