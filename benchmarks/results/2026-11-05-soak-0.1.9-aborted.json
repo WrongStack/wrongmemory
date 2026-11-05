@@ -1,0 +1,55 @@
+{
+ "note": "Aborted: every wrongmemoryd process on the machine was terminated at 2026-11-05 13:26:43 (UTC+2) at the same instant, with no crash report, no shutdown log line and no Defender detection, while the bench processes kept running. The figures cover the healthy part of the run only. The machine also slept from 01:58 to 09:01, a gap excluded from loadSecs; after it the bench's rate limiter caught up, so opsPerLoadSecond exceeds the 100/s target.",
+ "schema": "wrongmemory/soak-summary@1",
+ "daemonVersion": "0.1.9",
+ "startedLocal": "2026-11-04 19:54:47",
+ "plannedSecs": 86400,
+ "projects": 40,
+ "clients": 4,
+ "targetRate": 100.0,
+ "machine": {
+  "os": "windows",
+  "logicalCpus": 32
+ },
+ "healthyUntilLocal": "2026-11-05 13:25:42",
+ "healthyElapsedSecs": 63057,
+ "sampleGapsOver3Min": [
+  {
+   "from": "2026-11-05 01:58:23",
+   "to": "2026-11-05 09:01:13",
+   "secs": 25370
+  }
+ ],
+ "loadSecs": 37687,
+ "ops": 6305726,
+ "errors": 0,
+ "opsPerLoadSecond": 167.3,
+ "rssMb": {
+  "afterSeed": 32.7,
+  "max": 179.9,
+  "atEnd": 139.4
+ },
+ "handles": {
+  "afterSeed": 294,
+  "min": 294,
+  "max": 303
+ },
+ "threadsMax": 13,
+ "openStoresMax": 32,
+ "walMbMax": 4.4,
+ "dataMbAtEnd": 2209.7,
+ "samples": 619,
+ "rssMbMean": {
+  "hour2": 90.6,
+  "lastHour": 141.0
+ },
+ "handlesMean": {
+  "hour2": 300.2,
+  "lastHour": 302.1
+ },
+ "endedBy": {
+  "firstFailedSampleLocal": "2026-11-05 13:26:44",
+  "errorsInThatSample": 97,
+  "daemonGone": true
+ }
+}
