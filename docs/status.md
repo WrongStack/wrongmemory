@@ -1,6 +1,6 @@
 # Implementation status
 
-Last updated: 2026-11-04.
+Last updated: 2026-11-05.
 
 **Release level reached: none certified.** The 1.0 evidence matrix is `docs/evidence/wm-706-evidence-matrix.md`.
 
@@ -12,8 +12,13 @@ Last updated: 2026-11-04.
   - Linux and macOS (WM-802): the daemon, CLI and MCP bridge in hosted CI on Ubuntu and macOS, and a packaged Linux install in WSL Ubuntu, including under systemd.
 - Still open before native 1.0 (see the matrix):
   - WrongStack PR #434, which is open and not merged. It carries #431, #432 and #433, the Linux and macOS install, and the vector-mirror fix (WM-405), on branch `wrongmemory/vector-mirror`. The owner opened it on 2026-11-04.
-    - Two merges bring the branch up to `main` `ab9645e`. `main`'s `9e26fc8` fixed the WebUI ranked search store on its own, so only #432's test remains in the diff.
-    - CI run 41915706867 fails Build, TypeCheck, Lint and the TUI heap soak. Every error is in files the branch does not change and that are identical on `main`: the `packages/webui` declaration build pulls in `packages/project-surfaces/src` outside its `rootDir` (TS6059), and three `noThenProperty` errors in `apps/desktop-v2/tests`. `main` gained these since its last CI run on 2026-11-02.
+    - Three merges bring the branch up to `main` `8474970` (2026-11-05, merge `6805a9b`). `main`'s `9e26fc8` fixed the WebUI ranked search store on its own, so only #432's test remains in the diff. The branch now differs from `main` in 24 files.
+    - CI runs 41915706867 and 41989779890 (head `6805a9b`) fail Build, TypeCheck, Lint and the TUI heap soak. Every error is in files the branch does not change and that are identical on `main`:
+      - the `packages/webui` declaration build pulls in the source-only `packages/project-surfaces/src` outside its `rootDir` (508 TS6059 errors);
+      - three `noThenProperty` errors in `apps/desktop-v2/tests`.
+
+      Both came into `main` after its last CI run on 2026-11-02.
+    - On the merged tree, locally: `vector-memory` 236, `wrongmemory-client` 6, the cli install and memory-search tests 8, core `wstack-paths` 21 passed, and the branch packages typecheck clean. `sage` passed 1,616 of 1,617 and `webui-server` 3,458 of 3,459. The two failures are timing-bound tests in code identical to `main` (a 250 ms source-check budget; a 60 s timeout), and each passes 3 of 3 when run alone.
     - Merging needs an admin merge, or a `main` that builds again;
   - the plan's 24-hour soak, which is running on the v0.1.9 draft daemon since 2026-11-04 19:54 (UTC+2). The first run was cut off after 15 hours by an unexpected shutdown of the machine. A run on v0.1.8 still runs alongside for comparison: 0.1.8 lacks the hygiene fix (WM-507). A 2-hour soak passed: 3.36 M operations, 0 errors.
 - Not required for 1.0 but done: Linux and macOS packages (WM-802) in the v0.1.9 draft, which supersedes the v0.1.7 and v0.1.8 drafts. WrongStack branch `wrongmemory/unix-install` (CI green) lets `wstack sage service install` use them.
