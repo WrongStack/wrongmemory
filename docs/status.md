@@ -11,21 +11,20 @@ Last updated: 2026-11-05.
   - the plan's final demonstration with downloaded, attested binaries (WM-705);
   - Linux and macOS (WM-802): the daemon, CLI and MCP bridge in hosted CI on Ubuntu and macOS, and a packaged Linux install in WSL Ubuntu, including under systemd.
 - Still open before native 1.0 (see the matrix):
-  - WrongStack PR #434, which is open and not merged. It carries #431, #432 and #433, the Linux and macOS install, and the vector-mirror fix (WM-405), on branch `wrongmemory/vector-mirror`. The owner opened it on 2026-11-04.
-    - Three merges bring the branch up to `main` `8474970` (2026-11-05, merge `6805a9b`). `main`'s `9e26fc8` fixed the WebUI ranked search store on its own, so only #432's test remains in the diff. The branch now differs from `main` in 24 files.
-    - CI runs 41915706867 and 41989779890 (head `6805a9b`) fail Build, TypeCheck, Lint and the TUI heap soak. Every error is in files the branch does not change and that are identical on `main`:
+  - A WrongStack release with PR #434. The owner merged #434 into WrongStack `main` on 2026-11-05 (`784b0cd`, admin merge). It carries #431, #432 and #433, the Linux and macOS install, and the vector-mirror fix (WM-405); GitHub marks #431–#433 merged with it. The latest WrongStack release is still 1.4.0, which lacks all of them.
+    - Before the merge, four merges brought the branch up to `main` `01731c6`. `main`'s `9e26fc8` fixed the WebUI ranked search store on its own, so only #432's test remained in the diff, which was 24 files.
+    - `main` does not build at the moment, independently of #434. CI runs 41915706867 and 41989779890 on the branch failed Build, TypeCheck, Lint and the TUI heap soak, every error in files the branch did not change and that were identical on `main`:
       - the `packages/webui` declaration build pulls in the source-only `packages/project-surfaces/src` outside its `rootDir` (508 TS6059 errors);
       - three `noThenProperty` errors in `apps/desktop-v2/tests`.
 
-      Both came into `main` after its last CI run on 2026-11-02.
-    - On the merged tree, locally: `vector-memory` 236, `wrongmemory-client` 6, the cli install and memory-search tests 8, core `wstack-paths` 21 passed, and the branch packages typecheck clean. `sage` passed 1,616 of 1,617 and `webui-server` 3,458 of 3,459. The two failures are timing-bound tests in code identical to `main` (a 250 ms source-check budget; a 60 s timeout), and each passes 3 of 3 when run alone.
-    - Merging needs an admin merge, or a `main` that builds again;
+      Both came into `main` after its last CI run on 2026-11-02. A WrongStack release needs them fixed first.
+    - On the branch's last tested tree, locally: `vector-memory` 236, `wrongmemory-client` 6, the cli install and memory-search tests 8, core `wstack-paths` 21 passed, and the branch packages typecheck clean. `sage` passed 1,616 of 1,617 and `webui-server` 3,458 of 3,459. The two failures are timing-bound tests in code identical to `main` (a 250 ms source-check budget; a 60 s timeout), and each passes 3 of 3 when run alone;
   - the plan's 24-hour soak, which is running on the v0.1.9 daemon (byte-identical to the published `wrongmemoryd-windows-x64.exe`) since 2026-11-05 10:15 (UTC+2) and ends on 2026-11-06 about 10:20. A helper process holds a system-required power request for the run, so idle sleep cannot pause it. Earlier runs:
     - The first run was cut off after 15 hours by an unexpected shutdown of the machine.
     - The second run on v0.1.9, from 2026-11-04 19:54, lost 7 hours of load: the machine slept from 2026-11-05 01:58 to 09:01 (System log, Kernel-Power events 42 and 107). It keeps running and counts as a 17-hour run.
     - A run on v0.1.8 runs alongside for comparison and was paused by the same sleep. 0.1.8 lacks the hygiene fix (WM-507).
     - A 2-hour soak passed: 3.36 M operations, 0 errors.
-- Not required for 1.0 but done: Linux and macOS packages (WM-802), published in v0.1.9 on 2026-11-05, which supersedes the v0.1.7 and v0.1.8 drafts. WrongStack PR #434 lets `wstack sage service install` use them; on Linux it installed the published release (8/8).
+- Not required for 1.0 but done: Linux and macOS packages (WM-802), published in v0.1.9 on 2026-11-05, which supersedes the v0.1.7 and v0.1.8 drafts. WrongStack PR #434, merged into WrongStack `main` on 2026-11-05 and not yet released, lets `wstack sage service install` use them; on Linux it installed the published release (8/8).
 
 Legend: **Done**, meaning implemented and covered by an automated test or recorded command; **Partial**; **Not started**; **NOT RUN**, meaning implemented but never exercised in a real external environment.
 
@@ -374,7 +373,7 @@ Findings from the M run:
 | WSL Ubuntu (kernel 6.18, x86_64): anonymous `curl` of `SHA256SUMS`, the Linux tarball and both bare Linux executables from the release download URLs; `sha256sum -c`; the WM-802 install smoke on the tarball in a throwaway `HOME` | PASS: checksums; 21/21 |
 | WSL Ubuntu, Bun 1.4.2: `installWrongMemory` from WrongStack branch `wrongmemory/vector-mirror` (`473259d`, PR #434) against the real GitHub release API, in a throwaway `HOME` | PASS 8/8: installs `WrongStack/wrongmemory@v0.1.9` into `~/.local/share/wrongmemory/bin`; `findWrongMemoryBinary` returns both as `installed`; `install.json` records 0.1.9; the installed daemon starts and stops |
 | SHA-256 of the soak's `wrongmemoryd.exe` against the published `SHA256SUMS` | Identical (`99b60d7b…`) |
-| WrongStack PR #434: `gh pr merge --admin` by the owner | Refused: `main` had moved and the merge commit could not be created. Merge `473259d` brought the branch up to `main` `01731c6` (conflict only in the generated architecture report, regenerated; `check:architecture` PASS). The PR is mergeable again. |
+| WrongStack PR #434: `gh pr merge --admin` by the owner | First refused: `main` had moved and the merge commit could not be created. Merge `473259d` brought the branch up to `main` `01731c6` (conflict only in the generated architecture report, regenerated; `check:architecture` PASS). The second attempt merged it: `784b0cd`, 2026-11-05 08:38 UTC. `sage`, `vector-memory`, `wrongmemory-client`, the cli SAGE service and `wstack-paths.ts` on `main` are identical to the branch. |
 | Overnight sleep | The machine slept 2026-11-05 01:58 to 09:01 (Kernel-Power 42 and 107) and paused both running soaks for 7 hours. Both daemons resumed with 0 errors. A new 24-hour run on the published binary started at 10:15 with a system-required power request held by a helper process. |
 
 ## Verification run (2026-11-04, WM-309 task C, held-out in the live store, 24-hour soak)
