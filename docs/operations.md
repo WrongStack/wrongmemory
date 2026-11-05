@@ -38,8 +38,8 @@ wstack sage service use local [--yes]          # release the store again
 wstack sage service status
 ```
 
-- `install` downloads `wrongmemory-windows-x64.exe` and `wrongmemoryd-windows-x64.exe` from the release. It checks both against `SHA256SUMS` and against the digest GitHub recorded for the asset. It then runs this `install` command, so the binaries end up in the same directory. `--from <dir>` installs from a local build instead.
-- WrongStack finds the binaries in this order: `Sage.service.daemonPath`, then `WRONGMEMORYD_PATH`, then `%LOCALAPPDATA%\WrongMemory\bin`, then next to the WrongStack executable, then `PATH`.
+- `install` downloads `wrongmemory-<platform>` and `wrongmemoryd-<platform>` from the latest release, or the one named by `--release`. It checks both against `SHA256SUMS` and against the digest GitHub recorded for the asset, and marks only verified bytes executable. WrongStack 1.4.0 knows `windows-x64` only; WrongStack/WrongStack#434 (not yet released) adds `linux-x64` and `darwin-arm64`. It then runs this `install` command, so the binaries end up in the same directory. `--from <dir>` installs from a local build instead.
+- WrongStack finds the binaries in this order: `Sage.service.daemonPath`, then `WRONGMEMORYD_PATH`, then the install directory, then next to the WrongStack executable, then `PATH`. The install directory is `%LOCALAPPDATA%\WrongMemory\bin` on Windows. On Linux and macOS, with #434, it is `$XDG_DATA_HOME/wrongmemory/bin`, else `~/.local/share/wrongmemory/bin`; WrongStack 1.4.0 needs `daemonPath`, `WRONGMEMORYD_PATH` or `PATH` there.
 - `Sage.service.mode` is a profile setting, so it applies to every project of that profile.
   - Run `use wrongmemory` in a project to back up and hand over its existing store.
   - Other projects are registered the first time they are used.
@@ -66,7 +66,7 @@ How the daemon differs on Unix:
 - **Signals.** SIGTERM and SIGINT drain like `daemon stop`. SIGHUP is ignored. An on-demand start runs the daemon in its own session (`setsid`), with stdio on `/dev/null` and no inherited descriptors.
 - **Update.** The previous binaries are kept as `wrongmemory.old` and `wrongmemoryd.old`.
 
-Not run on Linux or macOS yet: installation from inside WrongStack (`wstack sage service install` accepts Windows x64 only and downloads the `*-windows-x64.exe` assets), real MCP clients, a soak, and an autostart through a real systemd or launchd session (the tests write the unit and agent to a temporary directory).
+Installing from inside WrongStack on Linux and macOS needs WrongStack/WrongStack#434. Its installer installed the published v0.1.9 on Linux in a throwaway home directory (2026-11-05); a released WrongStack with it has not been run. Not run on Linux or macOS yet: real MCP clients, a soak, an install on macOS outside hosted CI, and an autostart through a real systemd or launchd session (the tests write the unit and agent to a temporary directory).
 
 ## Update and rollback
 

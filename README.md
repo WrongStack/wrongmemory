@@ -2,12 +2,12 @@
 
 A per-user local memory service that keeps WrongStack's SAGE knowledge (structured memories, anchors, review queue, provenance) usable outside WrongStack. One Rust daemon serves many projects. WrongStack connects through a native adapter; other coding tools connect through MCP.
 
-> **Status: preview, not certified.** The daemon, policy, native SAGE-profile storage, MCP bridge and WrongStack adapter branch are implemented and tested against an oracle built from the real SAGE code. The following have not been run yet: real installed MCP clients, live store adoption, and signed releases. [docs/status.md](docs/status.md) lists every task with its evidence and lists what is still NOT RUN. The full program is in [docs/plan/](docs/plan/README.md).
+> **Status: preview, not certified.** The daemon, policy, native SAGE-profile storage, MCP bridge and WrongStack adapter are implemented and tested against an oracle built from the real SAGE code. They have run in real environments: WrongStack on a live store, Claude Code, Codex, Antigravity and MCP Inspector. Releases are unsigned; every asset has a SHA-256 checksum and a SLSA provenance attestation. The [1.0 evidence matrix](docs/evidence/wm-706-evidence-matrix.md) lists what passed and what is still open, and [docs/status.md](docs/status.md) lists every task with its evidence and what is still NOT RUN. The full program is in [docs/plan/](docs/plan/README.md).
 
 ## What works
 
 - **Daemon.** `wrongmemoryd` runs one daemon per user and data root.
-  - It listens on a named pipe that only the owner can open.
+  - It listens on a named pipe (Windows) or a Unix socket (Linux, macOS) that only the owner can open.
   - Before a client sends any credential, the daemon must prove it holds the host token (an HMAC challenge), which defeats pipe squatting.
   - Clients authenticate with frame limits enforced, and there is one serialized writer lane per project.
   - Durable maintenance jobs and an event feed are filtered by visibility.
@@ -46,11 +46,38 @@ A per-user local memory service that keeps WrongStack's SAGE knowledge (structur
 - **Operations.** `backup` uses the SQLite online backup API. Also: `migrate inspect`, `diagnostics export`, per-user `install`/`uninstall` and `autostart`. See [docs/operations.md](docs/operations.md) and [docs/runbooks.md](docs/runbooks.md).
 - **TypeScript client.** `packages/client-ts` (`@wrongmemory/client`) mirrors the Rust contracts; a parity check runs in CI.
 
-## Quick start (Windows)
+## Install
+
+Releases ship Windows x64, Linux x64 and macOS arm64 builds: https://github.com/WrongStack/wrongmemory/releases/latest. The binaries are unsigned. Check each download against `SHA256SUMS`, or with `gh attestation verify <file> --repo WrongStack/wrongmemory`.
+
+```text
+# Windows: unzip wrongmemory-<version>-windows-x64.zip
+bin\wrongmemory.exe install        # copies both binaries to %LOCALAPPDATA%\WrongMemory\bin
+
+# Linux, macOS: unpack wrongmemory-<version>-<platform>.tar.gz
+bin/wrongmemory install            # copies both binaries to ~/.local/share/wrongmemory/bin
+
+wrongmemory autostart enable       # optional: start the daemon at sign-in
+wrongmemory doctor
+```
+
+`install` changes nothing else on the system and does not edit `PATH`: add the directory to `PATH` or call the binaries by full path.
+
+### Use it instead of SAGE in WrongStack
+
+```text
+wstack sage service install                 # download, verify and install the latest release
+wstack sage service use wrongmemory --yes   # switch the profile; back up and hand over this project's store
+wstack sage service status
+wstack sage service use local --yes         # hand the store back to WrongStack's own SAGE
+```
+
+WrongStack 1.4.0 installs the Windows build. Installing on Linux and macOS from inside WrongStack needs a WrongStack release with WrongStack/WrongStack#434. Until then, install from the archive as above; WrongStack finds the binaries there once that PR is in, and through `Sage.service.daemonPath`, `WRONGMEMORYD_PATH` or `PATH` before. Details, the lookup order and worktree behavior: [docs/operations.md](docs/operations.md#from-wrongstack).
+
+## Quick start
 
 ```powershell
-cargo build --release
-$wm = ".\target\release\wrongmemory.exe"
+$wm = "$env:LOCALAPPDATA\WrongMemory\bin\wrongmemory.exe"   # or .\target\release\wrongmemory.exe after `cargo build --release`
 
 & $wm project add C:\src\my-project --managed      # starts the daemon on demand
 & $wm project list
@@ -88,7 +115,7 @@ Results are in `benchmarks/results/`.
 | `crates/wrongmemory-contracts` | Wire envelopes, typed errors, policy profiles, SAGE record DTOs |
 | `crates/wrongmemory-storage` | Inspector, SAGE DDL, retrieval, mutations, candidates, recovery, hygiene, backup, owner guard |
 | `crates/wrongmemory-registry` | `registry.db`: projects, grants, owner epochs, jobs and schedules |
-| `crates/wrongmemory-ipc` | NDJSON framing, private named pipe, discovery, server proof, client |
+| `crates/wrongmemory-ipc` | NDJSON framing, private named pipe (Windows) or Unix socket, discovery, server proof, client |
 | `crates/wrongmemoryd` | Daemon: auth, authorization, dispatch, scheduler, events, fault hooks (debug builds only) |
 | `crates/wrongmemory-cli` | `wrongmemory` CLI, MCP stdio bridge, client connect planner, install/ops |
 | `crates/wrongmemory-bench` | Latency, resource and synthetic recall benchmark |
