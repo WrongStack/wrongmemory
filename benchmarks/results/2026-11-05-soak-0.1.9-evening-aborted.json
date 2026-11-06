@@ -1,0 +1,44 @@
+{
+ "note": "Aborted: at 2026-11-05 20:25:16 (UTC+2) the bench process and its daemon ended at the same moment without output (stderr empty, no report; the daemon log stops mid-operation at 20:25:16.546). The user's own daemon on the same machine ended then too, with no shutdown line. No System, Application or Defender event between 20:24 and 20:27. The figures cover the run up to its last sample at 20:25:09; there was no sample gap.",
+ "schema": "wrongmemory/soak-summary@1",
+ "daemonVersion": "0.1.9",
+ "startedLocal": "2026-11-05 17:04:08",
+ "plannedSecs": 86400,
+ "projects": 40,
+ "clients": 4,
+ "targetRate": 100.0,
+ "machine": {
+  "os": "windows",
+  "logicalCpus": 32
+ },
+ "healthyUntilLocal": "2026-11-05 20:25:09",
+ "healthyElapsedSecs": 12060,
+ "sampleGapsOver3Min": [],
+ "loadSecs": 12060,
+ "ops": 1206083,
+ "errors": 0,
+ "opsPerLoadSecond": 100.0,
+ "rssMb": {
+  "afterSeed": 33.0,
+  "max": 122.5,
+  "atEnd": 116.5
+ },
+ "handles": {
+  "afterSeed": 294,
+  "min": 295,
+  "max": 302
+ },
+ "threadsMax": 11,
+ "openStoresMax": 32,
+ "walMbMax": 4.5,
+ "dataMbAtEnd": 442.5,
+ "samples": 198,
+ "rssMbMean": {
+  "hour2": 91.9,
+  "lastHour": 115.9
+ },
+ "handlesMean": {
+  "hour2": 300.1,
+  "lastHour": 300.6
+ }
+}
