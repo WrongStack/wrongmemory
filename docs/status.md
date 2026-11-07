@@ -404,7 +404,8 @@ Findings from the M run:
 | Downloaded v0.1.10 draft: `sha256sum -c SHA256SUMS`; `gh attestation verify` on each file | PASS 9/9 checksums; 10/10 attestations |
 | `install.sh` (dash, WSL Ubuntu) against the downloaded draft as a local mirror, throwaway `HOME` | PASS 12/12: CLI and daemon report 0.1.10; one PATH block in `.profile` and `.bashrc` with the user's line kept; a login shell finds the CLI; a second run adds nothing; a managed project, remember and search work; the binary carries the new dashboard; `uninstall` removes the blocks and leaves the user's line |
 | `install.ps1` (Windows PowerShell 5.1) against the downloaded draft, prefix with a space, scratch data root, scratch PATH key seeded with `%SystemRoot%\system32;C:\Other` | PASS 9/9: 0.1.10 installed; `REG_EXPAND_SZ` and `%SystemRoot%` kept; prefix added once, also after a second install; new dashboard in the binary; `uninstall` removes the entry and keeps the others; the real user Path untouched |
-| Publishing the v0.1.10 draft | NOT RUN: the owner's step. Until then the installers fetch v0.1.9 |
+| Publishing the v0.1.10 draft | DONE 2026-11-07 08:48 UTC at the owner's request (`gh release edit --draft=false --latest`); the anonymous `releases/latest/download/SHA256SUMS` equals the verified draft's |
+| Live install upgraded to the published 0.1.10 with `install.ps1` (`WRONGMEMORY_STOP_DAEMON=1`), then `daemon start` | PASS: both installed executables match the published `SHA256SUMS`; CLI and daemon 0.1.10; 18 projects, all compatible; WrongStack store read-write with 16,551 memories; one PATH entry; the soak (own binaries) not affected |
 
 ## Verification run (2026-11-07, WM-800 management dashboard)
 
