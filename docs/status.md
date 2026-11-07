@@ -399,7 +399,12 @@ Findings from the M run:
 | `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, `cargo test --workspace --locked`, `cargo test -p wrongmemory-cli --test ops` ×5 | PASS; 194 passed; 6/6 on each run |
 | Live install with the release CLI from this tree and the attested v0.1.9 daemon, `install --stop-daemon` | PASS: `C:\Users\ersin\AppData\Local\WrongMemory\bin` added to the user Path once (`REG_EXPAND_SZ` kept); a fresh PATH resolves `wrongmemory`; daemon 0.1.9 running with 18 projects; soak not affected |
 | CI on `7f6c937`: `ci` run 42324500830 and `install scripts` run 42324500839 | PASS on windows, ubuntu-latest and macos-latest. The installer workflow ran ShellCheck on the new `install.sh` and checked that a new login shell finds `wrongmemory` (Ubuntu, macOS) |
-| Version 0.1.10 (`Cargo.toml`; `Cargo.lock` changes only the seven workspace crates) | Release of the dashboard (WM-800) and PATH on install (WM-700); tag workflow below |
+| Version 0.1.10 (`Cargo.toml`; `Cargo.lock` changes only the seven workspace crates), commit `72660a9`, tag `v0.1.10` | Release of the dashboard (WM-800) and PATH on install (WM-700) |
+| Release workflow for tag `v0.1.10` (run 42353494951) and CI on `72660a9` (run 42353492569) | PASS: three platform builds and publish; draft with 9 assets and `SHA256SUMS`. CI PASS on windows, ubuntu-latest, macos-latest |
+| Downloaded v0.1.10 draft: `sha256sum -c SHA256SUMS`; `gh attestation verify` on each file | PASS 9/9 checksums; 10/10 attestations |
+| `install.sh` (dash, WSL Ubuntu) against the downloaded draft as a local mirror, throwaway `HOME` | PASS 12/12: CLI and daemon report 0.1.10; one PATH block in `.profile` and `.bashrc` with the user's line kept; a login shell finds the CLI; a second run adds nothing; a managed project, remember and search work; the binary carries the new dashboard; `uninstall` removes the blocks and leaves the user's line |
+| `install.ps1` (Windows PowerShell 5.1) against the downloaded draft, prefix with a space, scratch data root, scratch PATH key seeded with `%SystemRoot%\system32;C:\Other` | PASS 9/9: 0.1.10 installed; `REG_EXPAND_SZ` and `%SystemRoot%` kept; prefix added once, also after a second install; new dashboard in the binary; `uninstall` removes the entry and keeps the others; the real user Path untouched |
+| Publishing the v0.1.10 draft | NOT RUN: the owner's step. Until then the installers fetch v0.1.9 |
 
 ## Verification run (2026-11-07, WM-800 management dashboard)
 
