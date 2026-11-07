@@ -422,7 +422,8 @@ Findings from the M run:
 | Release 0.1.12 at the user's request: workspace version bumped (`Cargo.toml`, `Cargo.lock`), `6c20964`, tag `v0.1.12` | Release run 42399070763 PASS (3 platform builds, publish to draft); CI 42399067255 PASS. |
 | Draft check: `gh release download v0.1.12`, `sha256sum -c SHA256SUMS`, `gh attestation verify` for each asset | PASS: 9/9 checksums, 9/9 attestations. |
 | `restart-smoke.ps1` against the draft (Windows PowerShell 5.1, scratch install and data root): the published 0.1.11 over itself, then the 0.1.12 draft over it while the daemon runs, then with no daemon | PASS 14/14: both updates restart the daemon from the installed binary and keep serving the record; the 0.1.12 daemon binary is in place; nothing is started when nothing ran. |
-| `gh release edit v0.1.12 --draft=false --latest` | PASS: published 2026-11-07 18:12:20 UTC; the anonymous `releases/latest/download/SHA256SUMS` is identical to the verified draft's. NOT RUN: install on the live machine (still 0.1.11). |
+| `gh release edit v0.1.12 --draft=false --latest` | PASS: published 2026-11-07 18:12:20 UTC; the anonymous `releases/latest/download/SHA256SUMS` is identical to the verified draft's. |
+| Live machine, at the user's request: `irm https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install.ps1 \| iex` over 0.1.11 while its daemon and dashboard ran | PASS: "Checksums match SHA256SUMS", "Installed wrongmemory 0.1.12", "The running daemon was stopped for the update and started again from the new binaries." `wrongmemory --version` 0.1.12; daemon 0.1.12 on a new pid from the installed `wrongmemoryd.exe`; 14 projects, all `compatible` (13 read-write, 1 read-only); the WrongStack store has 16,551 memories. The 0.1.11 dashboard kept running from the renamed `wrongmemory.exe.old` and did not block the update; it was then restarted from the new binary. |
 
 ## Verification run (2026-11-07, WM-700 PATH on install)
 
