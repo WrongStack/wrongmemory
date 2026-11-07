@@ -48,12 +48,18 @@ jobs:
           project=$("$bin/wrongmemory" --json project add "$RUNNER_TEMP/proj" --managed | jq -r .project.projectId)
           "$bin/wrongmemory" --json remember "$project" "install.sh smoke on $RUNNER_OS" > /dev/null
           "$bin/wrongmemory" --json search "$project" "install smoke" | grep -q "install.sh smoke on $RUNNER_OS"
-      - name: Update while the daemon runs
+      - name: Update while the daemon runs; it is stopped and started again
         run: |
           set -eu
-          if sh install.sh; then echo "expected a refusal while the daemon runs" >&2; exit 1; fi
-          WRONGMEMORY_STOP_DAEMON=1 sh install.sh
-          test -f "$HOME/.local/share/wrongmemory/bin/wrongmemoryd.old"
+          bin="$HOME/.local/share/wrongmemory/bin"
+          before=$("$bin/wrongmemory" --json daemon status | jq -r .pid)
+          sh install.sh | tee "$RUNNER_TEMP/update.out"
+          grep -q 'started again from the new binaries' "$RUNNER_TEMP/update.out"
+          test -f "$bin/wrongmemoryd.old"
+          after=$("$bin/wrongmemory" --json daemon status | jq -r .pid)
+          test "$after" != "$before"
+          project=$("$bin/wrongmemory" --json project list | jq -r '.projects[0].projectId')
+          "$bin/wrongmemory" --json search "$project" "install smoke" | grep -q "install.sh smoke on $RUNNER_OS"
 
   windows:
     runs-on: windows-latest
@@ -78,13 +84,18 @@ jobs:
           & "$bin\wrongmemory.exe" --json remember $project "install.ps1 smoke on Windows" | Out-Null
           $hits = & "$bin\wrongmemory.exe" --json search $project "install smoke" | Out-String
           if ($hits -notmatch 'install.ps1 smoke on Windows') { throw 'search did not find the record' }
-      - name: Update while the daemon runs, with PowerShell 7
+      - name: Update while the daemon runs, with PowerShell 7; it is stopped and started again
         shell: pwsh
         run: |
           $env:WRONGMEMORY_NO_MODIFY_PATH = '1'
-          $refused = $false
-          try { ./install.ps1 } catch { $refused = $_.Exception.Message -match 'WRONGMEMORY_STOP_DAEMON' }
-          if (-not $refused) { throw 'expected a refusal while the daemon runs' }
-          $env:WRONGMEMORY_STOP_DAEMON = '1'
-          ./install.ps1
-          if (-not (Test-Path (Join-Path $env:LOCALAPPDATA 'WrongMemory\bin\wrongmemoryd.exe.old'))) { throw 'no rollback copy' }
+          $bin = Join-Path $env:LOCALAPPDATA 'WrongMemory\bin'
+          $before = (& "$bin\wrongmemory.exe" --json daemon status | ConvertFrom-Json).pid
+          $out = ./install.ps1 6>&1 | Out-String
+          Write-Host $out
+          if ($out -notmatch 'started again from the new binaries') { throw 'the daemon was not restarted' }
+          if (-not (Test-Path (Join-Path $bin 'wrongmemoryd.exe.old'))) { throw 'no rollback copy' }
+          $after = (& "$bin\wrongmemory.exe" --json daemon status | ConvertFrom-Json).pid
+          if ($after -eq $before) { throw 'the daemon still runs the old process' }
+          $project = (& "$bin\wrongmemory.exe" --json project list | ConvertFrom-Json).projects[0].projectId
+          $hits = & "$bin\wrongmemory.exe" --json search $project "install smoke" | Out-String
+          if ($hits -notmatch 'install.ps1 smoke on Windows') { throw 'search after the update did not find the record' }

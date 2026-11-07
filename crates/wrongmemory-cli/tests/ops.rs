@@ -152,18 +152,60 @@ fn diagnostics_contain_no_memory_text() {
     stop(&home);
 }
 
+/// The daemon process `status` reports runs the given executable.
+fn daemon_runs(home: &Path, daemon: &Path) -> bool {
+    let pid = json(home, &["daemon", "status"])["pid"].as_u64().unwrap();
+    #[cfg(windows)]
+    {
+        let out = Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-Command",
+                &format!("(Get-Process -Id {pid}).Path"),
+            ])
+            .output()
+            .unwrap();
+        let path = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        std::fs::canonicalize(path).ok() == std::fs::canonicalize(daemon).ok()
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::fs::read_link(format!("/proc/{pid}/exe"))
+            .ok()
+            .and_then(|p| std::fs::canonicalize(p).ok())
+            == std::fs::canonicalize(daemon).ok()
+    }
+    #[cfg(not(any(windows, target_os = "linux")))]
+    {
+        let out = Command::new("ps")
+            .args(["-o", "comm=", "-p", &pid.to_string()])
+            .output()
+            .unwrap();
+        Path::new(String::from_utf8_lossy(&out.stdout).trim()) == daemon
+    }
+}
+
 #[test]
-fn install_refuses_running_daemon_then_installs_and_uninstalls() {
+fn install_restarts_a_running_daemon_from_the_new_binaries_then_uninstalls() {
     let tmp = tempfile::tempdir().unwrap();
-    let (home, _, store) = setup(tmp.path());
+    let (home, p, store) = setup(tmp.path());
     let prefix = tmp.path().join("prefix with space").join("bin");
-    let refused = run(&home, &["install", "--prefix", prefix.to_str().unwrap()]);
-    assert_eq!(
-        refused.status.code(),
-        Some(6),
-        "{}",
-        String::from_utf8_lossy(&refused.stderr)
+    let before = json(&home, &["daemon", "status"])["daemonInstanceId"].clone();
+    // A running daemon is drained, stopped and started again from the
+    // installed binary; no flag is needed.
+    let r = json(&home, &["install", "--prefix", prefix.to_str().unwrap()]);
+    assert_eq!(r["daemonStopped"], true, "{r}");
+    assert_eq!(r["daemonRestarted"], true, "{r}");
+    assert!(prefix.join(exe("wrongmemory")).exists() && prefix.join(exe("wrongmemoryd")).exists());
+    let after = json(&home, &["daemon", "status"]);
+    assert_ne!(after["daemonInstanceId"], before);
+    assert!(
+        daemon_runs(&home, &prefix.join(exe("wrongmemoryd"))),
+        "the restarted daemon is not the installed one"
     );
+    // The project is served again by the new daemon.
+    json(&home, &["search", &p, "anything"]);
+    // --no-restart leaves it stopped; the old --stop-daemon is still accepted.
     let r = json(
         &home,
         &[
@@ -171,10 +213,15 @@ fn install_refuses_running_daemon_then_installs_and_uninstalls() {
             "--prefix",
             prefix.to_str().unwrap(),
             "--stop-daemon",
+            "--no-restart",
         ],
     );
-    assert_eq!(r["daemonStopped"], true);
-    assert!(prefix.join(exe("wrongmemory")).exists() && prefix.join(exe("wrongmemoryd")).exists());
+    assert_eq!(r["daemonStopped"], true, "{r}");
+    assert_eq!(r["daemonRestarted"], false, "{r}");
+    assert!(
+        !home.join("runtime").join("endpoint.json").exists(),
+        "daemon left stopped"
+    );
     // The installed CLI starts its own installed daemon on demand.
     let installed = prefix.join(exe("wrongmemory"));
     let st = Command::new(&installed)
@@ -203,6 +250,34 @@ fn install_refuses_running_daemon_then_installs_and_uninstalls() {
         ],
     );
     assert!(prefix.join(tagged("wrongmemory", "old")).exists());
+    // A process still running the previous binary (an MCP bridge, a
+    // dashboard) does not block the next install. Windows cannot delete a
+    // running executable, only rename it.
+    #[cfg(windows)]
+    {
+        let old = prefix.join(tagged("wrongmemory", "old"));
+        let mut held = Command::new(&old)
+            .args(["--data-root", home.to_str().unwrap(), "ui", "--no-open"])
+            .env("WRONGMEMORY_NO_MODIFY_PATH", "1")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        assert!(
+            std::fs::remove_file(&old).is_err(),
+            "the running old binary should not be deletable"
+        );
+        let r = json(&home, &["install", "--prefix", prefix.to_str().unwrap()]);
+        assert_eq!(r["daemonRestarted"], true, "{r}");
+        let aside = PathBuf::from(format!("{}-1", old.display()));
+        assert!(aside.exists(), "the running old binary was moved aside");
+        held.kill().unwrap();
+        held.wait().unwrap();
+        // Once nothing runs it, the next install deletes the leftover.
+        json(&home, &["install", "--prefix", prefix.to_str().unwrap()]);
+        assert!(!aside.exists(), "leftover deleted");
+    }
     json(&home, &["daemon", "start"]);
     let refuse_data = run(
         &home,

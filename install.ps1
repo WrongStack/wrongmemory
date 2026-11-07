@@ -6,7 +6,6 @@
 #   WRONGMEMORY_VERSION         release to install, e.g. 0.1.9 (default: latest)
 #   WRONGMEMORY_INSTALL_DIR     install directory (default: %LOCALAPPDATA%\WrongMemory\bin)
 #   WRONGMEMORY_DOWNLOAD_BASE   mirror serving the release assets (overrides the version URL)
-#   WRONGMEMORY_STOP_DAEMON=1   stop a running WrongMemory daemon so its binaries can be replaced
 #   WRONGMEMORY_AUTOSTART=1     start the daemon at sign-in (a per-user Run value)
 #   WRONGMEMORY_NO_MODIFY_PATH=1  leave the user PATH untouched
 #   WRONGMEMORY_VERIFY_ATTESTATION=1
@@ -18,8 +17,9 @@
 # *.exe.old. The install directory then goes on the user PATH (unless told
 # not to): newer CLIs do that inside `wrongmemory install`, and this script
 # does it as well for releases that do not, so either way it is added once.
-# It does not start the daemon. Works in Windows PowerShell 5.1 and
-# PowerShell 7.
+# A daemon that is running is drained and stopped for the install and started
+# again from the new binaries; one that is not running is not started. Works
+# in Windows PowerShell 5.1 and PowerShell 7.
 
 # Run a native program and return its exit code and combined output as text. In Windows
 # PowerShell 5.1, redirecting a native program's stderr under ErrorActionPreference 'Stop'
@@ -94,12 +94,10 @@ function Install-WrongMemory {
     Write-Host 'Checksums match SHA256SUMS.'
     if ($env:WRONGMEMORY_VERIFY_ATTESTATION -eq '1') { Write-Host 'Build provenance attestations verified.' }
 
-    $InstallArgs = @('--json', 'install', '--prefix', $Prefix)
-    if ($env:WRONGMEMORY_STOP_DAEMON -eq '1') { $InstallArgs += '--stop-daemon' }
+    # --stop-daemon: releases before 0.1.12 refuse to replace a running daemon
+    # without it; later ones always drain it and start it again themselves.
+    $InstallArgs = @('--json', 'install', '--prefix', $Prefix, '--stop-daemon')
     $Install = Invoke-WrongMemoryNative (Join-Path $Tmp 'wrongmemory.exe') $InstallArgs
-    if ($Install.Code -eq 6) {
-      throw 'A WrongMemory daemon is running. Rerun with $env:WRONGMEMORY_STOP_DAEMON = "1" to stop it and replace the binaries.'
-    }
     if ($Install.Code -ne 0) {
       $Install.Output | ForEach-Object { Write-Host $_ }
       throw "wrongmemory install exited $($Install.Code)"
@@ -114,6 +112,18 @@ function Install-WrongMemory {
   if ($Run.Code -ne 0 -or -not $Version) { throw "The installed binary could not run: $Cli" }
   Write-Host ''
   Write-Host "Installed $Version -> $Prefix"
+
+  $Report = $Install.Output -join "`n"
+  if ($Report -match '"daemonStopped":\s*true') {
+    # Releases before 0.1.12 stop the daemon without starting it again.
+    $Restarted = $Report -match '"daemonRestarted":\s*true'
+    if (-not $Restarted) { $Restarted = (Invoke-WrongMemoryNative $Cli @('daemon', 'start')).Code -eq 0 }
+    if ($Restarted) {
+      Write-Host 'The running daemon was stopped for the update and started again from the new binaries.'
+    } else {
+      Write-Warning "The daemon was stopped for the update and did not start again; run: & '$Cli' daemon start"
+    }
+  }
 
   if ($env:WRONGMEMORY_AUTOSTART -eq '1') {
     $Auto = Invoke-WrongMemoryNative $Cli @('autostart', 'enable', '--prefix', $Prefix)

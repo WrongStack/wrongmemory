@@ -120,6 +120,51 @@ fn open_dashboard(home: &Path) -> (Ui, u16, String) {
     (ui, port, format!("wm_ui={session}"))
 }
 
+/// A reader that takes the link and closes the pipe (`wrongmemory ui | head -1`,
+/// or a test) must not take the dashboard down: its later writes to stdout
+/// fail, and a failing write is not a reason to stop serving.
+#[test]
+fn dashboard_keeps_serving_after_its_stdout_is_closed() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let _stop = StopDaemon(&home);
+    let port = std::net::TcpListener::bind(("127.0.0.1", 0))
+        .unwrap()
+        .local_addr()
+        .unwrap()
+        .port();
+    let mut child = wm(&home)
+        .args(["ui", "--no-open", "--port", &port.to_string()])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    // Close both pipes before the dashboard writes anything.
+    drop(child.stdout.take());
+    drop(child.stderr.take());
+    let mut ui = Ui(child);
+    let deadline = std::time::Instant::now() + Duration::from_secs(20);
+    while TcpStream::connect(("127.0.0.1", port)).is_err() {
+        assert!(
+            ui.0.try_wait().unwrap().is_none(),
+            "the dashboard exited when its stdout was closed"
+        );
+        assert!(
+            std::time::Instant::now() < deadline,
+            "dashboard never listened"
+        );
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    // Give a failing write after the listener came up time to bring it down.
+    std::thread::sleep(Duration::from_millis(500));
+    assert!(
+        ui.0.try_wait().unwrap().is_none(),
+        "the dashboard exited when its stdout was closed"
+    );
+    let status = http(port, "GET", "/", &[]).0;
+    assert!(status.contains(" 401 "), "{status}");
+}
+
 #[test]
 fn dashboard_changes_need_the_token_and_the_pages_origin() {
     let tmp = tempfile::tempdir().unwrap();

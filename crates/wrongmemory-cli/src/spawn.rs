@@ -22,18 +22,18 @@ pub fn daemon_exe() -> anyhow::Result<PathBuf> {
     Ok(exe)
 }
 
-pub fn spawn_daemon(root: &DataRoot) -> anyhow::Result<u32> {
-    let exe = daemon_exe()?;
+/// Start the given `wrongmemoryd` detached, for `root`.
+pub fn spawn_daemon_exe(exe: &std::path::Path, root: &DataRoot) -> anyhow::Result<u32> {
     #[cfg(windows)]
     {
         win::spawn_detached(
-            &exe,
+            exe,
             &[std::ffi::OsStr::new("--data-root"), root.path().as_os_str()],
         )
     }
     #[cfg(unix)]
     {
-        unix::spawn_detached(&exe, root.path())
+        unix::spawn_detached(exe, root.path())
     }
 }
 
@@ -274,8 +274,17 @@ pub async fn connect_grant(
 /// another client's start. Until a daemon answers, the start is retried
 /// every second; extra starters exit without side effects.
 pub async fn start_and_wait(root: &DataRoot) -> Result<(), CallError> {
+    let exe =
+        daemon_exe().map_err(|e| CallError::Unavailable(format!("cannot start daemon: {e}")))?;
+    start_and_wait_exe(root, &exe).await
+}
+
+/// [`start_and_wait`] with an explicit `wrongmemoryd` (the installer starts
+/// the one it just installed, not the one next to the staging copy).
+pub async fn start_and_wait_exe(root: &DataRoot, exe: &std::path::Path) -> Result<(), CallError> {
     let spawn = || {
-        spawn_daemon(root).map_err(|e| CallError::Unavailable(format!("cannot start daemon: {e}")))
+        spawn_daemon_exe(exe, root)
+            .map_err(|e| CallError::Unavailable(format!("cannot start daemon: {e}")))
     };
     spawn()?;
     let deadline = Instant::now() + Duration::from_secs(10);

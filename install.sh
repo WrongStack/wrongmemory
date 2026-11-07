@@ -8,7 +8,6 @@
 #   WRONGMEMORY_INSTALL_DIR     install directory (default: $XDG_DATA_HOME/wrongmemory/bin,
 #                               else ~/.local/share/wrongmemory/bin)
 #   WRONGMEMORY_DOWNLOAD_BASE   mirror serving the release assets (overrides the version URL)
-#   WRONGMEMORY_STOP_DAEMON=1   stop a running WrongMemory daemon so its binaries can be replaced
 #   WRONGMEMORY_AUTOSTART=1     start the daemon at sign-in (systemd user unit or LaunchAgent)
 #   WRONGMEMORY_NO_MODIFY_PATH=1  leave shell startup files untouched
 #   WRONGMEMORY_VERIFY_ATTESTATION=1
@@ -20,8 +19,9 @@
 # previous binaries as *.old. It then puts the install directory on PATH: a
 # marked block in ~/.profile and in the current shell's startup file
 # (~/.bashrc, ~/.zshrc, or a fish conf.d file), the same block
-# `wrongmemory install` writes and `wrongmemory uninstall` removes. It does
-# not start the daemon.
+# `wrongmemory install` writes and `wrongmemory uninstall` removes. A daemon
+# that is running is drained and stopped for the install and started again
+# from the new binaries; one that is not running is not started.
 set -eu
 
 REPO="WrongStack/wrongmemory"
@@ -145,19 +145,27 @@ else
   prefix="$HOME/.local/share/wrongmemory/bin"
 fi
 
-set -- install --prefix "$prefix"
-[ "${WRONGMEMORY_STOP_DAEMON:-}" = 1 ] && set -- "$@" --stop-daemon
+# --stop-daemon: releases before 0.1.12 refuse to replace a running daemon
+# without it; later ones always drain it and start it again themselves.
 rc=0
-"$tmp/wrongmemory" "$@" >"$tmp/install.out" 2>&1 || rc=$?
-if [ "$rc" -eq 6 ]; then
-  fail "a WrongMemory daemon is running; rerun with WRONGMEMORY_STOP_DAEMON=1 to stop it and replace the binaries"
-elif [ "$rc" -ne 0 ]; then
+"$tmp/wrongmemory" --json install --prefix "$prefix" --stop-daemon >"$tmp/install.out" 2>&1 || rc=$?
+if [ "$rc" -ne 0 ]; then
   cat "$tmp/install.out" >&2
   fail "wrongmemory install exited $rc"
 fi
 
 version=$("$prefix/wrongmemory" --version 2>/dev/null) || fail "the installed binary could not run: $prefix/wrongmemory"
 printf '\nInstalled %s -> %s\n' "$version" "$prefix"
+
+if grep -Eq '"daemonStopped": *true' "$tmp/install.out"; then
+  # Releases before 0.1.12 stop the daemon without starting it again.
+  if grep -Eq '"daemonRestarted": *true' "$tmp/install.out" ||
+    "$prefix/wrongmemory" daemon start >/dev/null 2>&1; then
+    printf 'The running daemon was stopped for the update and started again from the new binaries.\n'
+  else
+    printf 'warning: the daemon was stopped for the update and did not start again; run: %s daemon start\n' "$prefix/wrongmemory" >&2
+  fi
+fi
 
 if [ "${WRONGMEMORY_AUTOSTART:-}" = 1 ]; then
   "$prefix/wrongmemory" autostart enable --prefix "$prefix" >/dev/null ||

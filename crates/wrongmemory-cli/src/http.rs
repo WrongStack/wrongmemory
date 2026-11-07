@@ -31,6 +31,7 @@
 
 use std::collections::HashMap;
 use std::convert::Infallible;
+use std::io::Write;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -205,7 +206,7 @@ impl State {
                 Err(plain(StatusCode::FORBIDDEN, "forbidden\n"))
             }
             Err(e) => {
-                eprintln!("wrongmemory http: grant {grant}: {e:#}");
+                let _ = writeln!(std::io::stderr(), "wrongmemory http: grant {grant}: {e:#}");
                 Err(plain(
                     StatusCode::SERVICE_UNAVAILABLE,
                     "memory service unavailable\n",
@@ -315,9 +316,16 @@ pub async fn serve(root: DataRoot, port: u16, label: String) -> anyhow::Result<(
         in_flight: Semaphore::new(MAX_IN_FLIGHT),
         mcp,
     });
-    // The URL is the only line on stdout, so a launcher can read it.
-    println!("http://127.0.0.1:{port}/mcp/<project-id>");
-    eprintln!(
+    // The URL is the only line on stdout, so a launcher can read it. Writes
+    // ignore a closed pipe: a launcher that read the URL and went away must
+    // not take the server down (a print macro panics there).
+    {
+        let mut out = std::io::stdout().lock();
+        let _ = writeln!(out, "http://127.0.0.1:{port}/mcp/<project-id>");
+        let _ = out.flush();
+    }
+    let _ = writeln!(
+        std::io::stderr(),
         "wrongmemory http: serving MCP on 127.0.0.1:{port} (loopback only); \
          send `Authorization: Bearer <grant-id>.<token>` (see `wrongmemory http header`). Ctrl+C stops."
     );

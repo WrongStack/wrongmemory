@@ -76,9 +76,13 @@ pub struct InstallArgs {
     /// $XDG_DATA_HOME/wrongmemory/bin or ~/.local/share/wrongmemory/bin on Unix).
     #[arg(long)]
     pub prefix: Option<PathBuf>,
-    /// Stop a running daemon first (otherwise install refuses).
-    #[arg(long)]
+    /// Accepted for older scripts; a running daemon is always drained,
+    /// stopped and (unless --no-restart) started again from the new binaries.
+    #[arg(long, hide = true)]
     pub stop_daemon: bool,
+    /// Leave a daemon that was running stopped after the install.
+    #[arg(long)]
+    pub no_restart: bool,
     /// Leave the user PATH alone (also: WRONGMEMORY_NO_MODIFY_PATH=1). By
     /// default the install directory is added to the user PATH (Windows) or
     /// to ~/.profile and the shell's startup file (Linux, macOS).
@@ -650,12 +654,39 @@ async fn stop_daemon(root: &DataRoot) -> Result<bool, String> {
     Ok(true)
 }
 
+/// Move a previous `*.old` out of the way. On Windows a running executable
+/// can be renamed but not deleted, so an `*.old` still running (an MCP
+/// bridge or dashboard started from an earlier install) is renamed to
+/// `*.old-<n>` instead; such leftovers are deleted once nothing runs them.
+fn clear_old(old: &Path) -> std::io::Result<()> {
+    if let (Some(dir), Some(name)) = (old.parent(), old.file_name()) {
+        let prefix = format!("{}-", name.to_string_lossy());
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for e in entries.flatten() {
+                if e.file_name().to_string_lossy().starts_with(&prefix) {
+                    let _ = std::fs::remove_file(e.path());
+                }
+            }
+        }
+    }
+    if !old.exists() || std::fs::remove_file(old).is_ok() {
+        return Ok(());
+    }
+    for n in 1..1000 {
+        let aside = PathBuf::from(format!("{}-{n}", old.display()));
+        if !aside.exists() {
+            return std::fs::rename(old, aside);
+        }
+    }
+    std::fs::remove_file(old)
+}
+
 fn replace_atomically(src: &Path, dst: &Path) -> std::io::Result<()> {
     let new = tagged(dst, "new");
     let old = tagged(dst, "old");
     std::fs::copy(src, &new)?;
     if dst.exists() {
-        let _ = std::fs::remove_file(&old);
+        clear_old(&old)?;
         std::fs::rename(dst, &old)?;
     }
     if let Err(e) = std::fs::rename(&new, dst) {
@@ -699,15 +730,11 @@ pub async fn run_install(root: &DataRoot, json_mode: bool, a: InstallArgs) -> i3
             return exit_code::FAILED;
         }
     }
+    // A running daemon is drained and stopped so its binary can be replaced,
+    // then started again from the new binaries below.
     let running = Client::connect_host(root, "probe").await.is_ok();
     let mut stopped = false;
     if running {
-        if !a.stop_daemon {
-            eprintln!(
-                "wrongmemory install: the daemon is running; rerun with --stop-daemon to drain and stop it first"
-            );
-            return exit_code::CONFLICT;
-        }
         match stop_daemon(root).await {
             Ok(s) => stopped = s,
             Err(e) => {
@@ -768,10 +795,22 @@ pub async fn run_install(root: &DataRoot, json_mode: bool, a: InstallArgs) -> i3
             }
         }
     };
+    // Start the daemon that was running again, from the installed binary.
+    let restart = if stopped && !a.no_restart {
+        let exe = prefix.join(exe_name("wrongmemoryd"));
+        Some(crate::spawn::start_and_wait_exe(root, &exe).await)
+    } else {
+        None
+    };
+    let restarted = matches!(restart, Some(Ok(())));
+    if let Some(Err(e)) = &restart {
+        eprintln!("wrongmemory install: the new daemon did not start: {e}");
+    }
     let v = json!({
         "prefix": prefix.display().to_string(),
         "installed": manifest["binaries"],
         "daemonStopped": stopped,
+        "daemonRestarted": restarted,
         "path": path,
     });
     let path_note = if path["modified"] == true {
@@ -794,15 +833,19 @@ pub async fn run_install(root: &DataRoot, json_mode: bool, a: InstallArgs) -> i3
         json_mode,
         &v,
         format!(
-            "installed {} to {}{}\n  start: \"{}\" daemon start{path_note}",
+            "installed {} to {}{}{path_note}",
             env!("CARGO_PKG_VERSION"),
             prefix.display(),
-            if stopped {
-                " (daemon was stopped; start it again)"
+            if restarted {
+                "\n  the running daemon was stopped and started again from the new binaries"
+                    .to_string()
             } else {
-                ""
+                format!(
+                    "{}\n  start: \"{}\" daemon start",
+                    if stopped { " (daemon was stopped)" } else { "" },
+                    prefix.join(exe_name("wrongmemory")).display()
+                )
             },
-            prefix.join(exe_name("wrongmemory")).display()
         ),
     );
     exit_code::SUCCESS

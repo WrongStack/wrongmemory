@@ -60,12 +60,12 @@ irm https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install.ps1 | 
 curl -fsSL https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install.sh | sh
 ```
 
-The installers download `wrongmemory` and `wrongmemoryd` from the latest release, check both against `SHA256SUMS`, and run `wrongmemory install`. They do not start the daemon. The install directory goes on your `PATH`, so a new terminal finds `wrongmemory`:
+The installers download `wrongmemory` and `wrongmemoryd` from the latest release, check both against `SHA256SUMS`, and run `wrongmemory install`. A daemon that is running is stopped for the update and started again from the new binaries; one that is not running is not started. The install directory goes on your `PATH`, so a new terminal finds `wrongmemory`:
 
 - Windows: appended to the user `Path` (existing `%VAR%` entries and the value type are kept).
 - Linux, macOS: a marked block in `~/.profile` and in your shell's startup file (`~/.bashrc`, `~/.zshrc`, or `~/.config/fish/conf.d/wrongmemory.fish`). The script prints the `export` line for the terminal you ran it in.
 
-Run the same command again to update; nothing is added twice. A running daemon is left alone unless `WRONGMEMORY_STOP_DAEMON=1` is set. Other settings: `WRONGMEMORY_VERSION`, `WRONGMEMORY_INSTALL_DIR`, `WRONGMEMORY_AUTOSTART=1`, `WRONGMEMORY_VERIFY_ATTESTATION=1` (needs a signed-in `gh`), `WRONGMEMORY_NO_MODIFY_PATH=1` (leave `PATH` and startup files alone). `wrongmemory uninstall` removes the `PATH` entry again. Read [install.ps1](install.ps1) or [install.sh](install.sh) first if you prefer.
+Run the same command again to update; nothing is added twice. Other settings: `WRONGMEMORY_VERSION`, `WRONGMEMORY_INSTALL_DIR`, `WRONGMEMORY_AUTOSTART=1`, `WRONGMEMORY_VERIFY_ATTESTATION=1` (needs a signed-in `gh`), `WRONGMEMORY_NO_MODIFY_PATH=1` (leave `PATH` and startup files alone). `wrongmemory uninstall` removes the `PATH` entry again. Read [install.ps1](install.ps1) or [install.sh](install.sh) first if you prefer.
 
 Or by hand, after checking the archive against `SHA256SUMS` (or with `gh attestation verify <file> --repo WrongStack/wrongmemory`):
 

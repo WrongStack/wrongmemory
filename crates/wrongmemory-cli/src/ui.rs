@@ -131,8 +131,10 @@ pub async fn run(root: DataRoot, port: u16, open: bool) -> anyhow::Result<()> {
         port,
         client: Mutex::new(Some(client)),
     });
-    println!("WrongMemory dashboard: {url}");
-    println!("The link works once; press Ctrl+C to stop.");
+    say(&format!(
+        "WrongMemory dashboard: {url}
+The link works once; press Ctrl+C to stop."
+    ));
     if open {
         open_browser(&ui.root, port, &url);
     }
@@ -148,6 +150,22 @@ pub async fn run(root: DataRoot, port: u16, open: bool) -> anyhow::Result<()> {
     }
 }
 
+/// A line on stdout. The dashboard keeps serving when nobody reads it any
+/// more (`wrongmemory ui | head -1`); a print macro would panic on the
+/// closed pipe and take the server down.
+fn say(text: &str) {
+    use std::io::Write;
+    let mut out = std::io::stdout().lock();
+    let _ = writeln!(out, "{text}");
+    let _ = out.flush();
+}
+
+/// A line on stderr, likewise without panicking.
+fn warn(text: &str) {
+    use std::io::Write;
+    let _ = writeln!(std::io::stderr(), "{text}");
+}
+
 /// Path of the launcher page for `port` (owner-only runtime directory).
 fn launcher_path(root: &DataRoot, port: u16) -> std::path::PathBuf {
     root.runtime_dir().join(format!("ui-{port}.html"))
@@ -161,7 +179,9 @@ fn open_browser(root: &DataRoot, port: u16, url: &str) {
         "<!doctype html><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"0; url={url}\">         <title>WrongMemory</title><a href=\"{url}\">Open the WrongMemory dashboard</a>"
     );
     if let Err(e) = wrongmemory_ipc::endpoint::write_private_atomic(&page, html.as_bytes()) {
-        eprintln!("Could not write the launcher ({e}); open the link above yourself.");
+        warn(&format!(
+            "Could not write the launcher ({e}); open the link above yourself."
+        ));
         return;
     }
     #[cfg(windows)]
@@ -173,7 +193,7 @@ fn open_browser(root: &DataRoot, port: u16, url: &str) {
     #[cfg(all(unix, not(target_os = "macos")))]
     let r = std::process::Command::new("xdg-open").arg(&page).spawn();
     if r.is_err() {
-        eprintln!("Could not open a browser; open the link above yourself.");
+        warn("Could not open a browser; open the link above yourself.");
     }
 }
 
