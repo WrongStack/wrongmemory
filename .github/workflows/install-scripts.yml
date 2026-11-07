@@ -32,6 +32,12 @@ jobs:
         run: shellcheck install.sh
       - name: Install the latest release, piped into sh
         run: sh < install.sh
+      - name: A new login shell finds wrongmemory on PATH
+        run: |
+          set -eu
+          grep -q '# >>> wrongmemory >>>' "$HOME/.profile"
+          found=$(env -i HOME="$HOME" PATH=/usr/bin:/bin sh -c '. "$HOME/.profile"; command -v wrongmemory')
+          test "$found" = "$HOME/.local/share/wrongmemory/bin/wrongmemory"
       - name: Use the installed binaries
         run: |
           set -eu

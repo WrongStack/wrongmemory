@@ -15,9 +15,11 @@
 # Downloads wrongmemory.exe and wrongmemoryd.exe, verifies both against the
 # release's SHA256SUMS, then runs `wrongmemory install`, which copies them into
 # the install directory, writes install.json and keeps the previous binaries as
-# *.exe.old. The script then appends the install directory to the user PATH
-# (unless told not to). It does not start the daemon. Works in Windows
-# PowerShell 5.1 and PowerShell 7.
+# *.exe.old. The install directory then goes on the user PATH (unless told
+# not to): newer CLIs do that inside `wrongmemory install`, and this script
+# does it as well for releases that do not, so either way it is added once.
+# It does not start the daemon. Works in Windows PowerShell 5.1 and
+# PowerShell 7.
 
 # Run a native program and return its exit code and combined output as text. In Windows
 # PowerShell 5.1, redirecting a native program's stderr under ErrorActionPreference 'Stop'
@@ -131,7 +133,7 @@ function Install-WrongMemory {
   Write-Host ''
   Write-Host 'Next:'
   Write-Host '  wrongmemory doctor                         # check the install and the daemon'
-  Write-Host '  wrongmemory ui                             # read-only dashboard in the browser'
+  Write-Host '  wrongmemory ui                             # dashboard in the browser'
   Write-Host "  wstack sage service use wrongmemory        # use it as WrongStack's SAGE memory"
   Write-Host 'Update by running this installer again; remove with: wrongmemory uninstall'
 }

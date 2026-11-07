@@ -13,6 +13,9 @@ use serde_json::Value;
 fn wm(home: &Path) -> Command {
     let mut c = Command::new(env!("CARGO_BIN_EXE_wrongmemory"));
     c.arg("--data-root").arg(home);
+    // `install` must never edit this machine's PATH from a test; the PATH
+    // test below lifts this and redirects every location instead.
+    c.env("WRONGMEMORY_NO_MODIFY_PATH", "1");
     c
 }
 
@@ -387,4 +390,193 @@ fn interrupted_install_rolls_back_to_the_previous_binaries() {
         sha(&prefix.join(tagged("wrongmemory", "old"))).as_deref(),
         Some(&b"previous cli"[..])
     );
+}
+
+/// `install` puts its prefix on the user PATH once, keeps what was there, and
+/// `uninstall` takes only its own entry out again. Every location is
+/// redirected: a scratch registry key (Windows) or a temp `$HOME` (Unix).
+#[test]
+fn install_puts_the_prefix_on_path_and_uninstall_takes_it_off() {
+    let tmp = tempfile::tempdir().unwrap();
+    let data = tmp.path().join("data");
+    let prefix = tmp.path().join("pre fix").join("bin");
+    let with_path = |args: &[&str]| -> Value {
+        let mut c = Command::new(env!("CARGO_BIN_EXE_wrongmemory"));
+        c.arg("--data-root").arg(&data).arg("--json").args(args);
+        c.env_remove("WRONGMEMORY_NO_MODIFY_PATH");
+        redirect(&mut c, tmp.path());
+        let out = c.output().unwrap();
+        assert!(
+            out.status.success(),
+            "wrongmemory {args:?}: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        serde_json::from_slice(&out.stdout).unwrap()
+    };
+    let p = prefix.to_str().unwrap();
+    let _cleanup = seed(tmp.path());
+
+    let first = with_path(&["install", "--prefix", p]);
+    assert_eq!(first["path"]["modified"], true, "{first}");
+    let again = with_path(&["install", "--prefix", p]);
+    assert_eq!(
+        again["path"]["modified"], false,
+        "a second install changes nothing: {again}"
+    );
+    check_installed(tmp.path(), &prefix);
+
+    // Opting out leaves everything as it is.
+    let skipped = with_path(&["install", "--prefix", p, "--no-modify-path"]);
+    assert_eq!(skipped["path"]["skipped"], true);
+
+    let u = with_path(&["uninstall", "--prefix", p]);
+    assert!(
+        u["removed"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|r| r.as_str().unwrap().starts_with("PATH entry")),
+        "{u}"
+    );
+    check_removed(tmp.path(), &prefix);
+}
+
+#[cfg(windows)]
+fn path_key(tmp: &Path) -> String {
+    // Its own root: the autostart test deletes HKCU\Software\WrongMemoryTest.
+    let leaf = tmp.file_name().unwrap().to_string_lossy().to_string();
+    format!(r"Software\WrongMemoryPathTest\{leaf}")
+}
+
+#[cfg(windows)]
+struct DropKey(String);
+
+#[cfg(windows)]
+impl Drop for DropKey {
+    fn drop(&mut self) {
+        // The whole scratch root: only this test uses it.
+        let root = self.0.rsplit_once('\\').map_or(self.0.as_str(), |(r, _)| r);
+        let _ = Command::new("reg")
+            .args(["delete", &format!(r"HKCU\{root}"), "/f"])
+            .output();
+    }
+}
+
+#[cfg(windows)]
+fn redirect(c: &mut Command, tmp: &Path) {
+    c.env("WRONGMEMORY_ENV_KEY_OVERRIDE", path_key(tmp));
+}
+
+#[cfg(windows)]
+fn reg_path(tmp: &Path) -> String {
+    let out = Command::new("reg")
+        .args(["query", &format!(r"HKCU\{}", path_key(tmp)), "/v", "Path"])
+        .output()
+        .unwrap();
+    String::from_utf8_lossy(&out.stdout).to_string()
+}
+
+#[cfg(windows)]
+fn seed(tmp: &Path) -> DropKey {
+    let key = DropKey(path_key(tmp));
+    let ok = Command::new("reg")
+        .args([
+            "add",
+            &format!(r"HKCU\{}", path_key(tmp)),
+            "/v",
+            "Path",
+            "/t",
+            "REG_EXPAND_SZ",
+            "/d",
+            r"%SystemRoot%\system32;C:\Other Tools",
+            "/f",
+        ])
+        .output()
+        .unwrap()
+        .status
+        .success();
+    assert!(ok);
+    key
+}
+
+#[cfg(windows)]
+fn check_installed(tmp: &Path, prefix: &Path) {
+    let q = reg_path(tmp);
+    assert!(q.contains("REG_EXPAND_SZ"), "type kept: {q}");
+    assert!(
+        q.contains(r"%SystemRoot%\system32"),
+        "entries stay unexpanded: {q}"
+    );
+    assert!(q.contains(r"C:\Other Tools"), "{q}");
+    let p = prefix.display().to_string();
+    assert_eq!(q.matches(&p).count(), 1, "added exactly once: {q}");
+}
+
+#[cfg(windows)]
+fn check_removed(tmp: &Path, prefix: &Path) {
+    let q = reg_path(tmp);
+    assert!(!q.contains(&prefix.display().to_string()), "{q}");
+    assert!(q.contains(r"%SystemRoot%\system32;C:\Other Tools"), "{q}");
+}
+
+#[cfg(unix)]
+fn redirect(c: &mut Command, tmp: &Path) {
+    c.env("HOME", tmp.join("user"))
+        .env("SHELL", "/bin/bash")
+        .env_remove("ZDOTDIR")
+        .env_remove("XDG_CONFIG_HOME");
+}
+
+#[cfg(unix)]
+const USER_RC: &str = "alias ll='ls -l'\n";
+
+#[cfg(unix)]
+fn seed(tmp: &Path) -> PathBuf {
+    let home = tmp.join("user");
+    std::fs::create_dir_all(&home).unwrap();
+    std::fs::write(home.join(".bashrc"), USER_RC).unwrap();
+    home
+}
+
+#[cfg(unix)]
+fn check_installed(tmp: &Path, prefix: &Path) {
+    let home = tmp.join("user");
+    for f in [".profile", ".bashrc"] {
+        let text = std::fs::read_to_string(home.join(f)).unwrap();
+        assert_eq!(
+            text.matches("# >>> wrongmemory >>>").count(),
+            1,
+            "{f}: {text}"
+        );
+    }
+    assert!(
+        std::fs::read_to_string(home.join(".bashrc"))
+            .unwrap()
+            .starts_with(USER_RC)
+    );
+    // A login shell finds the installed CLI, even with a space in the prefix,
+    // and sourcing the profile twice does not add the directory twice.
+    let out = Command::new("sh")
+        .arg("-c")
+        .arg(". \"$HOME/.profile\"; . \"$HOME/.profile\"; command -v wrongmemory; printf '%s\n' \"$PATH\"")
+        .env("HOME", &home)
+        .env("PATH", "/usr/bin:/bin")
+        .output()
+        .unwrap();
+    let text = String::from_utf8_lossy(&out.stdout).to_string();
+    let p = prefix.display().to_string();
+    assert!(text.starts_with(&format!("{p}/wrongmemory")), "{text}");
+    assert_eq!(text.matches(&format!("{p}:")).count(), 1, "{text}");
+}
+
+#[cfg(unix)]
+fn check_removed(tmp: &Path, _prefix: &Path) {
+    let home = tmp.join("user");
+    assert_eq!(
+        std::fs::read_to_string(home.join(".bashrc")).unwrap(),
+        USER_RC,
+        "only our block is removed"
+    );
+    let profile = std::fs::read_to_string(home.join(".profile")).unwrap();
+    assert!(!profile.contains("wrongmemory"), "{profile}");
 }

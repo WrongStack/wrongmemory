@@ -4,7 +4,9 @@
 //! Every system-touching path is overridable so tests never modify the real
 //! machine: `--prefix` for binaries, `--data-root` for data,
 //! `WRONGMEMORY_AUTOSTART_KEY_OVERRIDE` for the Windows Run key, and
-//! `WRONGMEMORY_AUTOSTART_DIR_OVERRIDE` for the Unix unit or agent directory.
+//! `WRONGMEMORY_AUTOSTART_DIR_OVERRIDE` for the Unix unit or agent directory,
+//! `WRONGMEMORY_ENV_KEY_OVERRIDE` for the Windows user environment key and
+//! `$HOME` for the Unix shell startup files (see `user_path`).
 
 use std::path::{Path, PathBuf};
 #[cfg(windows)]
@@ -77,6 +79,11 @@ pub struct InstallArgs {
     /// Stop a running daemon first (otherwise install refuses).
     #[arg(long)]
     pub stop_daemon: bool,
+    /// Leave the user PATH alone (also: WRONGMEMORY_NO_MODIFY_PATH=1). By
+    /// default the install directory is added to the user PATH (Windows) or
+    /// to ~/.profile and the shell's startup file (Linux, macOS).
+    #[arg(long)]
+    pub no_modify_path: bool,
 }
 
 #[derive(Debug, Args)]
@@ -746,12 +753,48 @@ pub async fn run_install(root: &DataRoot, json_mode: bool, a: InstallArgs) -> i3
         prefix.join("install.json"),
         serde_json::to_vec_pretty(&manifest).unwrap_or_default(),
     );
-    let v = json!({"prefix": prefix.display().to_string(), "installed": manifest["binaries"], "daemonStopped": stopped});
+    // PATH last: the binaries are in place even if the profile cannot be edited.
+    let path = if a.no_modify_path || crate::user_path::disabled_by_env() {
+        json!({"modified": false, "skipped": true})
+    } else {
+        match crate::user_path::add(&prefix) {
+            Ok(changed) => json!({"modified": !changed.is_empty(), "changed": changed}),
+            Err(e) => {
+                eprintln!(
+                    "wrongmemory install: could not add {} to PATH: {e}",
+                    prefix.display()
+                );
+                json!({"modified": false, "error": e})
+            }
+        }
+    };
+    let v = json!({
+        "prefix": prefix.display().to_string(),
+        "installed": manifest["binaries"],
+        "daemonStopped": stopped,
+        "path": path,
+    });
+    let path_note = if path["modified"] == true {
+        format!(
+            "\n  added {} to PATH ({}); open a new terminal to use `wrongmemory`",
+            prefix.display(),
+            path["changed"]
+                .as_array()
+                .map(|c| c
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .collect::<Vec<_>>()
+                    .join(", "))
+                .unwrap_or_default()
+        )
+    } else {
+        String::new()
+    };
     print(
         json_mode,
         &v,
         format!(
-            "installed {} to {}{}\n  start: \"{}\" daemon start",
+            "installed {} to {}{}\n  start: \"{}\" daemon start{path_note}",
             env!("CARGO_PKG_VERSION"),
             prefix.display(),
             if stopped {
@@ -847,6 +890,14 @@ pub async fn run_uninstall(root: &DataRoot, json_mode: bool, a: UninstallArgs) -
     let manifest = prefix.join("install.json");
     if manifest.exists() && std::fs::remove_file(&manifest).is_ok() {
         removed.push(manifest.display().to_string());
+    }
+    if !crate::user_path::disabled_by_env() {
+        match crate::user_path::remove(&prefix) {
+            Ok(changed) => {
+                removed.extend(changed.into_iter().map(|c| format!("PATH entry in {c}")))
+            }
+            Err(e) => eprintln!("wrongmemory uninstall: could not update PATH: {e}"),
+        }
     }
     let _ = std::fs::remove_dir(&prefix);
     if a.remove_data {

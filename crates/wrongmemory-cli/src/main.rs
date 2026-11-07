@@ -10,6 +10,7 @@ mod mcp;
 mod ops;
 mod spawn;
 mod ui;
+mod user_path;
 
 use std::path::PathBuf;
 use std::process::ExitCode;

@@ -385,6 +385,20 @@ Findings from the M run:
 | `wrongmemory daemon start`, `daemon status`, `doctor`, `search` on the WrongStack project | PASS: daemon 0.1.9; all projects compatible, WrongStack store read-write with 16,551 memories; search returns hits. Maintenance catch-up ran for 4 projects, each job succeeded. Only warning: `candidate-backlog` (1,166 pending review candidates). |
 | AGEZT write adoption, prepared | Its `server.json` dates from 2026-10-26 (WrongStack 1.2.1); its pid does not run and its pipe does not exist. Consistent backup `~/.wrongmemory/backups/AGEZT-before-write-20261107-012314.db` (integrity ok, 94 memories, compatible, SHA-256 `64a21554…`). `wrongmemory project add D:\Codebox\PROJECTS\AGEZT --write` was stopped by the agent's permission policy; the user runs it. |
 
+## Verification run (2026-11-07, WM-700 PATH on install)
+
+`wrongmemory install` now puts the install directory on the user's PATH, so installs through the scripts, through WrongStack (`wstack sage service install`) or by hand all give a `wrongmemory` command in a new terminal; `uninstall` removes it again. `--no-modify-path` or `WRONGMEMORY_NO_MODIFY_PATH=1` skips it. Windows: the user `Path` under `HKCU\Environment`, read and written raw so `%VAR%` entries stay unexpanded and the value stays `REG_EXPAND_SZ`, then `WM_SETTINGCHANGE` (`crates/wrongmemory-cli/src/user_path.rs`; three `windows-sys` features added, same pinned version, `Cargo.lock` unchanged). Unix: a marked block in `~/.profile` and the shell's startup file (`~/.bashrc`, plus `~/.bash_profile` when it exists; `$ZDOTDIR/.zshrc`; a fish `conf.d` file); the block prepends the directory only when it is missing. `install.sh` writes the same block itself (the published 0.1.9 CLI does not), instead of printing the line to add.
+
+| Command | Result |
+|---|---|
+| CI run 42319682913 on `fa0916f` (dashboard) | PASS on windows, ubuntu-latest, macos-latest |
+| `install_puts_the_prefix_on_path_and_uninstall_takes_it_off`, Windows (scratch key `HKCU\Software\WrongMemoryPathTest\…` seeded with `%SystemRoot%\system32;C:\Other Tools`) | PASS: added once, type and `%VAR%` kept, removed by uninstall with the other entries intact; no key left behind; the real user Path untouched |
+| The same test and the `user_path` unit tests on Linux (WSL Ubuntu, Rust 1.93.0, temp `$HOME`, `SHELL=/bin/bash`) | PASS 6/6 and 2/2: `sh` sourcing `~/.profile` twice finds the CLI under a prefix with a space and adds it once; uninstall leaves the user's `.bashrc` lines exactly as they were; the real WSL profiles untouched |
+| `install.sh` with dash against the published v0.1.9, throwaway `HOME` (bash, then fish) | PASS: blocks in `.profile` and `.bashrc` (fish: `conf.d/wrongmemory.fish`); login `sh` and interactive `bash` find `wrongmemory`; a second run adds nothing; the new CLI's `uninstall` recognises and removes the script's blocks and fish file. ShellCheck NOT RUN locally (not installed); the `install scripts` workflow runs it |
+| Existing install tests set `WRONGMEMORY_NO_MODIFY_PATH=1` | so no test edits this machine's PATH |
+| `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, `cargo test --workspace --locked`, `cargo test -p wrongmemory-cli --test ops` ×5 | PASS; 194 passed; 6/6 on each run |
+| Live install with the release CLI from this tree and the attested v0.1.9 daemon, `install --stop-daemon` | PASS: `C:\Users\ersin\AppData\Local\WrongMemory\bin` added to the user Path once (`REG_EXPAND_SZ` kept); a fresh PATH resolves `wrongmemory`; daemon 0.1.9 running with 18 projects; soak not affected |
+
 ## Verification run (2026-11-07, WM-800 management dashboard)
 
 | Command | Result |

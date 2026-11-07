@@ -10,14 +10,18 @@
 #   WRONGMEMORY_DOWNLOAD_BASE   mirror serving the release assets (overrides the version URL)
 #   WRONGMEMORY_STOP_DAEMON=1   stop a running WrongMemory daemon so its binaries can be replaced
 #   WRONGMEMORY_AUTOSTART=1     start the daemon at sign-in (systemd user unit or LaunchAgent)
+#   WRONGMEMORY_NO_MODIFY_PATH=1  leave shell startup files untouched
 #   WRONGMEMORY_VERIFY_ATTESTATION=1
 #                               also verify GitHub build provenance (needs a signed-in `gh`)
 #
 # Downloads `wrongmemory` and `wrongmemoryd` for this platform, verifies both
 # against the release's SHA256SUMS, then runs `wrongmemory install`, which
 # copies them into the install directory, writes install.json and keeps the
-# previous binaries as *.old. Nothing else on the system is changed: the
-# script does not edit shell profiles or start the daemon.
+# previous binaries as *.old. It then puts the install directory on PATH: a
+# marked block in ~/.profile and in the current shell's startup file
+# (~/.bashrc, ~/.zshrc, or a fish conf.d file), the same block
+# `wrongmemory install` writes and `wrongmemory uninstall` removes. It does
+# not start the daemon.
 set -eu
 
 REPO="WrongStack/wrongmemory"
@@ -161,28 +165,81 @@ if [ "${WRONGMEMORY_AUTOSTART:-}" = 1 ]; then
   printf 'The daemon starts at sign-in (wrongmemory autostart status).\n'
 fi
 
-case ":$PATH:" in
-  *":$prefix:"*) ;;
-  *)
-    shell_name=$(basename "${SHELL:-sh}")
-    case "$shell_name" in
-      zsh) rc_file="$HOME/.zshrc" ;;
-      bash) rc_file="$HOME/.bashrc" ;;
-      fish) rc_file="$HOME/.config/fish/config.fish" ;;
-      *) rc_file="$HOME/.profile" ;;
-    esac
-    printf '\n%s is not on your PATH. Add it with:\n' "$prefix"
-    if [ "$shell_name" = fish ]; then
-      printf '  fish_add_path %s\n' "$prefix"
-    else
-      # shellcheck disable=SC2016 # $PATH is printed literally, for the user's profile.
-      printf '  echo '\''export PATH="%s:$PATH"'\'' >> %s\n' "$prefix" "$rc_file"
-    fi
-    ;;
-esac
+# Keep these blocks byte-identical to crates/wrongmemory-cli/src/user_path.rs,
+# so `wrongmemory install` and `uninstall` recognise them.
+sh_block() {
+  q=$(printf '%s' "$1" | sed "s/'/'\\\\''/g")
+  printf '%s\n' '# >>> wrongmemory >>>'
+  # shellcheck disable=SC2016 # written literally into the startup file
+  printf '%s\n' '# Added by the WrongMemory installer; `wrongmemory uninstall` removes this block.'
+  printf "wm_bin='%s'\n" "$q"
+  # shellcheck disable=SC2016 # written literally into the startup file
+  printf '%s\n' 'case ":$PATH:" in *":$wm_bin:"*) ;; *) PATH="$wm_bin:$PATH"; export PATH ;; esac'
+  printf '%s\n' 'unset wm_bin'
+  printf '%s\n' '# <<< wrongmemory <<<'
+}
+
+fish_file() {
+  q=$(printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e "s/'/\\\\'/g")
+  # shellcheck disable=SC2016 # written literally into the fish file
+  printf '%s\n' '# Added by the WrongMemory installer; `wrongmemory uninstall` removes this file.'
+  printf "if not contains -- '%s' \$PATH\n" "$q"
+  printf "    set -gx PATH '%s' \$PATH\n" "$q"
+  printf '%s\n' 'end'
+}
+
+changed=""
+add_block() {
+  file=$1
+  if [ -f "$file" ] && grep -qF '# >>> wrongmemory >>>' "$file"; then
+    return 0
+  fi
+  if [ -s "$file" ]; then
+    [ -n "$(tail -c 1 "$file")" ] && printf '\n' >>"$file"
+    [ -n "$(tail -n 1 "$file")" ] && printf '\n' >>"$file"
+  fi
+  sh_block "$prefix" >>"$file" || fail "could not write $file"
+  changed="$changed $file"
+}
+
+if [ "${WRONGMEMORY_NO_MODIFY_PATH:-}" = 1 ]; then
+  case ":$PATH:" in
+    *":$prefix:"*) ;;
+    *) printf '\n%s is not on your PATH (WRONGMEMORY_NO_MODIFY_PATH=1); add it yourself.\n' "$prefix" ;;
+  esac
+else
+  add_block "$HOME/.profile"
+  case "$(basename "${SHELL:-sh}")" in
+    bash)
+      add_block "$HOME/.bashrc"
+      # Login bash reads only the first of these that exists.
+      [ -f "$HOME/.bash_profile" ] && add_block "$HOME/.bash_profile"
+      ;;
+    zsh) add_block "${ZDOTDIR:-$HOME}/.zshrc" ;;
+    fish)
+      config=${XDG_CONFIG_HOME:-$HOME/.config}
+      case "$config" in /*) ;; *) config="$HOME/.config" ;; esac
+      fish_conf="$config/fish/conf.d/wrongmemory.fish"
+      mkdir -p "$(dirname "$fish_conf")"
+      fish_file "$prefix" >"$fish_conf" || fail "could not write $fish_conf"
+      changed="$changed $fish_conf"
+      ;;
+  esac
+  if [ -n "$changed" ]; then
+    printf '\nAdded %s to PATH in:%s\n' "$prefix" "$changed"
+  fi
+  case ":$PATH:" in
+    *":$prefix:"*) ;;
+    *)
+      printf 'Open a new terminal, or use it in this one now with:\n'
+      # shellcheck disable=SC2016 # $PATH is printed literally for the user to paste.
+      printf '  export PATH="%s:$PATH"\n' "$prefix"
+      ;;
+  esac
+fi
 
 printf '\nNext:\n'
 printf '  wrongmemory doctor                         # check the install and the daemon\n'
-printf '  wrongmemory ui                             # read-only dashboard in the browser\n'
+printf '  wrongmemory ui                             # dashboard in the browser\n'
 printf '  wstack sage service use wrongmemory        # use it as WrongStack'\''s SAGE memory\n'
 printf 'Update by running this installer again; remove with: wrongmemory uninstall\n'
