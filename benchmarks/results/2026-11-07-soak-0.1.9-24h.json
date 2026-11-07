@@ -1,0 +1,206 @@
+{
+ "schema": "wrongmemory/soak-summary@1",
+ "daemonVersion": "0.1.9",
+ "startedLocal": "2026-11-06 17:30:35",
+ "plannedSecs": 86400,
+ "projects": 40,
+ "clients": 4,
+ "targetRate": 100.0,
+ "machine": {
+  "os": "windows",
+  "logicalCpus": 32
+ },
+ "healthyUntilLocal": "2026-11-07 17:30:08",
+ "healthyElapsedSecs": 86373,
+ "sampleGapsOver3Min": [
+  {
+   "from": "2026-11-07 02:05:49",
+   "to": "2026-11-07 02:08:59",
+   "secs": 190
+  },
+  {
+   "from": "2026-11-07 02:50:08",
+   "to": "2026-11-07 02:56:12",
+   "secs": 364
+  },
+  {
+   "from": "2026-11-07 02:56:12",
+   "to": "2026-11-07 03:02:18",
+   "secs": 366
+  },
+  {
+   "from": "2026-11-07 03:02:18",
+   "to": "2026-11-07 03:08:23",
+   "secs": 365
+  },
+  {
+   "from": "2026-11-07 03:08:23",
+   "to": "2026-11-07 03:14:27",
+   "secs": 364
+  },
+  {
+   "from": "2026-11-07 03:14:27",
+   "to": "2026-11-07 03:20:32",
+   "secs": 365
+  },
+  {
+   "from": "2026-11-07 03:31:26",
+   "to": "2026-11-07 09:32:25",
+   "secs": 21659
+  }
+ ],
+ "loadSecs": 62700,
+ "ops": 8637373,
+ "errors": 0,
+ "opsPerLoadSecond": 137.8,
+ "rssMb": {
+  "afterSeed": 32.8,
+  "max": 315.9,
+  "atEnd": 140.2
+ },
+ "handles": {
+  "afterSeed": 294,
+  "min": 294,
+  "max": 305
+ },
+ "threadsMax": 13,
+ "openStoresMax": 32,
+ "walMbMax": 4.5,
+ "dataMbAtEnd": 3013.9,
+ "samples": 990,
+ "measurementMisses": [
+  {
+   "local": "2026-11-06 19:25:23",
+   "missing": [
+    "rssBytes"
+   ]
+  },
+  {
+   "local": "2026-11-07 01:32:49",
+   "missing": [
+    "rssBytes"
+   ]
+  },
+  {
+   "local": "2026-11-07 02:50:08",
+   "missing": [
+    "rssBytes"
+   ]
+  },
+  {
+   "local": "2026-11-07 02:56:12",
+   "missing": [
+    "rssBytes"
+   ]
+  },
+  {
+   "local": "2026-11-07 03:02:18",
+   "missing": [
+    "rssBytes"
+   ]
+  },
+  {
+   "local": "2026-11-07 03:08:23",
+   "missing": [
+    "rssBytes"
+   ]
+  },
+  {
+   "local": "2026-11-07 03:14:27",
+   "missing": [
+    "rssBytes"
+   ]
+  }
+ ],
+ "rssMbMean": {
+  "hour2": 93.4,
+  "lastHour": 143.1
+ },
+ "handlesMean": {
+  "hour2": 301.0,
+  "lastHour": 304.1
+ },
+ "benchReport": {
+  "schema": "wrongmemory/soak@4",
+  "daemonVersion": "0.1.9",
+  "startedUnixSecs": 1793979035,
+  "seconds": 86400.1118348,
+  "projects": 40,
+  "clients": 4,
+  "targetRate": 100.0,
+  "ops": 8639998,
+  "opsPerSecond": 99.99984741362343,
+  "errors": 0,
+  "firstErrors": [],
+  "latencyMs": {
+   "forPath": {
+    "n": 1726907,
+    "p50": 0.7303000000000001,
+    "p95": 25.8612,
+    "p99": 114.67779999999999,
+    "max": 21527153.551
+   },
+   "listPage": {
+    "n": 431177,
+    "p50": 51.057199999999995,
+    "p95": 119.93570000000001,
+    "p99": 574.3588,
+    "max": 5036.231199999999
+   },
+   "propose": {
+    "n": 864228,
+    "p50": 2.1562,
+    "p95": 46.5056,
+    "p99": 344.1667,
+    "max": 14563.2104
+   },
+   "remember": {
+    "n": 863852,
+    "p50": 23.9965,
+    "p95": 99.0376,
+    "p99": 514.5924,
+    "max": 14549.8471
+   },
+   "search": {
+    "n": 4753834,
+    "p50": 6.822,
+    "p95": 32.7074,
+    "p99": 182.9939,
+    "max": 21527133.0987
+   }
+  },
+  "rssBytes": {
+   "afterSeed": 34443264,
+   "end": 147136512
+  },
+  "handles": {
+   "afterSeed": 294,
+   "end": 301
+  },
+  "threads": {
+   "afterSeed": 7,
+   "end": 12
+  },
+  "openStoresAtEnd": 32,
+  "walBytesAtEnd": 4149448,
+  "dataBytesAtEnd": 3161076521,
+  "idle": {
+   "seconds": 300.3775807,
+   "cpuSecs": 0.203125,
+   "cpuPercentOfOneCore": 0.06762322258759706,
+   "rssBytesAtEnd": 144293888,
+   "openStoresAtEnd": 32
+  },
+  "maintenance": {
+   "jobsByState": {
+    "succeeded": 160
+   },
+   "projectsWithASucceededPass": 40
+  },
+  "machine": {
+   "os": "windows",
+   "logicalCpus": 32
+  }
+ },
+ "note": "Fifth 24-hour run, published v0.1.9 binaries. Host asleep 2026-11-07 03:32:58-09:31:41 (user sleep from the Start menu); after waking the bench (pre-0.1.11 pacing) made up the missed schedule at 200-275 ops/s, so the run reached 8.64 M operations in 17.4 h of load. Latency max values of about 21,527 s are calls that spanned the sleep."
+}
