@@ -384,6 +384,7 @@ Findings from the M run:
 | `wstack sage service install --stop-daemon` (WrongStack 1.4.0), at the user's request | PASS: installed `WrongStack/wrongmemory@v0.1.9`; both executables match the published `SHA256SUMS` (`c3ea6479…`, `99b60d7b…`); 0.1.6 kept as `*.exe.old`. The soak (`wm-soakd`, own data root) was not affected. |
 | `wrongmemory daemon start`, `daemon status`, `doctor`, `search` on the WrongStack project | PASS: daemon 0.1.9; all projects compatible, WrongStack store read-write with 16,551 memories; search returns hits. Maintenance catch-up ran for 4 projects, each job succeeded. Only warning: `candidate-backlog` (1,166 pending review candidates). |
 | AGEZT write adoption, prepared | Its `server.json` dates from 2026-10-26 (WrongStack 1.2.1); its pid does not run and its pipe does not exist. Consistent backup `~/.wrongmemory/backups/AGEZT-before-write-20261107-012314.db` (integrity ok, 94 memories, compatible, SHA-256 `64a21554…`). `wrongmemory project add D:\Codebox\PROJECTS\AGEZT --write` was stopped by the agent's permission policy; the user runs it. |
+| AGEZT write adoption, run by the user on daemon 0.1.10 | PASS: `admission: read-write — service owner` (the stale-`server.json` upgrade of 0.1.3); 94 memories, compatible; search works; on first open the daemon wrote `wrongmemory-adopted.json` (`p_2c1170c11873400b`, data root `~/.wrongmemory`) and holds `wrongmemory-owner.lock`. The stale `server.json` was left in place. |
 
 ## Verification run (2026-11-07, WM-700 PATH on install)
 
