@@ -350,6 +350,45 @@ fn legacy_server_may_run(store: &Path) -> bool {
     }
 }
 
+/// A consistent copy of an existing store, taken before WrongMemory becomes
+/// its writer: `<data root>/backups/<name>-before-write-<UTC time>.db`.
+/// Every write adoption goes through here, whichever client asked for it
+/// (a host registering on first use takes no backup of its own).
+fn backup_before_write(
+    data_root: &DataRoot,
+    display: &str,
+    store: &Path,
+) -> Result<PathBuf, ErrorBody> {
+    let dir = data_root.backups_dir();
+    std::fs::create_dir_all(&dir).map_err(|e| {
+        ErrorBody::new(
+            ErrorCode::StoreUnavailable,
+            format!("cannot create {}: {e}", dir.display()),
+        )
+    })?;
+    let name: String = display
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let stamp: String = now_iso()
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .collect();
+    let target = dir.join(format!("{name}-before-write-{stamp}.db"));
+    wrongmemory_storage::backup::backup_store(store, &target)?;
+    crate::info!("adoption_backup", {
+        "store": store.display().to_string(),
+        "backup": target.display().to_string(),
+    });
+    Ok(target)
+}
+
 fn open_handle(
     registry: &Mutex<Registry>,
     instance_id: &str,
@@ -495,6 +534,7 @@ pub fn register(
                     && (p.force_owner || !legacy_server_may_run(&store))
                     && inspect(&store).verdict.writable()
                 {
+                    let backup = backup_before_write(data_root, &existing.display_name, &store)?;
                     reg.set_admission(
                         &existing.project_id,
                         Admission::ReadWrite,
@@ -512,6 +552,7 @@ pub fn register(
                         RegisterProjectResult {
                             project,
                             created: false,
+                            write_backup: Some(backup.display().to_string()),
                         },
                         true,
                     ));
@@ -520,6 +561,7 @@ pub fn register(
                     RegisterProjectResult {
                         project: existing,
                         created: false,
+                        write_backup: None,
                     },
                     false,
                 ));
@@ -558,6 +600,15 @@ pub fn register(
             } else {
                 (Admission::ReadWrite, "service owner".to_string())
             };
+            let write_backup = if admission == Admission::ReadWrite {
+                Some(
+                    backup_before_write(data_root, &display, &store)?
+                        .display()
+                        .to_string(),
+                )
+            } else {
+                None
+            };
             let info = reg
                 .insert_project(&NewProject {
                     display_name: &display,
@@ -574,6 +625,7 @@ pub fn register(
                 RegisterProjectResult {
                     project: info,
                     created: true,
+                    write_backup,
                 },
                 false,
             ))
@@ -594,6 +646,7 @@ pub fn register(
                             RegisterProjectResult {
                                 project: existing,
                                 created: false,
+                                write_backup: None,
                             },
                             false,
                         ));
@@ -609,6 +662,7 @@ pub fn register(
                         RegisterProjectResult {
                             project: existing,
                             created: false,
+                            write_backup: None,
                         },
                         false,
                     ));
@@ -657,6 +711,7 @@ pub fn register(
                 RegisterProjectResult {
                     project: info,
                     created: true,
+                    write_backup: None,
                 },
                 false,
             ))

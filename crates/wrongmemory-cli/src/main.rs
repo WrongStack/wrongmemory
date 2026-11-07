@@ -417,8 +417,12 @@ async fn run(cli: Cli, root: DataRoot) -> i32 {
                 let v = call!(c, method::PROJECT_REGISTER, None, params);
                 print(j, &v, |v| {
                     let p = &v["project"];
+                    let backup = v["writeBackup"]
+                        .as_str()
+                        .map(|b| format!("\n  backup before write: {b}"))
+                        .unwrap_or_default();
                     format!(
-                        "{} {} {}\n  store: {} ({})\n  admission: {} — {}",
+                        "{} {} {}\n  store: {} ({})\n  admission: {} — {}{backup}",
                         if v["created"].as_bool() == Some(true) {
                             "registered"
                         } else {

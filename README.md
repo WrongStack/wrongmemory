@@ -110,7 +110,7 @@ $wm = "$env:LOCALAPPDATA\WrongMemory\bin\wrongmemory.exe"   # or .\target\releas
 & $wm connect print --project <project-id> --grant <grant-id> --format toml   # or json
 ```
 
-- **Adopting a store.** `project add <root>` adopts an existing WrongStack store, read-only by default. Write ownership needs `--write`. The store stays read-only while a legacy SAGE daemon may be running. Back up a live store before adopting it for writes.
+- **Adopting a store.** `project add <root>` adopts an existing WrongStack store, read-only by default. Write ownership needs `--write`. The store stays read-only while a legacy SAGE daemon may be running. From 0.1.11 the daemon backs the store up to `~/.wrongmemory/backups/` before it takes write ownership.
 - **Client config.** `connect print` only prints an entry. `connect <client>` edits the client's config only when you ask it to, and only its own marked entry. The grant secret stays under `~/.wrongmemory/grants/` and never appears in any config.
 
 ## Benchmark

@@ -158,6 +158,17 @@ async fn maintenance_jobs(c: &mut Client, projects: &[String]) -> Value {
     json!({"jobsByState": by_state, "projectsWithASucceededPass": with_run})
 }
 
+/// The time of a client's next call: one interval after the previous slot.
+/// Slots already in the past (a slow call, or a host that slept) are dropped,
+/// not made up for with a burst, so a client never runs faster than its rate.
+fn next_due(
+    prev: tokio::time::Instant,
+    every: Duration,
+    now: tokio::time::Instant,
+) -> tokio::time::Instant {
+    (prev + every).max(now)
+}
+
 async fn worker(
     root: DataRoot,
     projects: Vec<String>,
@@ -171,14 +182,11 @@ async fn worker(
     let mut lat: Lat = BTreeMap::new();
     let mut errors = Vec::new();
     let mut n = 0usize;
-    let paced_from = tokio::time::Instant::now();
+    let mut due = tokio::time::Instant::now();
     while Instant::now() < deadline {
         if let Some(every) = every {
-            // Fixed schedule: a slow call is not made up for by a burst.
-            let due = paced_from + every.mul_f64(n as f64);
-            if due > tokio::time::Instant::now() {
-                tokio::time::sleep_until(due).await;
-            }
+            due = next_due(due, every, tokio::time::Instant::now());
+            tokio::time::sleep_until(due).await;
         }
         let p = &projects[(rng.next() as usize) % projects.len()];
         let roll = rng.next() % 100;
@@ -432,4 +440,23 @@ pub async fn run(exe: &Path, o: &Options, out: Option<&Path>) -> anyhow::Result<
         bail!("soak saw {error_count} failed requests");
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_late_client_is_not_paced_into_a_burst() {
+        let every = Duration::from_millis(40);
+        let t0 = tokio::time::Instant::now();
+        // On schedule: the next slot is one interval later.
+        assert_eq!(next_due(t0, every, t0), t0 + every);
+        // Six hours behind (a host sleep): the next call goes now, and the
+        // one after it a full interval later, not straight away.
+        let woke = t0 + Duration::from_secs(6 * 3600);
+        let next = next_due(t0, every, woke);
+        assert_eq!(next, woke);
+        assert_eq!(next_due(next, every, next), woke + every);
+    }
 }

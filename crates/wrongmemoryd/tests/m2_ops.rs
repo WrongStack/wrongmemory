@@ -923,6 +923,15 @@ async fn adopted_store_carries_a_durable_marker_until_detach() {
     .await;
     let pid = rw["project"]["projectId"].as_str().unwrap().to_string();
     assert_eq!(rw["project"]["admission"], "read-write");
+    // A consistent copy was taken before the daemon became the writer; the
+    // read-only adoption above took none.
+    let backup = PathBuf::from(rw["writeBackup"].as_str().expect("writeBackup"));
+    assert!(ro.get("writeBackup").is_none());
+    assert_eq!(backup.parent().unwrap(), dr(&home).backups_dir());
+    assert_eq!(
+        wrongmemory_storage::inspect::inspect(&backup).verdict,
+        wrongmemory_storage::inspect::Verdict::Compatible
+    );
     call(
         &mut c,
         method::MEMORY_SEARCH,
@@ -1089,6 +1098,7 @@ async fn stale_legacy_metadata_does_not_hold_an_adopted_store_read_only() {
     let held = call(&mut c, method::PROJECT_REGISTER, None, adopt(live)).await;
     let pid = held["project"]["projectId"].as_str().unwrap().to_string();
     assert_eq!(held["project"]["admission"], "read-only");
+    assert!(held.get("writeBackup").is_none());
     call(
         &mut c,
         method::MEMORY_SEARCH,
@@ -1112,7 +1122,22 @@ async fn stale_legacy_metadata_does_not_hold_an_adopted_store_read_only() {
     assert_eq!(upgraded["created"], false);
     assert_eq!(upgraded["project"]["projectId"], pid.as_str());
     assert_eq!(upgraded["project"]["admission"], "read-write");
+    // The upgrade copies the store before the first write, without the
+    // row written after it.
+    let backup = PathBuf::from(upgraded["writeBackup"].as_str().expect("writeBackup"));
     remember(&mut c, &pid, "written after the upgrade", json!({})).await;
+    let copied: i64 = rusqlite::Connection::open(&backup)
+        .unwrap()
+        .query_row(
+            "SELECT count(*) FROM memories WHERE data LIKE '%written after the upgrade%'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(copied, 0);
+    // Registering again changes nothing and copies nothing.
+    let again = call(&mut c, method::PROJECT_REGISTER, None, adopt(live)).await;
+    assert!(again.get("writeBackup").is_none());
     assert!(memories.join("wrongmemory-adopted.json").exists());
 
     // 3. A new adoption next to stale metadata is read-write at once.

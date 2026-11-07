@@ -44,7 +44,7 @@ wstack sage service status
 - WrongStack finds the binaries in this order: `Sage.service.daemonPath`, then `WRONGMEMORYD_PATH`, then the install directory, then next to the WrongStack executable, then `PATH`. The install directory is `%LOCALAPPDATA%\WrongMemory\bin` on Windows. On Linux and macOS, with #434, it is `$XDG_DATA_HOME/wrongmemory/bin`, else `~/.local/share/wrongmemory/bin`; WrongStack 1.4.0 needs `daemonPath`, `WRONGMEMORYD_PATH` or `PATH` there.
 - `Sage.service.mode` is a profile setting, so it applies to every project of that profile.
   - Run `use wrongmemory` in a project to back up and hand over its existing store.
-  - Other projects are registered the first time they are used.
+  - Other projects are registered the first time they are used. From 0.1.11 the daemon copies an existing store to `<data root>/backups/<name>-before-write-<UTC time>.db` before it becomes its writer, whoever asked for write ownership (`writeBackup` in the `project.register` result; `project add --write` prints it). A failed copy refuses the registration.
   - A linked Git worktree uses its main checkout's project and store, as local SAGE does.
   - Memory is shared across worktrees; file evidence is not. A host session in a linked worktree binds its connection to that worktree (`project.bindCheckout`, from WrongMemory 0.1.4 and a WrongStack build that sends it). The daemon accepts only the project's own root or a worktree whose Git link checks out from both sides, and only from the host, never from a grant.
   - Once bound, absolute paths inside the worktree resolve to the shared project paths. `memory_verify` then checks the worktree's own files and labels each result `checkout: {kind: "linkedWorktree", root}`. Those results are reported, never written back: only the main checkout's verification (and scheduled hygiene) changes a memory's status or `lastVerifiedAt`. A file renamed on a branch therefore does not mark the shared memory stale.
@@ -136,6 +136,7 @@ Access rules:
 
 - `wrongmemory backup <project-id> --output <file>` takes a consistent online snapshot through the SQLite backup API from a read-only connection. It includes committed WAL content, runs `integrity_check`, and reports a SHA-256. It works while the daemon is running and never overwrites `<file>`.
 - `wrongmemory backup --store <sage.db> --output <file>` does the same offline, without the daemon.
+- Write adoption takes such a backup by itself (see above). Those copies are not pruned.
 - Backups are plain SQLite and **not encrypted**. Store them like the source.
 - Restoring is a deliberate manual step:
   1. `wrongmemory daemon stop`.

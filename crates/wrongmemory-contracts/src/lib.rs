@@ -593,6 +593,10 @@ pub struct RegisterProjectResult {
     pub project: ProjectInfo,
     /// False when the same root/store was already registered (idempotent).
     pub created: bool,
+    /// The consistent copy taken of an existing store before this request
+    /// made WrongMemory its writer; absent when nothing was copied.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub write_backup: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -218,6 +218,8 @@ export interface ProjectInfo {
 export interface RegisterProjectResult {
   project: ProjectInfo;
   created: boolean;
+  /** Consistent copy of an existing store taken before WrongMemory became its writer. */
+  writeBackup?: string;
 }
 
 export interface GrantCreateParams {
