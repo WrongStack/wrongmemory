@@ -76,7 +76,7 @@ bin\wrongmemory.exe install        # copies both binaries to %LOCALAPPDATA%\Wron
 # Linux, macOS: unpack wrongmemory-<version>-<platform>.tar.gz
 bin/wrongmemory install            # copies both binaries to ~/.local/share/wrongmemory/bin
 
-# Builds after 0.1.9 also put that directory on PATH (--no-modify-path to skip).
+# 0.1.10 and later also put that directory on PATH (--no-modify-path to skip).
 
 wrongmemory autostart enable       # optional: start the daemon at sign-in
 wrongmemory doctor

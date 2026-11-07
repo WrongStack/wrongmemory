@@ -398,6 +398,8 @@ Findings from the M run:
 | Existing install tests set `WRONGMEMORY_NO_MODIFY_PATH=1` | so no test edits this machine's PATH |
 | `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, `cargo test --workspace --locked`, `cargo test -p wrongmemory-cli --test ops` ×5 | PASS; 194 passed; 6/6 on each run |
 | Live install with the release CLI from this tree and the attested v0.1.9 daemon, `install --stop-daemon` | PASS: `C:\Users\ersin\AppData\Local\WrongMemory\bin` added to the user Path once (`REG_EXPAND_SZ` kept); a fresh PATH resolves `wrongmemory`; daemon 0.1.9 running with 18 projects; soak not affected |
+| CI on `7f6c937`: `ci` run 42324500830 and `install scripts` run 42324500839 | PASS on windows, ubuntu-latest and macos-latest. The installer workflow ran ShellCheck on the new `install.sh` and checked that a new login shell finds `wrongmemory` (Ubuntu, macOS) |
+| Version 0.1.10 (`Cargo.toml`; `Cargo.lock` changes only the seven workspace crates) | Release of the dashboard (WM-800) and PATH on install (WM-700); tag workflow below |
 
 ## Verification run (2026-11-07, WM-800 management dashboard)
 
