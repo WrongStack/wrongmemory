@@ -1,9 +1,10 @@
-//! WM-800 (partial): `wrongmemory ui` serves a read-only dashboard on
+//! WM-800 (partial): `wrongmemory ui` serves a management dashboard on
 //! loopback. This drives the real command over raw HTTP and checks its
 //! access rules: no access without the run's key, the one-time key traded
 //! for a separate `HttpOnly`/`SameSite=Strict` session cookie, foreign `Host` headers refused (DNS
-//! rebinding), GET only, read-only method allowlist, and no secret in any
-//! response.
+//! rebinding), reads over GET from a read allowlist, changes only over
+//! `POST /api` with the run's CSRF token and the page's own `Origin`, a
+//! short change allowlist, and no secret in any response.
 
 #![cfg(any(windows, unix))]
 
@@ -58,6 +59,16 @@ fn http(
     target: &str,
     headers: &[(&str, &str)],
 ) -> (String, String, String) {
+    http_body(port, method, target, headers, "")
+}
+
+fn http_body(
+    port: u16,
+    method: &str,
+    target: &str,
+    headers: &[(&str, &str)],
+    body: &str,
+) -> (String, String, String) {
     let mut s = TcpStream::connect(("127.0.0.1", port)).unwrap();
     s.set_read_timeout(Some(Duration::from_secs(20))).unwrap();
     let mut req = format!("{method} {target} HTTP/1.1\r\n");
@@ -67,7 +78,11 @@ fn http(
     for (k, v) in headers {
         req.push_str(&format!("{k}: {v}\r\n"));
     }
+    if !body.is_empty() {
+        req.push_str(&format!("Content-Length: {}\r\n", body.len()));
+    }
     req.push_str("\r\n");
+    req.push_str(body);
     s.write_all(req.as_bytes()).unwrap();
     let mut raw = String::new();
     s.read_to_string(&mut raw).unwrap();
@@ -76,8 +91,196 @@ fn http(
     (status.to_string(), headers.to_string(), body.to_string())
 }
 
+/// Starts `wrongmemory ui` and trades its key for the session cookie.
+/// Returns (ui process, port, cookie header value).
+fn open_dashboard(home: &Path) -> (Ui, u16, String) {
+    let mut child = wm(home)
+        .args(["ui", "--no-open"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    let stdout = child.stdout.take().unwrap();
+    let ui = Ui(child);
+    let mut line = String::new();
+    BufReader::new(stdout).read_line(&mut line).unwrap();
+    let url = line.split_whitespace().last().unwrap().to_string();
+    let rest = url.strip_prefix("http://127.0.0.1:").expect("loopback URL");
+    let (port, key) = rest.split_once("/?key=").unwrap();
+    let port: u16 = port.parse().unwrap();
+    let (_, headers, _) = http(port, "GET", &format!("/?key={key}"), &[]);
+    let session = headers
+        .split_once("wm_ui=")
+        .unwrap()
+        .1
+        .split(';')
+        .next()
+        .unwrap()
+        .to_string();
+    (ui, port, format!("wm_ui={session}"))
+}
+
 #[test]
-fn dashboard_is_loopback_keyed_and_read_only() {
+fn dashboard_changes_need_the_token_and_the_pages_origin() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let _stop = StopDaemon(&home);
+    let proj = tmp.path().join("proj");
+    std::fs::create_dir_all(&proj).unwrap();
+    let project = run_json(
+        &home,
+        &["project", "add", proj.to_str().unwrap(), "--managed"],
+    )["project"]["projectId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    run_json(&home, &["remember", &project, "Edit me from the dashboard"]);
+    let (_ui, port, cookie) = open_dashboard(&home);
+    let origin = format!("http://127.0.0.1:{port}");
+    let get = |q: &str| -> Value {
+        serde_json::from_str(&http(port, "GET", q, &[("Cookie", cookie.as_str())]).2).unwrap()
+    };
+
+    // The token is served only with the session cookie.
+    assert!(http(port, "GET", "/session", &[]).0.contains(" 401 "));
+    let csrf = get("/session")["csrf"].as_str().unwrap().to_string();
+    assert_eq!(csrf.len(), 64);
+
+    let post =
+        |headers: &[(&str, &str)], body: &str| http_body(port, "POST", "/api", headers, body);
+    let memory =
+        get(&format!("/api?m=memory.listPage&p={project}"))["result"]["memories"][0].clone();
+    let id = memory["id"].as_str().unwrap().to_string();
+    let edit = format!(
+        r#"{{"m":"memory.update","p":"{project}","a":{{"id":"{id}","expectedRevision":1,"text":"Edited from the dashboard"}}}}"#
+    );
+    let json = ("Content-Type", "application/json");
+    // Without the token, with a wrong one, from another origin, without an
+    // origin, without the cookie, or as a form: refused, nothing written.
+    for headers in [
+        vec![
+            ("Cookie", cookie.as_str()),
+            ("Origin", origin.as_str()),
+            json,
+        ],
+        vec![
+            ("Cookie", cookie.as_str()),
+            ("Origin", origin.as_str()),
+            json,
+            ("X-WrongMemory-CSRF", "00"),
+        ],
+        vec![
+            ("Cookie", cookie.as_str()),
+            ("Origin", "http://evil.example"),
+            json,
+            ("X-WrongMemory-CSRF", csrf.as_str()),
+        ],
+        vec![
+            ("Cookie", cookie.as_str()),
+            json,
+            ("X-WrongMemory-CSRF", csrf.as_str()),
+        ],
+        vec![
+            ("Cookie", cookie.as_str()),
+            ("Origin", origin.as_str()),
+            ("Content-Type", "application/x-www-form-urlencoded"),
+            ("X-WrongMemory-CSRF", csrf.as_str()),
+        ],
+    ] {
+        let (status, _, body) = post(&headers, &edit);
+        assert!(status.contains(" 403 "), "{headers:?}: {status} {body}");
+    }
+    let (status, _, _) = post(
+        &[
+            ("Origin", origin.as_str()),
+            json,
+            ("X-WrongMemory-CSRF", csrf.as_str()),
+        ],
+        &edit,
+    );
+    assert!(status.contains(" 401 "), "{status}");
+    assert_eq!(
+        get(&format!(
+            "/api?m=memory.get&p={project}&a=%7B%22id%22%3A%22{id}%22%7D"
+        ))["result"]["text"],
+        "Edit me from the dashboard"
+    );
+
+    let ok: [(&str, &str); 4] = [
+        ("Cookie", cookie.as_str()),
+        ("Origin", origin.as_str()),
+        json,
+        ("X-WrongMemory-CSRF", csrf.as_str()),
+    ];
+    let call = |body: String| -> Value { serde_json::from_str(&post(&ok, &body).2).unwrap() };
+
+    // Methods outside the change list are refused before the daemon.
+    for m in [
+        "grant.create",
+        "daemon.shutdown",
+        "project.export",
+        "memory.remember",
+    ] {
+        let r = call(format!(
+            r#"{{"m":"{m}","p":"{project}","a":{{"text":"x"}}}}"#
+        ));
+        assert_eq!(r["error"]["code"], "FORBIDDEN", "{m}");
+    }
+    // An edit must name the revision it was made from.
+    let r = call(format!(
+        r#"{{"m":"memory.update","p":"{project}","a":{{"id":"{id}","text":"no revision"}}}}"#
+    ));
+    assert_eq!(r["error"]["code"], "INVALID_REQUEST");
+
+    // With all of it: the edit lands; a stale revision is refused.
+    let r = call(edit.clone());
+    assert_eq!(r["ok"], true, "{r}");
+    assert_eq!(
+        get(&format!(
+            "/api?m=memory.get&p={project}&a=%7B%22id%22%3A%22{id}%22%7D"
+        ))["result"]["text"],
+        "Edited from the dashboard"
+    );
+    let r = call(edit);
+    assert_eq!(r["error"]["code"], "REVISION_CONFLICT", "{r}");
+
+    // Delete and recover.
+    let r = call(format!(
+        r#"{{"m":"memory.delete","p":"{project}","a":{{"id":"{id}","force":true,"reason":"test"}}}}"#
+    ));
+    assert_eq!(r["ok"], true, "{r}");
+    let page = get(&format!("/api?m=memory.listPage&p={project}"));
+    assert_eq!(page["result"]["total"], 0);
+    let r = call(format!(
+        r#"{{"m":"memory.recover","p":"{project}","a":{{"id":"{id}"}}}}"#
+    ));
+    assert_eq!(r["ok"], true, "{r}");
+
+    // A maintenance run is queued with the project's own options.
+    let r = call(format!(
+        r#"{{"m":"maintenance.run","p":"{project}","a":{{"options":{{"purgeDeletedAfterDays":0}}}}}}"#
+    ));
+    assert_eq!(r["ok"], true, "{r}");
+
+    // Removing the project detaches it; the store file stays.
+    let store = run_json(&home, &["project", "list"])["projects"][0]["storePath"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let r = call(format!(r#"{{"m":"project.detach","p":"{project}"}}"#));
+    assert_eq!(r["result"]["detached"], true, "{r}");
+    assert_eq!(
+        get("/api?m=project.list")["result"]["projects"]
+            .as_array()
+            .unwrap()
+            .len(),
+        0
+    );
+    assert!(Path::new(&store).exists(), "detach keeps the store file");
+}
+
+#[test]
+fn dashboard_is_loopback_keyed_and_reads_over_get() {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
     let _stop = StopDaemon(&home);
@@ -187,7 +390,7 @@ fn dashboard_is_loopback_keyed_and_read_only() {
     assert!(body.contains("WrongMemory"));
     assert!(http(port, "GET", "/app.js", &auth).0.contains(" 200 "));
 
-    // Read methods work; anything else is refused before reaching the daemon.
+    // Read methods work over GET; changes are not reachable that way.
     let api = |q: &str| -> Value { serde_json::from_str(&http(port, "GET", q, &auth).2).unwrap() };
     let list = api("/api?m=project.list");
     assert_eq!(list["ok"], true);

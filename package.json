@@ -13,6 +13,7 @@
     "check": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets --locked -- -D warnings && cargo test --workspace --locked",
     "test:client": "cd packages/client-ts && bun run check:parity && bun test",
     "typecheck": "cd packages/client-ts && bun run typecheck",
+    "dashboard:build": "cd packages/dashboard && bun run typecheck && bun run build",
     "oracle:mutations": "bun scripts/oracle/build-mutation-fixtures.ts",
     "certification:surface": "bun scripts/certification/build-sage-surface.ts",
     "inventory:mcp-tools": "bun scripts/inventory/mcp-tools.ts",

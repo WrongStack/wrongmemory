@@ -1,0 +1,131 @@
+@import 'tailwindcss';
+@import '@xyflow/react/dist/style.css';
+
+/* Colour tokens: dark by default, light when the system asks for it. */
+:root {
+  --bg: #0d0f14;
+  --panel: #151821;
+  --panel-2: #1b1f2a;
+  --raised: #222736;
+  --line: #2a3040;
+  --line-strong: #3a4256;
+  --fg: #e6e8ef;
+  --fg-muted: #9aa3b5;
+  --fg-faint: #6b7489;
+  --accent: #7c8cff;
+  --accent-soft: rgb(124 140 255 / 0.14);
+  --on-accent: #0d0f14;
+  --ok: #3fbf86;
+  --ok-soft: rgb(63 191 134 / 0.14);
+  --warn: #e0a740;
+  --warn-soft: rgb(224 167 64 / 0.14);
+  --bad: #ef5f6b;
+  --bad-soft: rgb(239 95 107 / 0.14);
+  --info: #4fb3e8;
+  --info-soft: rgb(79 179 232 / 0.14);
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f5f6f9;
+    --panel: #ffffff;
+    --panel-2: #f8f9fc;
+    --raised: #eef0f5;
+    --line: #e1e4ec;
+    --line-strong: #c9cedb;
+    --fg: #1b1f2a;
+    --fg-muted: #586178;
+    --fg-faint: #8a92a6;
+    --accent: #4b5ce6;
+    --accent-soft: rgb(75 92 230 / 0.1);
+    --on-accent: #ffffff;
+    --ok: #1f9d68;
+    --ok-soft: rgb(31 157 104 / 0.1);
+    --warn: #b7791f;
+    --warn-soft: rgb(183 121 31 / 0.12);
+    --bad: #d6404d;
+    --bad-soft: rgb(214 64 77 / 0.1);
+    --info: #1f84c2;
+    --info-soft: rgb(31 132 194 / 0.1);
+    color-scheme: light;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--fg-muted);
+  --color-faint: var(--fg-faint);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* React Flow, themed with the same tokens. */
+.react-flow {
+  --xy-background-color: transparent;
+  --xy-edge-stroke: var(--line-strong);
+  --xy-edge-label-background-color: var(--panel);
+  --xy-edge-label-color: var(--fg-muted);
+  --xy-controls-button-background-color: var(--panel);
+  --xy-controls-button-background-color-hover: var(--raised);
+  --xy-controls-button-color: var(--fg);
+  --xy-controls-button-border-color: var(--line);
+  --xy-minimap-background-color: var(--panel);
+  --xy-minimap-mask-background-color: rgb(0 0 0 / 0.35);
+  --xy-handle-background-color: var(--line-strong);
+  --xy-handle-border-color: var(--panel);
+}
+
+.react-flow__edge-textbg {
+  rx: 4;
+}
+
+.react-flow__edge-text {
+  font-size: 10px;
+  font-family: var(--font-mono);
+}

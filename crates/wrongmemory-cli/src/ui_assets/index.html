@@ -1,38 +1,18 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>WrongMemory</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Cpath d=%27M8 1l7 7-7 7-7-7z%27 fill=%27%233b5bdb%27/%3E%3C/svg%3E">
-<link rel="stylesheet" href="/app.css">
-<script src="/app.js" defer></script>
-</head>
-<body>
-<header class="top">
-  <div class="brand"><span class="logo" aria-hidden="true">◆</span> WrongMemory <span class="tag">read-only</span></div>
-  <div id="daemon" class="daemon">connecting…</div>
-</header>
-<div class="layout">
-  <nav class="side">
-    <div class="side-title">Projects <span id="project-count" class="count"></span></div>
-    <ul id="projects" class="projects"></ul>
-    <div class="side-title">Service</div>
-    <ul class="projects">
-      <li><button type="button" class="nav-item" data-view="grants">Client grants</button></li>
-      <li><button type="button" class="nav-item" data-view="daemon">Daemon</button></li>
-    </ul>
-  </nav>
-  <main id="main" class="main">
-    <p class="muted">Loading…</p>
-  </main>
-</div>
-<aside id="drawer" class="drawer" hidden>
-  <div class="drawer-head">
-    <strong id="drawer-title">Memory</strong>
-    <button type="button" id="drawer-close" class="ghost" aria-label="Close">✕</button>
-  </div>
-  <div id="drawer-body" class="drawer-body"></div>
-</aside>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>WrongMemory</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Cpath d=%27M8 1l7 7-7 7-7-7z%27 fill=%27%237c8cff%27/%3E%3C/svg%3E"
+    />
+    <script type="module" crossorigin src="/app.js"></script>
+    <link rel="stylesheet" crossorigin href="/app.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>

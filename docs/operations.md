@@ -113,12 +113,24 @@ Run `wrongmemory migrate inspect <store>` before adopting. It is read-only and p
 
 ## Dashboard
 
-`wrongmemory ui` opens a read-only dashboard in the browser. It shows the daemon status, the projects with memory counts, each project's memories (search, status and kind filters, full record), candidates, live activity, audit trail, health check, maintenance schedule and semantic provider, and the client grants.
+`wrongmemory ui` opens a management dashboard in the browser:
 
-- It only reads. The page can call read methods only; the health check never applies repairs.
+- **Projects:** every registered project with memory and review counts. Remove one or several (for example all empty ones). Removing is `project.detach`: the store file stays where it is, an adopted store goes back to local SAGE, and a WrongStack host in `wrongmemory` mode registers the project again the next time it is used there. Removing a project that holds memories asks you to type `remove`.
+- **Memories:** search and filter, then open a memory to read it with its kind, status, importance, anchors, tags, lineage (replaces, replaced by, contradicts), related memories, sources and feedback. Edit text, kind, status, importance, confidence, persistence and tags; an edit names the revision it was made from, so a concurrent change by an agent is refused (`REVISION_CONFLICT`) instead of overwritten. Delete (a recoverable tombstone, recorded in the audit trail; a permanent memory needs a second confirmation) and recover.
+- **Relations:** a graph (React Flow) centred on a memory, a file or directory path, or a topic: memories, the files, directories and symbols they are anchored to, and the replaces / contradicts / same-topic links between them.
+- **Review:** accept or reject proposals one by one or in batches.
+- **Activity:** live changes and the stored audit trail.
+- **Health & maintenance:** the doctor report with a Fix button for each repairable check, the maintenance schedule, recent jobs, and "Run maintenance now".
+- **Client grants** and **Daemon** status (read only).
+
+Access rules:
+
+- Reads go over `GET /api`. Changes go over `POST /api`, only for the list above, and each must carry the run's CSRF token (handed only to a request with the session cookie) and come from the page's own origin. Grant creation and revocation, export, registration, semantic configuration and daemon shutdown are not reachable from the page.
 - It is local to this user: it listens on `127.0.0.1` only and opens with a fresh one-time link printed on start. The first visit trades it for a session cookie (`HttpOnly`, `SameSite=Strict`) and the link stops working; to open the dashboard in another browser, restart `wrongmemory ui`. Requests naming another host are refused, and grant secrets and the host token never reach the page.
+- A read-only project (for example one held by legacy SAGE metadata) shows no edit buttons.
 - `--port <n>` picks the port (default: a free one); `--no-open` prints the link without opening a browser. Ctrl+C stops it; the daemon keeps running.
 - Session-private memories are not listed: the dashboard has no session.
+- The page is built from `packages/dashboard` (React, React Flow, Tailwind) with `bun run --cwd packages/dashboard build`, which writes `crates/wrongmemory-cli/src/ui_assets/`. The built files are committed, so building the Rust workspace needs no Bun; rebuild them after changing the page.
 
 ## Backup and restore
 

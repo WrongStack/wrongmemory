@@ -1,0 +1,27 @@
+{
+  "name": "@wrongmemory/dashboard",
+  "version": "0.1.0",
+  "description": "Browser dashboard served by `wrongmemory ui`; built into crates/wrongmemory-cli/src/ui_assets",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@xyflow/react": "12.12.1",
+    "lucide-react": "1.69.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.2.1",
+    "tailwindcss": "4.3.4",
+    "typescript": "7.0.2",
+    "vite": "8.3.6"
+  }
+}
