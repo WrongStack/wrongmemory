@@ -8,7 +8,7 @@ const repo = resolve(import.meta.dir, '../..');
 const native = join(repo, 'apps/desktop');
 const sha = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
 function run(args: string[], cwd = repo, capture = false): string {
-  const result = Bun.spawnSync(args, { cwd, stdout: capture ? 'pipe' : 'inherit', stderr: 'inherit' });
+  const result = Bun.spawnSync(args, { cwd, stdout: capture ? 'pipe' : 'inherit', stderr: 'inherit', ...(args[0] === 'powershell' ? {timeout:120000} : {}) });
   if (result.exitCode !== 0) throw new Error(args[0] + ' failed (' + result.exitCode + ')');
   return capture ? result.stdout.toString() : '';
 }

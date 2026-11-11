@@ -2,7 +2,9 @@
 
 Last updated: 2026-11-11.
 
-## v0.2.0 release preparation (WM-704 / WM-800-RELEASE)
+## v0.2.1 release preparation (WM-704 / WM-800-RELEASE)
+
+The unpublished v0.2.0 candidate's exact-commit CI exposed a packaging-test harness timeout: cold Windows PowerShell compression exceeded Bun's default 5 seconds, which killed the native child. The same run passed the native unit/daemon tests and five repeated daemon runs, and all three headless platforms passed. The package integration test now has an explicit 90-second budget with 120-second native process bounds; assertions are unchanged. v0.2.0 remains an immutable, unpublished candidate tag; its release workflow was cancelled. v0.2.1 carries the test-harness correction.
 
 The release adds the optional Windows GPUI desktop and a per-user desktop installer. `install-desktop.ps1` selects the full checksum-verified bundle; existing headless `install.ps1` / `install.sh` behavior remains available. `install --desktop` admits the matching bundle schema/version and every manifest hash before stopping a service. It installs the GUI beside the CLI/daemon and keeps license/source material under `desktop-resources`. Update keeps previous executables; uninstall removes owned program/resource files and preserves knowledge by default. No GUI is launched by installation.
 

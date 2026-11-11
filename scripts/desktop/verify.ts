@@ -5,7 +5,7 @@ import {isAbsolute, join, relative, resolve} from 'node:path';
 
 const digest = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
 function run(args: string[]): string {
-  const result = Bun.spawnSync(args, {stdout:'pipe', stderr:'pipe'});
+  const result = Bun.spawnSync(args, {stdout:'pipe', stderr:'pipe', timeout:120000});
   if (result.exitCode !== 0) throw new Error(args[0] + ' failed: ' + result.stderr.toString());
   return result.stdout.toString();
 }

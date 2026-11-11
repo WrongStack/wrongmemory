@@ -39,4 +39,4 @@ test.skipIf(process.platform !== 'win32')('package keeps bundled clients and nev
   expect(createHash('sha256').update(readFileSync(result.archive)).digest('hex')).toBe(digest);
   writeFileSync(result.bare, 'modified binary');
   expect(() => verifyPackage(input.output)).toThrow('Checksum mismatch');
-});
+}, 90000); // Three cold Windows native processes are part of this integration test.

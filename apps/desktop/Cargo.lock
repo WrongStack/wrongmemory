@@ -8029,7 +8029,7 @@ checksum = "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc"
 
 [[package]]
 name = "wrongmemory-contracts"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -8037,7 +8037,7 @@ dependencies = [
 
 [[package]]
 name = "wrongmemory-desktop"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -8052,7 +8052,7 @@ dependencies = [
 
 [[package]]
 name = "wrongmemory-ipc"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "getrandom 0.3.4",
  "hex",
