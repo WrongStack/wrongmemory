@@ -1,6 +1,76 @@
 # Implementation status
 
-Last updated: 2026-11-06.
+Last updated: 2026-11-11.
+
+## v0.2.0 release preparation (WM-704 / WM-800-RELEASE)
+
+The release adds the optional Windows GPUI desktop and a per-user desktop installer. `install-desktop.ps1` selects the full checksum-verified bundle; existing headless `install.ps1` / `install.sh` behavior remains available. `install --desktop` admits the matching bundle schema/version and every manifest hash before stopping a service. It installs the GUI beside the CLI/daemon and keeps license/source material under `desktop-resources`. Update keeps previous executables; uninstall removes owned program/resource files and preserves knowledge by default. No GUI is launched by installation.
+
+Local acceptance: core format/Clippy PASS and **201 tests passed, 2 opt-in probes ignored**; desktop format/Clippy and **14 tests PASS**; package regression **2 tests / 12 assertions PASS**; TS client **10 tests**, contract parity and typecheck PASS. A separate certification target was used because an earlier disposable demo still runs the default debug daemon; that open demo was not stopped or overwritten. Core daemon/CLI and desktop integration repetition logs are `target/release-integration-*.txt` and `target/release-native-integration-*.txt`.
+
+`scripts/desktop/install-smoke.ts` PASS against a private local mirror: rejects a corrupt download before changing the prefix, installs all three binaries without initializing a store, updates a live disposable daemon, retains knowledge and the old GUI, verifies installed GUI bytes, and uninstalls program/autostart files while retaining managed knowledge. All data roots, registry overrides and prefixes belong to disposable fixtures. The live user service, stores and external client configurations are unchanged.
+
+Dependency materials: missing workspace license texts are collected from recorded crate VCS commits with source URLs/hashes in `apps/desktop/third-party-licenses/SOURCES.json`. Three upstream crates omit a license file; their declarations, standard license text and exact checksum-verified crate sources are bundled explicitly. MPL-2.0 corresponding source is included. Packaging now fails on missing license material or a supplemental hash mismatch. This does not imply a broader legal certification.
+
+Publication/hosted-CI/downloaded-release acceptance will be recorded after the exact release commit and tag are built. Native accessibility/IME/high-DPI/frame performance and installer GUI rendering remain NOT RUN; this is a preview release, not native 1.0 certification. Earlier local v0.1.12 preview hashes below remain historical evidence and are not v0.2.0 artifact identities.
+
+## Native desktop preview (2026-11-11, WM-800-GPUI / SHELL / REVIEW / OPS / RELEASE)
+
+An optional native Windows workbench is implemented in [apps/desktop](../apps/desktop/README.md). Its independent workspace pins Rust **1.99.1**, GPUI Kit **0.9.1** and its own lockfile. The core remains on Rust **1.93.0**, with unchanged core manifest/lock/toolchain. [WM-ADR-014](plan/adr-014-native-desktop-workspace.md) records this decision: the earlier exact Kit preflight failed on Rust 1.93 (`gpui-pre` 0.3.12 `cold_path`, E0658) and passed on 1.99.1. The [product program](plan/native-desktop-gpui.md) separates implemented scope from future acceptance.
+
+Implemented: resizable three-panel workbench; virtualized server-paged library; text/status search; full-text evidence inspector; revision-checked edit, protected draft/current-server comparison and explicit rebase; candidate decisions; recover/delete confirmation; bounded GPU relations canvas with zoom/pan; public grants and secret-free generic MCP configuration; health/jobs; explicit existing-CLI-backed daemon start. A bounded worker owns authenticated IPC; the desktop has no SQLite dependency or arbitrary method/shell interface. Dropping the desktop client leaves the daemon and other clients running.
+
+Private presentation preferences preserve theme/project/view/status/zoom/panel sizes and unknown optional JSON fields. Invalid/newer/oversized settings are preserved and reported. Drafts, queries, memory text and credentials are not saved in this file. Drafts survive failed/conflicting saves and reconnect discovery, including detached-project discovery; they remain memory-only. A copy-draft action is available. Presentation saves are asynchronous and can lose the last change on immediate process exit. Navigation is blocked while a mutation is pending; uncertain outcomes are reported without automatic retries.
+
+Windows CI and release jobs now gate the independent workspace. The release job packages matching desktop/CLI/daemon versions, then extracts and hashes the package and runs real-daemon tests against the bundled binaries. These are configured workflows, **not hosted CI success**. No commit, push, tag, publication, installed update or external-client configuration change was performed.
+
+| Command / evidence | Result |
+|---|---|
+| Core `cargo fmt --all -- --check`; `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS, Rust 1.93.0 |
+| Core `cargo test --workspace --locked` | PASS **199**; 2 ignored opt-in store-copy probes; `target/desktop-final-core-test.txt` |
+| Core daemon/CLI integration suites, five consecutive runs from the preceding implementation stage | PASS x5; `target/desktop-core-integration-1.txt` through `-5.txt`; core lifecycle/IPC source unchanged since |
+| Desktop `cargo fmt --all -- --check`; `cargo clippy --workspace --all-targets --locked --target-dir ../../target/desktop-verify -- -D warnings` | PASS, Rust 1.99.1 |
+| Desktop `cargo test --workspace --locked --target-dir ../../target/desktop-verify` | PASS **14** (9 unit, 5 real-daemon integration); `target/desktop-next-test.txt` |
+| Desktop `cargo test --test daemon --locked --target-dir ../../target/desktop-verify`, five consecutive runs | PASS **5/5** each run; `target/desktop-native-integration-1.txt` through `-5.txt` |
+| Core CLI/daemon `cargo build --release --locked -p wrongmemory-cli -p wrongmemoryd`; native `cargo build --release --locked` | PASS, separate pinned toolchains; native executable 24,528,384 bytes |
+| `bun run desktop:package:test` | PASS **2** tests / 12 assertions: archive extraction, integrity and overwrite/tamper refusal |
+| `bun run desktop:package --skip-build --out target/desktop-package-2026-11-11-final` | PASS; unsigned Windows x64 preview ZIP **18,236,996 bytes**, three binaries, source identity, manifest, hashes, third-party inventory and available texts |
+| `bun scripts/desktop/verify.ts --out target/desktop-package-2026-11-11-final --runtime` | PASS **804** extracted file hashes/sizes, bare/extracted GUI identity, all three `--version` banners; `target/desktop-package-proof.json` |
+| Desktop integration suite with `WRONGMEMORY_TEST_CLI` pointing to the extracted release CLI | PASS **5/5**, actual bundled release daemon/IPC; `target/desktop-packaged-daemon-test.txt` |
+| CI/release YAML parsing, release dependency check; `git diff --check` | PASS locally; hosted execution NOT RUN |
+
+Package: `target/desktop-package-2026-11-11-final/wrongmemory-desktop-0.1.12-windows-x64.zip`. SHA-256: `76e79fa7bc2a63a7801b98e4cc2fe402f7683970143a4b5a54bbcc464613c141`. Bare GUI SHA-256: `82bc6ff2d05d817bf5e441d5fad5ea9518fe0ffab888c98c3d88c0160b1e6fb0`. The package records a dirty local source tree and is not a published v0.1.12 release artifact. Its inventory contains 479 active Windows dependency packages; 21 omit license texts in their upstream crate packages and are explicitly labeled, with source archive links. Full distribution-license review remains open.
+
+Runtime evidence: the earlier native build rendered real disposable-fixture library and relations views on Windows. The user stopped screen automation; the existing running window was left untouched. The current settings/conflict controls are covered by code/model/IPC tests, **not renewed visual/keyboard acceptance**. Accessibility, IME, 100/150/200% DPI, GPU fallback, sleep/resume, sustained UI performance, installer/update/uninstall and macOS/Linux native builds/launches: **NOT RUN**. No zero-defect, SAGE-parity, named MCP-client or native 1.0 certification claim. Batch review, immutable history, automatic text merge, saved text queries, kind/anchor filter controls, adoption UI and repair preview remain outside this slice.
+
+## Current review (2026-11-11, WM-604 / WM-605 / WM-705 / WM-706)
+
+**Release level: preview; native 1.0 remains uncertified.** The current investigation, integration contract, client matrix and ordered acceptance work are in [the readiness review](readiness-review-2026-11-11.md).
+
+- GitHub currently publishes WrongMemory **v0.1.12** (2026-11-07) and WrongStack **v1.5.6** (2026-11-10). Integration merge `784b0cd` is an ancestor of the WrongStack release tag. The older claim below that #434 is unreleased is superseded.
+- WM-604/F01: reproduced and fixed runtime log growth beyond the declared 5 MiB quota. Before: 11,171,116 bytes; after: byte-bound rotation with one backup, three regression tests, verifier PASS x3 and original proof `PROBLEM NOT REPRODUCED`. This is a local patch, not a published/installed fix.
+- Fresh checks: format and Clippy PASS; workspace Rust **199 passed, 2 ignored** (opt-in store-copy probes); TS client **10 passed**, contract parity **55 methods / 23 error codes**; client/dashboard typechecks and isolated-output dashboard build PASS. Real-daemon WrongStack adapter/worktree suites **25/25 PASS** against the current host source, with no WrongStack source edits.
+- Optimized small-corpus benchmark: five runs, 1,000 memories; search p95 **0.654 ms**, p99 **0.791 ms**, synthetic recall@5 **1.0**, session leaks **0**. See `benchmarks/results/2026-11-11-s.json`; this does not certify M/L or sustained load.
+- Mixed-load smoke: 40 projects / 4 clients / 130 seconds / target 100 operations per second: **12,959 operations, 0 errors**, search p95 **11.01 ms** / p99 **17.94 ms**; 24 maintenance jobs succeeded, 16 queued. Approximately 62 seconds post-load: 0.884% of one core, RSS 42.5 MiB, 32 open stores. See `benchmarks/results/2026-11-11-soak-smoke.json`; no 24-hour or resource-plateau claim. Final format/Clippy and `git diff --check` PASS.
+- Still required: continuous 24-hour active-load evidence (the November 7 run contains about six hours of sleep), downloaded current-release end-to-end demonstration, Cursor's required real-client run, current named-client refresh and enforced held-out quality thresholds. Extra clients have a documented generic MCP path, not runtime certification.
+- No live user database, installed daemon, external client settings or WrongStack source was changed. Pre-existing `.gitignore` and `.wrongstack/` work was preserved. Full session commands/results are in the readiness review's verification table.
+
+| Task / command (2026-11-11) | Result |
+|---|---|
+| WM-604: `cargo fmt --all -- --check` | PASS |
+| WM-604: `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS |
+| WM-604: `cargo test --workspace --locked` | PASS 199; 2 ignored opt-in copy probes |
+| WM-604/F01: `powershell -NoProfile -File .temp_files/verify_F01_runtime_log_rotation.ps1`; original `prove_F01_runtime_log_rotation.ps1` | PASS 3/3 tests x3; original problem not reproduced |
+| WM-102: `bun run test:client`; `bun run typecheck` | PASS 10 tests, parity 55/23; typecheck PASS |
+| WM-800: `bun run --cwd packages/dashboard typecheck`; `bun run --cwd packages/dashboard build --outDir D:/Codebox/PROJECTS/WrongMemory/target/review-dashboard-2026-11-11` | PASS; committed assets not overwritten |
+| WM-604: `cargo build --release --locked -p wrongmemoryd -p wrongmemory-bench`; benchmark commands in `benchmarks/results/2026-11-11-review-manifest.json` | PASS; S and mixed smoke only |
+| WM-400/402, from WrongStack: `bun run --cwd packages/sage test tests/wrongmemory-port.integration.test.ts tests/wrongmemory-worktree.integration.test.ts`, `WRONGMEMORYD_PATH` pointing to this checkout's debug daemon | PASS 25/25 |
+| WM-706: `gh api repos/WrongStack/wrongmemory/releases/latest`; corresponding WrongStack release query; `gh run list --repo WrongStack/wrongmemory` | v0.1.12 / v1.5.6; committed HEAD CI success |
+| WM-706: `git diff --check`; local Markdown link and source/binary manifest checks | PASS |
+
+## Historical summary (recorded through 2026-11-07; superseded by the current review)
+
+The release/CI/soak statements in this historical summary describe their recorded dates, not the current latest versions. The detailed task and verification history is retained below.
 
 **Release level reached: none certified.** The 1.0 evidence matrix is `docs/evidence/wm-706-evidence-matrix.md`.
 

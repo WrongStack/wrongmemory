@@ -5,6 +5,7 @@
 #[cfg(unix)]
 mod autostart_unix;
 mod connect;
+mod desktop_install;
 mod http;
 mod mcp;
 mod ops;

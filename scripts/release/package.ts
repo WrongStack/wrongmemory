@@ -42,6 +42,7 @@ const exeSuffix = windows ? '.exe' : '';
 const cargoToml = readFileSync(join(repo, 'Cargo.toml'), 'utf8');
 const version = /\[workspace\.package\][^[]*?version\s*=\s*"([^"]+)"/s.exec(cargoToml)?.[1];
 if (!version) throw new Error('workspace version not found');
+if (process.env.GITHUB_REF_TYPE === 'tag' && process.env.GITHUB_REF_NAME !== 'v' + version) throw new Error('Release tag does not match workspace version');
 
 if (!skipBuild) run(['cargo', 'build', '--release', '--locked', '-p', 'wrongmemoryd', '-p', 'wrongmemory-cli']);
 
@@ -57,6 +58,9 @@ for (const exe of ['wrongmemory', 'wrongmemoryd']) {
   if (!windows) chmodSync(join(stage, 'bin', exe), 0o755);
 }
 for (const f of ['LICENSE', 'README.md']) cpSync(join(repo, f), join(stage, f));
+if (windows) {
+  for (const script of ['install.ps1', 'install-desktop.ps1', 'install.sh']) cpSync(join(repo, script), join(dist, script));
+}
 mkdirSync(join(stage, 'docs'), { recursive: true });
 for (const f of ['operations.md', 'runbooks.md', 'status.md']) cpSync(join(repo, 'docs', f), join(stage, 'docs', f));
 cpSync(join(repo, 'contracts', 'profiles'), join(stage, 'contracts', 'profiles'), { recursive: true });

@@ -1,4 +1,3 @@
-* text=auto eol=lf
-*.db binary
-*.png binary
-*.ico binary
+# Preserve exact upstream license/source bytes and their recorded SHA-256 values.
+# Upstream whitespace is retained verbatim, including in legal notices.
+apps/desktop/third-party-licenses/** -text -whitespace

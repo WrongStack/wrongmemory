@@ -59,10 +59,69 @@ jobs:
             dist/*.tar.gz
             dist/wrongmemory-${{ matrix.platform }}*
             dist/wrongmemoryd-${{ matrix.platform }}*
+            dist/install.*
+            dist/install-desktop.ps1
+          if-no-files-found: error
+
+  desktop:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    env:
+      WRONGMEMORY_TEST_CLI: ${{ github.workspace }}/target/debug/wrongmemory.exe
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Install pinned toolchains
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal
+          rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
+      - name: Build disposable daemon fixtures
+        run: cargo +1.93.0 build --locked -p wrongmemory-cli -p wrongmemoryd
+      - name: Native format
+        working-directory: apps/desktop
+        run: cargo fmt --all -- --check
+      - name: Native Clippy
+        working-directory: apps/desktop
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Native tests
+        working-directory: apps/desktop
+        run: cargo test --workspace --locked
+      - name: Five consecutive native daemon runs
+        working-directory: apps/desktop
+        run: |
+          for ($round = 1; $round -le 5; $round++) {
+            cargo test --test daemon --locked
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Package regression tests
+        run: bun run desktop:package:test
+      - name: Package native Windows preview
+        run: bun run desktop:package
+      - name: Verify extracted binaries and packaged daemon IPC
+        working-directory: apps/desktop
+        run: |
+          $proof = bun ../../scripts/desktop/verify.ts --out ../../dist-desktop --runtime | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:WRONGMEMORY_TEST_CLI = Join-Path $proof.extracted 'bin/wrongmemory.exe'
+          cargo test --test daemon --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          bun ../../scripts/desktop/install-smoke.ts --out ../../dist-desktop --bundle $proof.extracted
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dist-desktop-windows-x64
+          path: |
+            dist-desktop/*.zip
+            dist-desktop/wrongmemory-desktop-windows-x64.exe
           if-no-files-found: error
 
   publish:
-    needs: build
+    needs: [build, desktop]
     runs-on: ubuntu-latest
     permissions:
       contents: write

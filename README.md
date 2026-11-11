@@ -51,6 +51,9 @@ A per-user local memory service that keeps WrongStack's SAGE knowledge (structur
 Releases ship Windows x64, Linux x64 and macOS arm64 builds: https://github.com/WrongStack/wrongmemory/releases/latest. The binaries are unsigned; each has a SHA-256 checksum and a GitHub build provenance attestation.
 
 ```powershell
+# Windows native desktop + CLI + daemon (PowerShell 5.1 or 7)
+irm https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install-desktop.ps1 | iex
+
 # Windows (PowerShell 5.1 or 7)
 irm https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install.ps1 | iex
 ```
@@ -67,6 +70,8 @@ The installers download `wrongmemory` and `wrongmemoryd` from the latest release
 
 Run the same command again to update; nothing is added twice. Other settings: `WRONGMEMORY_VERSION`, `WRONGMEMORY_INSTALL_DIR`, `WRONGMEMORY_AUTOSTART=1`, `WRONGMEMORY_VERIFY_ATTESTATION=1` (needs a signed-in `gh`), `WRONGMEMORY_NO_MODIFY_PATH=1` (leave `PATH` and startup files alone). `wrongmemory uninstall` removes the `PATH` entry again. Read [install.ps1](install.ps1) or [install.sh](install.sh) first if you prefer.
 
+The Windows desktop installer verifies the full ZIP, then `install --desktop` verifies its manifest and matching version before updating the three executables. Start it with `wrongmemory-desktop`; installation does not open a window. Updates retain previous executables as `.old`; close and reopen an existing desktop window to use the new version. `wrongmemory uninstall` removes the desktop and owned license/source materials too, preserving memory data by default. For an offline desktop install, extract the desktop ZIP and run `bin\wrongmemory.exe install --desktop`.
+
 Or by hand, after checking the archive against `SHA256SUMS` (or with `gh attestation verify <file> --repo WrongStack/wrongmemory`):
 
 ```text
@@ -82,7 +87,7 @@ wrongmemory autostart enable       # optional: start the daemon at sign-in
 wrongmemory doctor
 ```
 
-`wrongmemory install` changes nothing else on the system and does not edit `PATH`: add the directory to `PATH` or call the binaries by full path.
+From 0.1.10, `wrongmemory install` also adds the install directory to the per-user `PATH` setup. Use `--no-modify-path` to skip that step; a new terminal sees the updated path.
 
 ### Use it instead of SAGE in WrongStack
 
@@ -93,7 +98,7 @@ wstack sage service status
 wstack sage service use local --yes         # hand the store back to WrongStack's own SAGE
 ```
 
-WrongStack 1.4.0 installs the Windows build. Installing on Linux and macOS from inside WrongStack needs a WrongStack release with WrongStack/WrongStack#434. Until then, install from the archive as above; WrongStack finds the binaries there once that PR is in, and through `Sage.service.daemonPath`, `WRONGMEMORYD_PATH` or `PATH` before. Details, the lookup order and worktree behavior: [docs/operations.md](docs/operations.md#from-wrongstack).
+WrongStack 1.4.0 installs the Windows build only. The published WrongStack 1.5.6 includes #434's Linux/macOS installer and integration changes (verified 2026-11-11). Details, lookup order and worktree behavior: [docs/operations.md](docs/operations.md#from-wrongstack). Current certification gaps and the distinction between native integration and external MCP are in the [readiness review](docs/readiness-review-2026-11-11.md).
 
 ## Quick start
 
@@ -131,6 +136,8 @@ Results are in `benchmarks/results/`.
 
 ## Layout
 
+The optional [native GPUI desktop preview](apps/desktop/README.md) is a separate Rust 1.99.1 workspace; the daemon remains on Rust 1.93.0. `bun run desktop:run` runs it, and `bun run desktop:package` builds the Windows x64 preview bundle. It uses the same authenticated service and does not own a database. Platform, runtime and certification boundaries are recorded in [status](docs/status.md).
+
 | Path | Contents |
 |---|---|
 | `crates/wrongmemory-contracts` | Wire envelopes, typed errors, policy profiles, SAGE record DTOs |
@@ -141,6 +148,7 @@ Results are in `benchmarks/results/`.
 | `crates/wrongmemory-cli` | `wrongmemory` CLI, MCP stdio bridge, client connect planner, install/ops |
 | `crates/wrongmemory-bench` | Latency, resource and synthetic recall benchmark |
 | `packages/client-ts` | TypeScript client used by the WrongStack adapter |
+| `apps/desktop` | Optional native GPUI Kit workbench, independent toolchain and lockfile |
 | `scripts/` | Bun scripts: WrongStack baseline, SAGE oracle fixtures, inventories, release packaging |
 | `contracts/` | Generated storage profile, record shape and known-answer tests, inventories |
 | `tests/fixtures/` | Read and mutation oracle stores built by the real SAGE code |

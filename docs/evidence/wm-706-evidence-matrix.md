@@ -1,4 +1,25 @@
-# WM-706: native 1.0 evidence matrix (2026-11-04)
+# WM-706: native 1.0 evidence matrix (reviewed 2026-11-11)
+
+## Current gate reconciliation
+
+Native 1.0 remains **NOT CERTIFIED**. [The dated readiness review](../readiness-review-2026-11-11.md) is the current source for commands, source identity, client scope and remaining work. The detailed older matrix below is historical evidence, not a statement of current latest releases.
+
+| Gate | Current observation | Status |
+|---|---|---|
+| Published integration changes | GitHub: WrongMemory v0.1.12 and WrongStack v1.5.6; integration merge `784b0cd` is in the v1.5.6 tag | PASS for publication/ancestry; downloaded pair NOT RUN here |
+| Current-source WrongStack adapter/worktree integration | Real daemon, disposable fixtures: 25/25 tests | PASS; released-host demonstration still NOT RUN here |
+| Rust/TS build and fixture checks | Rust 199 passed / 2 opt-in probes ignored; TS 10 passed, contract parity 55 methods / 23 error codes; fmt/clippy/typechecks/dashboard build pass | PASS for this local source snapshot |
+| Bounded daemon logs | F01 reproduced startup-only rotation; local runtime-rotation patch and regression tests pass | PASS locally; patch not published |
+| Small-corpus performance | Five optimized runs; search p95 0.654 ms / p99 0.791 ms; synthetic session leaks 0 | PASS for S only |
+| Short mixed workload | 40 projects / 4 clients / 130 seconds: 12,959 operations, 0 errors; 24 maintenance jobs succeeded / 16 queued; search p95 11.01 ms | PASS for this smoke only; no long-term plateau claim |
+| Continuous 24-hour active workload | November 7 report has 17.4 active-load hours inside 24 wall-clock hours, with a sleep gap and catch-up burst | NOT RUN to the required continuous-load definition |
+| Required named-client coverage | Claude Code/Codex/Antigravity/Inspector have dated recorded runs; Cursor still has no installed-client proof | Cursor NOT RUN / certification UNSUPPORTED; existing clients not refreshed here |
+| Current downloaded-artifact full demonstration | Earlier WM-705 evidence is retained; the current WrongMemory/WrongStack pair was not freshly demonstrated from downloads | NOT RUN |
+| Retrieval-quality enforcement | Handwritten corpus has score floors; held-out test currently asserts leakage only | Acceptance gap; see R6 in the readiness review |
+
+Cursor is a required initial client in `docs/plan/validation-and-operations.md` section 4. Its missing run cannot be silently moved to optional scope. The separate optional HTTP listener process also needs its topology discrepancy documented or resolved; it is not hosted inside `wrongmemoryd` today.
+
+## Historical detailed matrix (2026-11-04 through 2026-11-07)
 
 This maps every gate of the plan's release evidence matrix (`docs/plan/validation-and-operations.md` §13) to its evidence. It uses the plan's labels: PASS, FAIL, NOT RUN, UNSUPPORTED. "Not claimed" marks an optional increment (L4) this release does not claim. Details and commands live in `docs/status.md` (by task id) and in `docs/evidence/wm-705-demo-2026-11-03.md`.
 

@@ -1,5 +1,7 @@
 # WrongMemory implementation program
 
+2026-11-11 follow-up: [Native desktop / GPUI product program](native-desktop-gpui.md) extends WM-800. The optional Windows preview is implemented in `apps/desktop`; [WM-ADR-014](adr-014-native-desktop-workspace.md) records its independent toolchain and required CI/package gates. See current status for evidence and remaining acceptance. The original planning snapshot below is historical; invariants remain binding.
+
 Status: proposed standalone project; no WrongMemory daemon or adapter is implemented by this plan.
 
 Planning date: 2026-11-01. Intended ownership: WrongMemory maintainers own the service; WrongStack maintainers own the SAGE integration contract. Individual implementation owners are unassigned.
@@ -133,6 +135,7 @@ Rust toolchain, inference runtime/model, and optional GUI frontend versions are 
 | WM-ADR-011 | Separate WrongIndex identity/event adapter; shared worktrees do not imply shared checkout evidence |
 | WM-ADR-012 | Maintenance uses durable schedules and per-project jobs with revision revalidation |
 | WM-ADR-013 | Full native migration is distinct from a supervised legacy preview |
+| [WM-ADR-014](adr-014-native-desktop-workspace.md) | Optional GPUI desktop uses an independent pinned workspace and Windows CI/package gates; core toolchain remains unchanged |
 
 ## 10. Program completion
 

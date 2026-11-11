@@ -7,6 +7,7 @@
 #   WRONGMEMORY_INSTALL_DIR     install directory (default: %LOCALAPPDATA%\WrongMemory\bin)
 #   WRONGMEMORY_DOWNLOAD_BASE   mirror serving the release assets (overrides the version URL)
 #   WRONGMEMORY_AUTOSTART=1     start the daemon at sign-in (a per-user Run value)
+#   WRONGMEMORY_DESKTOP=1       install the native Windows desktop bundle as well
 #   WRONGMEMORY_NO_MODIFY_PATH=1  leave the user PATH untouched
 #   WRONGMEMORY_VERIFY_ATTESTATION=1
 #                               also verify GitHub build provenance (needs a signed-in `gh`)
@@ -28,6 +29,40 @@ function Invoke-WrongMemoryNative([string]$File, [string[]]$Arguments) {
   $ErrorActionPreference = 'Continue'
   $Output = @(& $File @Arguments 2>&1 | ForEach-Object { "$_" })
   [pscustomobject]@{ Code = $LASTEXITCODE; Output = $Output }
+}
+
+function Get-WrongMemoryAsset([string]$Base, [string[]]$SumLines, [string]$Asset, [string]$Destination, [string]$Repo) {
+  $Expected = @()
+  foreach ($Line in $SumLines) {
+    $Parts = $Line.Trim() -split '\s+', 2
+    if ($Parts.Count -eq 2 -and $Parts[1].TrimStart('*') -eq $Asset) { $Expected += $Parts[0].ToLower() }
+  }
+  if ($Expected.Count -ne 1 -or $Expected[0] -notmatch '^[a-f0-9]{64}$') { throw "SHA256SUMS must contain exactly one valid entry for $Asset" }
+  Write-Host "Downloading $Asset..."
+  Invoke-WebRequest -Uri "$Base/$Asset" -OutFile $Destination -UseBasicParsing
+  $Stream = [IO.File]::OpenRead($Destination)
+  $Hasher = [Security.Cryptography.SHA256]::Create()
+  try { $Actual = [BitConverter]::ToString($Hasher.ComputeHash($Stream)).Replace('-', '').ToLowerInvariant() }
+  finally { $Hasher.Dispose(); $Stream.Dispose() }
+  if ($Actual -ne $Expected[0]) { throw "checksum mismatch for $Asset" }
+  if ($env:WRONGMEMORY_VERIFY_ATTESTATION -eq '1') {
+    if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "'gh' is required for WRONGMEMORY_VERIFY_ATTESTATION" }
+    $Verify = Invoke-WrongMemoryNative 'gh' @('attestation', 'verify', $Destination, '--repo', $Repo)
+    if ($Verify.Code -ne 0) { throw "build provenance attestation did not verify for $Asset" }
+  }
+}
+
+function Expand-WrongMemoryDesktop([string]$Archive, [string]$Destination) {
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  $Root = [IO.Path]::GetFullPath($Destination).TrimEnd('\') + '\'
+  $Zip = [IO.Compression.ZipFile]::OpenRead($Archive)
+  try {
+    foreach ($Entry in $Zip.Entries) {
+      $Resolved = [IO.Path]::GetFullPath((Join-Path $Destination $Entry.FullName))
+      if ($Entry.FullName.Contains(':') -or -not $Resolved.StartsWith($Root, [StringComparison]::OrdinalIgnoreCase)) { throw 'Archive path escapes the extraction directory' }
+    }
+  } finally { $Zip.Dispose() }
+  [IO.Compression.ZipFile]::ExtractToDirectory($Archive, $Destination)
 }
 
 function Install-WrongMemory {
@@ -67,43 +102,42 @@ function Install-WrongMemory {
     Invoke-WebRequest -Uri "$Base/SHA256SUMS" -OutFile $Sums -UseBasicParsing
     $SumLines = Get-Content $Sums
 
-    foreach ($Exe in 'wrongmemory', 'wrongmemoryd') {
+    $InstallSource = $Tmp
+    if ($env:WRONGMEMORY_DESKTOP -eq '1') {
+      $DesktopAssets = @($SumLines | ForEach-Object {
+        if ($_ -match '^[a-fA-F0-9]{64}\s+\*?(wrongmemory-desktop-[0-9]+\.[0-9]+\.[0-9]+-windows-x64\.zip)$') { $Matches[1] }
+      })
+      if ($DesktopAssets.Count -ne 1) { throw 'Release must contain exactly one supported Windows desktop bundle' }
+      $Archive = Join-Path $Tmp $DesktopAssets[0]
+      Get-WrongMemoryAsset $Base $SumLines $DesktopAssets[0] $Archive $Repo
+      $Bundle = Join-Path $Tmp 'bundle'
+      Expand-WrongMemoryDesktop $Archive $Bundle
+      $InstallSource = Join-Path $Bundle 'bin'
+    } else { foreach ($Exe in 'wrongmemory', 'wrongmemoryd') {
       $Asset = "$Exe-windows-x64.exe"
-      $Expected = @()
-      foreach ($Line in $SumLines) {
-        $Parts = $Line.Trim() -split '\s+', 2
-        if ($Parts.Count -eq 2 -and $Parts[1].TrimStart('*') -eq $Asset) {
-          $Expected += $Parts[0].ToLower()
-        }
-      }
-      if ($Expected.Count -ne 1) { throw "SHA256SUMS must contain exactly one entry for $Asset" }
-
-      Write-Host "Downloading $Asset..."
       $File = Join-Path $Tmp $Asset
-      Invoke-WebRequest -Uri "$Base/$Asset" -OutFile $File -UseBasicParsing
-      $Actual = (Get-FileHash -Algorithm SHA256 $File).Hash.ToLower()
-      if ($Expected[0] -ne $Actual) { throw "checksum mismatch for $Asset" }
-      if ($env:WRONGMEMORY_VERIFY_ATTESTATION -eq '1') {
-        if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "'gh' is required for WRONGMEMORY_VERIFY_ATTESTATION" }
-        $Verify = Invoke-WrongMemoryNative 'gh' @('attestation', 'verify', $File, '--repo', $Repo)
-        if ($Verify.Code -ne 0) { throw "build provenance attestation did not verify for $Asset" }
-      }
+      Get-WrongMemoryAsset $Base $SumLines $Asset $File $Repo
       # `wrongmemory install` copies wrongmemory.exe and wrongmemoryd.exe from its own directory.
       Move-Item -Force $File (Join-Path $Tmp "$Exe.exe")
-    }
+    } }
     Write-Host 'Checksums match SHA256SUMS.'
     if ($env:WRONGMEMORY_VERIFY_ATTESTATION -eq '1') { Write-Host 'Build provenance attestations verified.' }
 
     # --stop-daemon: releases before 0.1.12 refuse to replace a running daemon
     # without it; later ones always drain it and start it again themselves.
     $InstallArgs = @('--json', 'install', '--prefix', $Prefix, '--stop-daemon')
-    $Install = Invoke-WrongMemoryNative (Join-Path $Tmp 'wrongmemory.exe') $InstallArgs
+    if ($env:WRONGMEMORY_DESKTOP -eq '1') { $InstallArgs += '--desktop' }
+    $Install = Invoke-WrongMemoryNative (Join-Path $InstallSource 'wrongmemory.exe') $InstallArgs
     if ($Install.Code -ne 0) {
       $Install.Output | ForEach-Object { Write-Host $_ }
       throw "wrongmemory install exited $($Install.Code)"
     }
   } finally {
-    Remove-Item -Recurse -Force $Tmp -ErrorAction SilentlyContinue
+    $TempBase = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+    $ResolvedTmp = [IO.Path]::GetFullPath($Tmp)
+    if ($ResolvedTmp.StartsWith($TempBase, [StringComparison]::OrdinalIgnoreCase) -and (Split-Path $ResolvedTmp -Leaf) -match '^wrongmemory-install-[a-fA-F0-9-]+$') {
+      Remove-Item -LiteralPath $ResolvedTmp -Recurse -Force -ErrorAction SilentlyContinue
+    }
   }
 
   $Cli = Join-Path $Prefix 'wrongmemory.exe'
@@ -142,6 +176,7 @@ function Install-WrongMemory {
 
   Write-Host ''
   Write-Host 'Next:'
+  if ($env:WRONGMEMORY_DESKTOP -eq '1') { Write-Host '  wrongmemory-desktop                        # native desktop (no automatic launch)' }
   Write-Host '  wrongmemory doctor                         # check the install and the daemon'
   Write-Host '  wrongmemory ui                             # dashboard in the browser'
   Write-Host "  wstack sage service use wrongmemory        # use it as WrongStack's SAGE memory"

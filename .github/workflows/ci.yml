@@ -10,6 +10,45 @@ permissions:
   contents: read
 
 jobs:
+  desktop-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/desktop
+    env:
+      WRONGMEMORY_TEST_CLI: ${{ github.workspace }}/target/debug/wrongmemory.exe
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version-file: .bun-version
+      - name: Build core fixtures with the core toolchain
+        working-directory: .
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal
+          cargo +1.93.0 build --locked -p wrongmemory-cli -p wrongmemoryd
+      - name: Install the independent desktop toolchain
+        run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
+      - name: Desktop format
+        run: cargo fmt --all -- --check
+      - name: Desktop Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Desktop tests
+        run: cargo test --workspace --locked
+      - name: Five consecutive real-daemon desktop runs
+        run: |
+          for ($round = 1; $round -le 5; $round++) {
+            cargo test --test daemon --locked
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Package regression tests
+        working-directory: .
+        run: bun run desktop:package:test
+      - name: Build native executable
+        run: cargo build --locked
+
   unix:
     # Unix sockets, flock singleton, peer-uid checks, detached spawn and the
     # systemd/launchd autostart entries (WM-802). The daemon, CLI and

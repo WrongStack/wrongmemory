@@ -1,0 +1,19 @@
+{
+  "schema": "wrongmemory/review-evidence@1",
+  "date": "2026-11-11",
+  "baseCommit": "7ffce0bb7c243ecdf7354fe062b70f90a232fd05",
+  "localPatch": "WM-604/F01 runtime log rotation; not published or installed",
+  "sourceSha256": "2f8bfe6bab286d91fd8f4db0d4bd3da797915f99a8d80ebe6431d80987b06898",
+  "daemonSha256": "330f1adfa75cbabd1f58400196fa80c4dd222f432e70040e751b780cf07f76b8",
+  "benchSha256": "013620607ec543c13ecffe7b9be943a7bf80cbbc707c24676acb0ddcdd9a57f4",
+  "rustToolchain": "[toolchain]\n# Pinned to the toolchain validated during bootstrap (WI-101). Upgrading is a\n# deliberate change: re-run the full gate after bumping.\nchannel = \"1.93.0\"\ncomponents = [\"rustfmt\", \"clippy\"]\n",
+  "wrongstackSource": "a6211d479",
+  "wrongstackPublishedTag": "v1.5.6",
+  "wrongstackPublishedCommit": "284007538ccdd302ad2e9c0a0329383283bc473f",
+  "commands": [
+    "cargo build --release --locked -p wrongmemoryd -p wrongmemory-bench",
+    "target/release/wrongmemory-bench.exe --corpus s --runs 5 --calls 200 --out benchmarks/results/2026-11-11-s.json",
+    "target/release/wrongmemory-bench.exe --soak-secs 130 --soak-projects 40 --soak-clients 4 --soak-rate 100 --soak-idle-secs 60 --out benchmarks/results/2026-11-11-soak-smoke.json"
+  ],
+  "operatingConditions": "Windows x64; 32 logical CPUs; developer machine with other activity; disposable roots; not reference-machine or 24-hour certification"
+}

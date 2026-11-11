@@ -1,0 +1,45 @@
+[workspace]
+resolver = "3"
+
+[workspace.dependencies]
+gpui-kit = "=0.9.1"
+anyhow = "=1.0.104"
+clap = { version = "=4.6.7", features = ["derive"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = { version = "=1.0.154", features = ["preserve_order"] }
+tokio = { version = "=1.54.1", features = ["rt", "net", "sync", "time", "io-util"] }
+tempfile = "=3.27.0"
+wrongmemory-contracts = { path = "../../crates/wrongmemory-contracts" }
+wrongmemory-ipc = { path = "../../crates/wrongmemory-ipc" }
+
+[package]
+name = "wrongmemory-desktop"
+version = "0.2.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+license = "MIT"
+
+[dependencies]
+gpui-kit.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+wrongmemory-contracts.workspace = true
+wrongmemory-ipc.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+
+[profile.dev]
+debug = 1
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

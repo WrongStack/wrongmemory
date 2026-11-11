@@ -1,0 +1,111 @@
+{
+  "schema": "wrongmemory/soak@4",
+  "daemonVersion": "0.1.12",
+  "startedUnixSecs": 1794392603,
+  "seconds": 130.3132851,
+  "projects": 40,
+  "clients": 4,
+  "targetRate": 100.0,
+  "ops": 12959,
+  "opsPerSecond": 99.44496441829016,
+  "errors": 0,
+  "firstErrors": [],
+  "latencyMs": {
+    "forPath": {
+      "n": 2608,
+      "p50": 0.8325,
+      "p95": 10.340300000000001,
+      "p99": 17.5941,
+      "max": 328.30510000000004
+    },
+    "listPage": {
+      "n": 615,
+      "p50": 1.991,
+      "p95": 11.1287,
+      "p99": 16.7233,
+      "max": 22.669999999999998
+    },
+    "propose": {
+      "n": 1304,
+      "p50": 1.5208000000000002,
+      "p95": 12.2608,
+      "p99": 20.4317,
+      "max": 342.48
+    },
+    "remember": {
+      "n": 1270,
+      "p50": 3.2169,
+      "p95": 13.6131,
+      "p99": 22.203,
+      "max": 65.9429
+    },
+    "search": {
+      "n": 7162,
+      "p50": 1.2107,
+      "p95": 11.008000000000001,
+      "p99": 17.936400000000003,
+      "max": 354.53479999999996
+    }
+  },
+  "rssBytes": {
+    "afterSeed": 33943552,
+    "end": 40316928
+  },
+  "handles": {
+    "afterSeed": 289,
+    "end": 291
+  },
+  "threads": {
+    "afterSeed": 8,
+    "end": 8
+  },
+  "openStoresAtEnd": 32,
+  "walBytesAtEnd": 9641536,
+  "dataBytesAtEnd": 31535266,
+  "idle": {
+    "seconds": 61.8473255,
+    "cpuSecs": 0.546875,
+    "cpuPercentOfOneCore": 0.884233870387815,
+    "rssBytesAtEnd": 44568576,
+    "openStoresAtEnd": 32
+  },
+  "maintenance": {
+    "jobsByState": {
+      "queued": 16,
+      "succeeded": 24
+    },
+    "projectsWithASucceededPass": 24
+  },
+  "samples": [
+    {
+      "elapsedSecs": 61,
+      "unixSecs": 1794392664,
+      "ops": 6116,
+      "errors": 0,
+      "rssBytes": 36212736,
+      "handles": 296,
+      "threads": 9,
+      "cpuSecs": 20.328125,
+      "openStores": 31,
+      "walBytes": 4124792,
+      "dataBytes": 22164186
+    },
+    {
+      "elapsedSecs": 126,
+      "unixSecs": 1794392730,
+      "ops": 12633,
+      "errors": 0,
+      "rssBytes": 40460288,
+      "handles": 295,
+      "threads": 8,
+      "cpuSecs": 36.296875,
+      "openStores": 32,
+      "walBytes": 4128944,
+      "dataBytes": 25936658
+    }
+  ],
+  "machine": {
+    "os": "windows",
+    "logicalCpus": 32
+  }
+}

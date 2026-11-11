@@ -72,6 +72,9 @@ pub enum AutostartCmd {
 
 #[derive(Debug, Args)]
 pub struct InstallArgs {
+    /// Install the optional Windows desktop from a verified, extracted desktop bundle.
+    #[arg(long)]
+    pub desktop: bool,
     /// Install directory (default %LOCALAPPDATA%\WrongMemory\bin on Windows,
     /// $XDG_DATA_HOME/wrongmemory/bin or ~/.local/share/wrongmemory/bin on Unix).
     #[arg(long)]
@@ -721,7 +724,22 @@ pub async fn run_install(root: &DataRoot, json_mode: bool, a: InstallArgs) -> i3
         );
         return exit_code::INVALID_INPUT;
     }
-    for b in BINARIES {
+    let mut binaries = BINARIES.to_vec();
+    let desktop_resources = if a.desktop {
+        match crate::desktop_install::prepare(&src_dir, &prefix) {
+            Ok(path) => {
+                binaries.push("wrongmemory-desktop");
+                Some(path)
+            }
+            Err(e) => {
+                eprintln!("wrongmemory install: desktop bundle refused: {e}");
+                return exit_code::FAILED;
+            }
+        }
+    } else {
+        None
+    };
+    for b in &binaries {
         if !src_dir.join(exe_name(b)).exists() {
             eprintln!(
                 "wrongmemory install: {} missing next to this executable",
@@ -748,7 +766,7 @@ pub async fn run_install(root: &DataRoot, json_mode: bool, a: InstallArgs) -> i3
         return exit_code::FAILED;
     }
     let mut done: Vec<PathBuf> = Vec::new();
-    for b in BINARIES {
+    for b in &binaries {
         let dst = prefix.join(exe_name(b));
         if let Err(e) = replace_atomically(&src_dir.join(exe_name(b)), &dst) {
             // Roll back the binaries already replaced in this run.
@@ -771,6 +789,7 @@ pub async fn run_install(root: &DataRoot, json_mode: bool, a: InstallArgs) -> i3
         "version": env!("CARGO_PKG_VERSION"),
         "installedFrom": src_dir.display().to_string(),
         "binaries": done.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
+        "desktopResources": desktop_resources,
         "rollback": format!(
             "previous binaries (if any) are kept as *{}.old",
             std::env::consts::EXE_SUFFIX
@@ -910,7 +929,7 @@ pub async fn run_uninstall(root: &DataRoot, json_mode: bool, a: UninstallArgs) -
     let me = std::env::current_exe()
         .ok()
         .and_then(|p| std::fs::canonicalize(p).ok());
-    for b in BINARIES {
+    for b in BINARIES.into_iter().chain(["wrongmemory-desktop"]) {
         let base = prefix.join(exe_name(b));
         for p in [base.clone(), tagged(&base, "old"), tagged(&base, "new")] {
             if !p.exists() {
@@ -929,6 +948,10 @@ pub async fn run_uninstall(root: &DataRoot, json_mode: bool, a: UninstallArgs) -
                 removed.push(p.display().to_string());
             }
         }
+    }
+    if let Err(e) = crate::desktop_install::uninstall(&prefix) {
+        eprintln!("wrongmemory uninstall: desktop resources preserved: {e}");
+        return exit_code::FAILED;
     }
     let manifest = prefix.join("install.json");
     if manifest.exists() && std::fs::remove_file(&manifest).is_ok() {

@@ -1,0 +1,3 @@
+{"schema":"wrongmemory/soak-samples@1","startedUnixSecs":1794392603,"plannedSecs":130,"projects":40,"clients":4,"targetRate":100.0,"daemonVersion":"0.1.12","rssBytesAfterSeed":33943552,"handlesAfterSeed":289,"threadsAfterSeed":8,"machine":{"os":"windows","logicalCpus":32}}
+{"elapsedSecs":61,"unixSecs":1794392664,"ops":6116,"errors":0,"rssBytes":36212736,"handles":296,"threads":9,"cpuSecs":20.328125,"openStores":31,"walBytes":4124792,"dataBytes":22164186}
+{"elapsedSecs":126,"unixSecs":1794392730,"ops":12633,"errors":0,"rssBytes":40460288,"handles":295,"threads":8,"cpuSecs":36.296875,"openStores":32,"walBytes":4128944,"dataBytes":25936658}
