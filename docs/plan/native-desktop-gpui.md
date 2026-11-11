@@ -1,7 +1,7 @@
 # Native desktop program - GPUI feasibility and product contract
 
 Date: 2026-11-11. Task: WM-800, with WM-801 and WM-604 acceptance dependencies.
-State: optional native Windows preview implemented locally; no native application has been published. GPUI Kit is the selected framework. Existing WM-INV-01..16 and WM-ADR-001..013 remain binding; [WM-ADR-014](adr-014-native-desktop-workspace.md) records the independent desktop workspace/toolchain. Product targets below remain acceptance requirements, not blanket completion claims.
+State: optional native Windows preview published in [v0.2.1](https://github.com/WrongStack/wrongmemory/releases/tag/v0.2.1); [release evidence](../releases/v0.2.1.md) records hosted CI, downloaded artifacts and fixture install/update/uninstall results. GPUI Kit is the selected framework. Existing WM-INV-01..16 and WM-ADR-001..013 remain binding; [WM-ADR-014](adr-014-native-desktop-workspace.md) records the independent desktop workspace/toolchain. Product targets below remain acceptance requirements, not blanket completion claims.
 
 ## Product objective
 

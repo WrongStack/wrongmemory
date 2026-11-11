@@ -2,7 +2,11 @@
 
 Last updated: 2026-11-11.
 
-## v0.2.1 release preparation (WM-704 / WM-800-RELEASE)
+## v0.2.1 published (WM-704 / WM-800-RELEASE)
+
+**Published and latest:** [v0.2.1](https://github.com/WrongStack/wrongmemory/releases/tag/v0.2.1), 2026-11-11 13:33:53 UTC, source `14edd3cdd1032be5c69e08184f9fb60c7fdda133`. [Full release evidence](releases/v0.2.1.md). Exact-source hosted CI **PASS 4/4**; exact-tag release jobs **PASS 5/5**. All **15 downloaded files** passed GitHub asset-digest and tag/workflow-bound provenance verification; all 14 payloads matched SHA256SUMS. The native ZIP's **842 files** and all three binary banners passed verification. Downloaded daemon integration **PASS 5/5**; downloaded installer fixture **PASS**. Actual published HTTPS install with attestation, upgrading a downloaded **v0.1.12 -> v0.2.1** disposable project, **PASS**: new daemon version and preserved earlier record verified; uninstall kept the store. No live deployment was performed.
+
+The exact public tagged `irm .../install-desktop.ps1 | iex` bootstrap was also executed in Windows PowerShell 5.1 against a fresh private prefix/root with attestations enabled: **PASS**, all three versions 0.2.1, no window opened, no store initialized, uninstall completed. Proof: `target/release-bootstrap-result.json`.
 
 The unpublished v0.2.0 candidate's exact-commit CI exposed a packaging-test harness timeout: cold Windows PowerShell compression exceeded Bun's default 5 seconds, which killed the native child. The same run passed the native unit/daemon tests and five repeated daemon runs, and all three headless platforms passed. The package integration test now has an explicit 90-second budget with 120-second native process bounds; assertions are unchanged. v0.2.0 remains an immutable, unpublished candidate tag; its release workflow was cancelled. v0.2.1 carries the test-harness correction.
 
@@ -14,9 +18,9 @@ Local acceptance: core format/Clippy PASS and **201 tests passed, 2 opt-in probe
 
 Dependency materials: missing workspace license texts are collected from recorded crate VCS commits with source URLs/hashes in `apps/desktop/third-party-licenses/SOURCES.json`. Three upstream crates omit a license file; their declarations, standard license text and exact checksum-verified crate sources are bundled explicitly. MPL-2.0 corresponding source is included. Packaging now fails on missing license material or a supplemental hash mismatch. This does not imply a broader legal certification.
 
-Publication/hosted-CI/downloaded-release acceptance will be recorded after the exact release commit and tag are built. Native accessibility/IME/high-DPI/frame performance and installer GUI rendering remain NOT RUN; this is a preview release, not native 1.0 certification. Earlier local v0.1.12 preview hashes below remain historical evidence and are not v0.2.0 artifact identities.
+Native accessibility/IME/high-DPI/frame performance and installer GUI rendering remain NOT RUN; this is a preview release, not native 1.0 certification. Earlier local v0.1.12 preview hashes below remain historical evidence and are not v0.2.1 artifact identities.
 
-## Native desktop preview (2026-11-11, WM-800-GPUI / SHELL / REVIEW / OPS / RELEASE)
+## Earlier native desktop checkpoint (2026-11-11, WM-800-GPUI / SHELL / REVIEW / OPS / RELEASE)
 
 An optional native Windows workbench is implemented in [apps/desktop](../apps/desktop/README.md). Its independent workspace pins Rust **1.99.1**, GPUI Kit **0.9.1** and its own lockfile. The core remains on Rust **1.93.0**, with unchanged core manifest/lock/toolchain. [WM-ADR-014](plan/adr-014-native-desktop-workspace.md) records this decision: the earlier exact Kit preflight failed on Rust 1.93 (`gpui-pre` 0.3.12 `cold_path`, E0658) and passed on 1.99.1. The [product program](plan/native-desktop-gpui.md) separates implemented scope from future acceptance.
 
@@ -45,7 +49,7 @@ Package: `target/desktop-package-2026-11-11-final/wrongmemory-desktop-0.1.12-win
 
 Runtime evidence: the earlier native build rendered real disposable-fixture library and relations views on Windows. The user stopped screen automation; the existing running window was left untouched. The current settings/conflict controls are covered by code/model/IPC tests, **not renewed visual/keyboard acceptance**. Accessibility, IME, 100/150/200% DPI, GPU fallback, sleep/resume, sustained UI performance, installer/update/uninstall and macOS/Linux native builds/launches: **NOT RUN**. No zero-defect, SAGE-parity, named MCP-client or native 1.0 certification claim. Batch review, immutable history, automatic text merge, saved text queries, kind/anchor filter controls, adoption UI and repair preview remain outside this slice.
 
-## Current review (2026-11-11, WM-604 / WM-605 / WM-705 / WM-706)
+## Earlier review checkpoint (2026-11-11, WM-604 / WM-605 / WM-705 / WM-706)
 
 **Release level: preview; native 1.0 remains uncertified.** The current investigation, integration contract, client matrix and ordered acceptance work are in [the readiness review](readiness-review-2026-11-11.md).
 
