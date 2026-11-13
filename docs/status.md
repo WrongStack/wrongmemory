@@ -22,6 +22,7 @@ No new release: v0.2.1 stays the published and latest version. The one-line inst
 | Draft release notes rendered from `release.yml` with `GITHUB_REF_NAME=v0.2.2` | PASS: tagged URLs, pinned `WRONGMEMORY_VERSION=0.2.2`, bound attestation command |
 | `cargo fmt --all -- --check`; `cargo clippy --workspace --all-targets --locked -- -D warnings`; `cargo test --workspace --locked` (separate `--target-dir`, so the running debug demo daemon was not replaced) | PASS; 201 passed, 2 ignored opt-in store-copy probes |
 | Hosted `install scripts` on PR #5, first run | unix ubuntu, unix macOS and windows PASS; windows-desktop FAIL in the test step itself: `wrongmemory-desktop` is a GUI-subsystem executable, so `&` in PowerShell 7 neither waits for nor captures it, and `| Select-Object -First 1` left `$LASTEXITCODE` unset. The step now reads each banner through a redirected `System.Diagnostics.Process`; locally PASS in PowerShell 7 and 5.1 against the published v0.2.1 (three banners 0.2.1, uninstall exit 0) |
+| Hosted `install scripts` run [43425842145](https://github.com/WrongStack/wrongmemory/actions/runs/43425842145) on `ae8106f`, with `ci` run [43425842427](https://github.com/WrongStack/wrongmemory/actions/runs/43425842427) | PASS: unix ubuntu and macOS, windows, windows-desktop; `ci` Windows, Linux, macOS and desktop-windows PASS |
 
 The live installation, its daemon, autostart entry and user `Path` were not changed. No Rust source changed.
 
