@@ -2,7 +2,153 @@
 
 A per-user local memory service that keeps WrongStack's SAGE knowledge (structured memories, anchors, review queue, provenance) usable outside WrongStack. One Rust daemon serves many projects. WrongStack connects through a native adapter; other coding tools connect through MCP.
 
-> **Status: preview, not certified.** The daemon, policy, native SAGE-profile storage, MCP bridge and WrongStack adapter are implemented and tested against an oracle built from the real SAGE code. They have run in real environments: WrongStack on a live store, Claude Code, Codex, Antigravity and MCP Inspector. Releases are unsigned; every asset has a SHA-256 checksum and a SLSA provenance attestation. The [1.0 evidence matrix](docs/evidence/wm-706-evidence-matrix.md) lists what passed and what is still open, and [docs/status.md](docs/status.md) lists every task with its evidence and what is still NOT RUN. The full program is in [docs/plan/](docs/plan/README.md).
+> **Status: preview, not certified.** The daemon, policy, native SAGE-profile storage, MCP bridge and WrongStack adapter are implemented and tested against an oracle built from the real SAGE code. They have run in real environments: WrongStack on a live store, Claude Code, Codex, Antigravity and MCP Inspector. Releases are unsigned; every asset has a SHA-256 checksum and a SLSA build provenance attestation. The [1.0 evidence matrix](docs/evidence/wm-706-evidence-matrix.md) lists what passed and what is still open. [docs/status.md](docs/status.md) lists every task with its evidence and what is still NOT RUN. The full program is in [docs/plan/](docs/plan/README.md).
+
+## Platforms
+
+| Platform | CLI + daemon + MCP bridge | Native desktop (preview) |
+|---|---|---|
+| Windows x64 | yes | yes |
+| Linux x64, glibc 2.34 or newer (no musl) | yes | no |
+| macOS arm64 (Apple silicon) | yes | no |
+
+Latest release: https://github.com/WrongStack/wrongmemory/releases/latest. Nothing else is needed at runtime: no Bun, Node or source checkout. On Windows on ARM the installer uses the x64 build under emulation, which has not been tested. The macOS build has run on hosted CI runners only; Linux also in WSL Ubuntu. [docs/status.md](docs/status.md) lists what is NOT RUN per platform.
+
+## Install
+
+```powershell
+# Windows: native desktop + CLI + daemon (PowerShell 5.1 or 7)
+irm https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install-desktop.ps1 | iex
+
+# Windows: CLI + daemon only
+irm https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install.ps1 | iex
+```
+
+```sh
+# Linux x64, macOS arm64
+curl -fsSL https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install.sh | sh
+```
+
+What the installers do:
+
+1. Download `wrongmemory` and `wrongmemoryd` (on Windows with the desktop: the desktop ZIP) from the release. Each file must match its single entry in `SHA256SUMS`, or nothing is installed. The desktop ZIP's extraction paths and manifest hashes are checked as well.
+2. Run `wrongmemory install`, which copies the binaries into a per-user directory and writes `install.json`. No administrator rights are needed.
+   - Windows: `%LOCALAPPDATA%\WrongMemory\bin`.
+   - Linux, macOS: `$XDG_DATA_HOME/wrongmemory/bin`, else `~/.local/share/wrongmemory/bin`.
+3. Put that directory on your `PATH`, so a new terminal finds `wrongmemory`.
+   - Windows: appended to the user `Path`. Existing `%VAR%` entries and the value type are kept.
+   - Linux, macOS: a marked block in `~/.profile` and in your shell's startup file (`~/.bashrc`, `~/.zshrc`, or `~/.config/fish/conf.d/wrongmemory.fish`). The script prints the `export` line for the terminal you ran it in.
+4. A daemon that is running is drained, stopped and started again from the new binaries. One that is not running is not started. No desktop window opens and no store is adopted.
+
+Read [install.ps1](install.ps1), [install-desktop.ps1](install-desktop.ps1) or [install.sh](install.sh) first if you prefer.
+
+### Options
+
+Set these in the environment before running an installer:
+
+| Variable | Effect |
+|---|---|
+| `WRONGMEMORY_VERSION=0.2.1` | Install that release instead of the latest. The desktop bundle exists from 0.2.1. |
+| `WRONGMEMORY_INSTALL_DIR=<dir>` | Install somewhere else. |
+| `WRONGMEMORY_AUTOSTART=1` | Start the daemon at sign-in (Windows `Run` value, systemd user unit, or macOS LaunchAgent). |
+| `WRONGMEMORY_VERIFY_ATTESTATION=1` | Also verify the GitHub build provenance of each download. Needs a signed-in `gh`. |
+| `WRONGMEMORY_NO_MODIFY_PATH=1` | Leave `PATH` and the shell startup files alone. |
+| `WRONGMEMORY_DOWNLOAD_BASE=<url>` | Download from a mirror serving the release assets. |
+
+```powershell
+$env:WRONGMEMORY_VERSION = '0.2.1'; irm https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install.ps1 | iex
+```
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install.sh | WRONGMEMORY_VERSION=0.2.1 sh
+```
+
+### Manual or offline install
+
+Download the archive for your platform from the release. Check it against `SHA256SUMS` and its provenance attestation:
+
+```sh
+gh attestation verify <file> --repo WrongStack/wrongmemory \
+  --signer-workflow WrongStack/wrongmemory/.github/workflows/release.yml \
+  --source-ref refs/tags/v0.2.1
+```
+
+Then unpack it and install from its `bin` directory:
+
+```text
+# Windows: wrongmemory-<version>-windows-x64.zip
+bin\wrongmemory.exe install
+
+# Windows desktop: wrongmemory-desktop-<version>-windows-x64.zip
+bin\wrongmemory.exe install --desktop
+
+# Linux, macOS: wrongmemory-<version>-<platform>.tar.gz
+bin/wrongmemory install
+```
+
+`install` takes `--prefix <dir>` and `--no-modify-path`. With `--desktop` it checks the bundle's version and every manifest hash before it stops a daemon or replaces a file.
+
+### Update
+
+Run the same installer command again; nothing is added to `PATH` twice. The previous binaries are kept as `*.old` (`*.exe.old` on Windows). An open desktop window keeps running its old code until you close and reopen it. MCP bridges reconnect to the new daemon by themselves. Rollback and data handling: [docs/operations.md](docs/operations.md#update-and-rollback).
+
+### Uninstall
+
+```text
+wrongmemory uninstall
+```
+
+This stops the daemon and removes the binaries, the desktop and its license material, the autostart entry and the `PATH` entries. Memory stores, grants and logs under `~/.wrongmemory` are kept. `wrongmemory uninstall --remove-data --yes` also deletes that data root, including the stores WrongMemory manages; adopted WrongStack stores are never touched.
+
+## Quick start
+
+```sh
+wrongmemory doctor                                  # check the install and the daemon
+wrongmemory project add ~/src/my-project --managed  # starts the daemon on demand
+wrongmemory project list
+wrongmemory remember <project-id> "Use bun run for scripts" --kind convention --file package.json
+wrongmemory search <project-id> "bun scripts"
+wrongmemory ui                                      # read-only dashboard on 127.0.0.1
+```
+
+- **Adopting a store.** `project add <root>` without `--managed` adopts an existing WrongStack store, read-only by default. Write ownership needs `--write`. The store stays read-only while a legacy SAGE daemon may be running. From 0.1.11 the daemon backs the store up to `~/.wrongmemory/backups/` before it takes write ownership.
+- **Data root.** `~/.wrongmemory` by default; `WRONGMEMORY_HOME` or `--data-root` changes it.
+
+### Connect a coding tool
+
+```sh
+# Plan the entry first, then write it. Claude Code, Codex, Cursor and Antigravity are supported.
+wrongmemory connect claude-code --project <project-id> --create-grant --dry-run
+wrongmemory connect claude-code --project <project-id> --create-grant
+
+# Any other MCP client: create a grant and print an entry to paste
+wrongmemory grants create --label my-tool --project <project-id>
+wrongmemory connect print --project <project-id> --grant <grant-id> --format toml   # or json
+
+wrongmemory client doctor                           # check the setup
+wrongmemory disconnect claude-code --project <project-id>
+```
+
+- `connect <client>` edits the client's configuration only when you ask it to, and only its own marked entry. `disconnect` removes that entry and revokes the grant.
+- The grant secret stays under `~/.wrongmemory/grants/`. Client configurations carry only the project ID and grant ID.
+- New grants use the `read-propose` profile: the tool can read and propose candidates, and you review them. Certification is per client and version; see [docs/status.md](docs/status.md).
+
+### Use it instead of SAGE in WrongStack
+
+```text
+wstack sage service install                 # download, verify and install the latest release
+wstack sage service use wrongmemory --yes   # switch the profile; back up and hand over this project's store
+wstack sage service status
+wstack sage service use local --yes         # hand the store back to WrongStack's own SAGE
+```
+
+WrongStack 1.4.0 installs the Windows build only. WrongStack 1.5.6 includes #434's Linux and macOS installer and integration changes (verified 2026-11-11). Lookup order and worktree behavior: [docs/operations.md](docs/operations.md#from-wrongstack). Current certification gaps, and the difference between the native integration and external MCP, are in the [readiness review](docs/readiness-review-2026-11-11.md).
+
+## Desktop (Windows preview)
+
+`wrongmemory-desktop` is an optional native GPUI workbench on the same authenticated service. It owns no database, and closing it leaves the daemon and other clients running. It has a paged library, a full-text evidence inspector, revision-checked edits, review decisions, a relations view, client grants and health/jobs. Installation never opens it; start it yourself.
+
+Accessibility, IME, high-DPI, GPU fallback, sleep/resume and sustained frame performance are NOT RUN. Native Linux and macOS builds are not provided. Details: [apps/desktop/README.md](apps/desktop/README.md).
 
 ## What works
 
@@ -39,84 +185,10 @@ A per-user local memory service that keeps WrongStack's SAGE knowledge (structur
 - **MCP.** `wrongmemory mcp` is a stdio bridge built on the official `rmcp` SDK.
   - Tools are listed according to the grant's profile.
   - The bridge starts the daemon by itself, so WrongStack does not need to run.
-- **Client setup.**
-  - `wrongmemory connect` plans owned entries for Claude Code, Codex, Cursor and Antigravity, or prints one.
-  - `disconnect` removes those entries and revokes the grant.
-  - `client doctor` checks the setup.
-- **Operations.** `backup` uses the SQLite online backup API. Also: `migrate inspect`, `diagnostics export`, per-user `install`/`uninstall` and `autostart`. See [docs/operations.md](docs/operations.md) and [docs/runbooks.md](docs/runbooks.md).
+- **Client setup.** `connect`, `disconnect` and `client doctor` (see [Connect a coding tool](#connect-a-coding-tool)).
+- **Operations.** `backup` uses the SQLite online backup API. Also: `migrate inspect`, `diagnostics export`, per-user `install`/`uninstall`, `autostart` and the read-only `ui` dashboard. See [docs/operations.md](docs/operations.md) and [docs/runbooks.md](docs/runbooks.md).
+- **Desktop.** The Windows preview above.
 - **TypeScript client.** `packages/client-ts` (`@wrongmemory/client`) mirrors the Rust contracts; a parity check runs in CI.
-
-## Install
-
-Releases ship Windows x64, Linux x64 and macOS arm64 builds: https://github.com/WrongStack/wrongmemory/releases/latest. The binaries are unsigned; each has a SHA-256 checksum and a GitHub build provenance attestation.
-
-```powershell
-# Windows native desktop + CLI + daemon (PowerShell 5.1 or 7)
-irm https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install-desktop.ps1 | iex
-
-# Windows (PowerShell 5.1 or 7)
-irm https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install.ps1 | iex
-```
-
-```sh
-# Linux x64, macOS arm64
-curl -fsSL https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install.sh | sh
-```
-
-The installers download `wrongmemory` and `wrongmemoryd` from the latest release, check both against `SHA256SUMS`, and run `wrongmemory install`. A daemon that is running is stopped for the update and started again from the new binaries; one that is not running is not started. The install directory goes on your `PATH`, so a new terminal finds `wrongmemory`:
-
-- Windows: appended to the user `Path` (existing `%VAR%` entries and the value type are kept).
-- Linux, macOS: a marked block in `~/.profile` and in your shell's startup file (`~/.bashrc`, `~/.zshrc`, or `~/.config/fish/conf.d/wrongmemory.fish`). The script prints the `export` line for the terminal you ran it in.
-
-Run the same command again to update; nothing is added twice. Other settings: `WRONGMEMORY_VERSION`, `WRONGMEMORY_INSTALL_DIR`, `WRONGMEMORY_AUTOSTART=1`, `WRONGMEMORY_VERIFY_ATTESTATION=1` (needs a signed-in `gh`), `WRONGMEMORY_NO_MODIFY_PATH=1` (leave `PATH` and startup files alone). `wrongmemory uninstall` removes the `PATH` entry again. Read [install.ps1](install.ps1) or [install.sh](install.sh) first if you prefer.
-
-The Windows desktop installer verifies the full ZIP, then `install --desktop` verifies its manifest and matching version before updating the three executables. Start it with `wrongmemory-desktop`; installation does not open a window. Updates retain previous executables as `.old`; close and reopen an existing desktop window to use the new version. `wrongmemory uninstall` removes the desktop and owned license/source materials too, preserving memory data by default. For an offline desktop install, extract the desktop ZIP and run `bin\wrongmemory.exe install --desktop`.
-
-Or by hand, after checking the archive against `SHA256SUMS` (or with `gh attestation verify <file> --repo WrongStack/wrongmemory`):
-
-```text
-# Windows: unzip wrongmemory-<version>-windows-x64.zip
-bin\wrongmemory.exe install        # copies both binaries to %LOCALAPPDATA%\WrongMemory\bin
-
-# Linux, macOS: unpack wrongmemory-<version>-<platform>.tar.gz
-bin/wrongmemory install            # copies both binaries to ~/.local/share/wrongmemory/bin
-
-# 0.1.10 and later also put that directory on PATH (--no-modify-path to skip).
-
-wrongmemory autostart enable       # optional: start the daemon at sign-in
-wrongmemory doctor
-```
-
-From 0.1.10, `wrongmemory install` also adds the install directory to the per-user `PATH` setup. Use `--no-modify-path` to skip that step; a new terminal sees the updated path.
-
-### Use it instead of SAGE in WrongStack
-
-```text
-wstack sage service install                 # download, verify and install the latest release
-wstack sage service use wrongmemory --yes   # switch the profile; back up and hand over this project's store
-wstack sage service status
-wstack sage service use local --yes         # hand the store back to WrongStack's own SAGE
-```
-
-WrongStack 1.4.0 installs the Windows build only. The published WrongStack 1.5.6 includes #434's Linux/macOS installer and integration changes (verified 2026-11-11). Details, lookup order and worktree behavior: [docs/operations.md](docs/operations.md#from-wrongstack). Current certification gaps and the distinction between native integration and external MCP are in the [readiness review](docs/readiness-review-2026-11-11.md).
-
-## Quick start
-
-```powershell
-$wm = "$env:LOCALAPPDATA\WrongMemory\bin\wrongmemory.exe"   # or .\target\release\wrongmemory.exe after `cargo build --release`
-
-& $wm project add C:\src\my-project --managed      # starts the daemon on demand
-& $wm project list
-& $wm remember <project-id> "Use bun run for scripts" --kind convention --file package.json
-& $wm search <project-id> "bun scripts"
-
-# External coding tool: create a read/propose grant and print its MCP entry
-& $wm grants create --label codex --project <project-id>
-& $wm connect print --project <project-id> --grant <grant-id> --format toml   # or json
-```
-
-- **Adopting a store.** `project add <root>` adopts an existing WrongStack store, read-only by default. Write ownership needs `--write`. The store stays read-only while a legacy SAGE daemon may be running. From 0.1.11 the daemon backs the store up to `~/.wrongmemory/backups/` before it takes write ownership.
-- **Client config.** `connect print` only prints an entry. `connect <client>` edits the client's config only when you ask it to, and only its own marked entry. The grant secret stays under `~/.wrongmemory/grants/` and never appears in any config.
 
 ## Benchmark
 
@@ -136,8 +208,6 @@ Results are in `benchmarks/results/`.
 
 ## Layout
 
-The optional [native GPUI desktop preview](apps/desktop/README.md) is a separate Rust 1.99.1 workspace; the daemon remains on Rust 1.93.0. `bun run desktop:run` runs it, and `bun run desktop:package` builds the Windows x64 preview bundle. It uses the same authenticated service and does not own a database. Platform, runtime and certification boundaries are recorded in [status](docs/status.md).
-
 | Path | Contents |
 |---|---|
 | `crates/wrongmemory-contracts` | Wire envelopes, typed errors, policy profiles, SAGE record DTOs |
@@ -148,19 +218,34 @@ The optional [native GPUI desktop preview](apps/desktop/README.md) is a separate
 | `crates/wrongmemory-cli` | `wrongmemory` CLI, MCP stdio bridge, client connect planner, install/ops |
 | `crates/wrongmemory-bench` | Latency, resource and synthetic recall benchmark |
 | `packages/client-ts` | TypeScript client used by the WrongStack adapter |
-| `apps/desktop` | Optional native GPUI Kit workbench, independent toolchain and lockfile |
-| `scripts/` | Bun scripts: WrongStack baseline, SAGE oracle fixtures, inventories, release packaging |
+| `packages/dashboard` | Read-only browser dashboard served by `wrongmemory ui` |
+| `apps/desktop` | Optional native GPUI desktop: separate Rust 1.99.1 workspace and lockfile (the core stays on Rust 1.93.0) |
+| `scripts/` | Bun scripts: WrongStack baseline, SAGE oracle fixtures, inventories, release and desktop packaging |
 | `contracts/` | Generated storage profile, record shape and known-answer tests, inventories |
 | `tests/fixtures/` | Read and mutation oracle stores built by the real SAGE code |
+| `install.ps1`, `install-desktop.ps1`, `install.sh` | Release installers, tested against the published release in CI |
 
-## Checks
+## Development
+
+```powershell
+cargo build --release                 # target\release\wrongmemory(.exe) and wrongmemoryd(.exe)
+bun run desktop:run                   # build and run the desktop from source (Windows)
+bun run desktop:package               # Windows x64 desktop preview bundle
+```
+
+Checks:
 
 ```powershell
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
-bun run test:client      # TS client tests + contract parity
+bun run test:client          # TS client tests + contract parity
+bun run typecheck
+bun run desktop:check        # desktop fmt, Clippy and tests (Rust 1.99.1)
+bun run desktop:package:test
 ```
+
+Contributor rules, including the store-safety rules, are in [AGENTS.md](AGENTS.md).
 
 ## License
 

@@ -4,7 +4,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install.sh | sh
 #
 # Environment:
-#   WRONGMEMORY_VERSION         release to install, e.g. 0.1.9 (default: latest)
+#   WRONGMEMORY_VERSION         release to install, e.g. 0.2.1 (default: latest)
 #   WRONGMEMORY_INSTALL_DIR     install directory (default: $XDG_DATA_HOME/wrongmemory/bin,
 #                               else ~/.local/share/wrongmemory/bin)
 #   WRONGMEMORY_DOWNLOAD_BASE   mirror serving the release assets (overrides the version URL)
@@ -37,8 +37,16 @@ need() {
 
 need uname
 need mkdir
+need mktemp
 need chmod
 need awk
+need grep
+need sed
+need cut
+
+if [ "${WRONGMEMORY_DESKTOP:-}" = 1 ]; then
+  printf 'wrongmemory install: the native desktop ships for Windows x64 only; installing the headless CLI and daemon.\n' >&2
+fi
 
 os=$(uname -s)
 arch=$(uname -m)

@@ -1,14 +1,16 @@
 name: install scripts
 
-# install.sh and install.ps1 download the published release, so they run
-# against it: on every change to them, and whenever a release is published.
+# install.sh, install.ps1 and install-desktop.ps1 download the published
+# release, so they run against it: on every change to them, and whenever a
+# release is published. Users fetch them from `main`, so a change merges only
+# when these jobs pass.
 
 on:
   push:
     branches: [main]
-    paths: [install.sh, install.ps1, .github/workflows/install-scripts.yml]
+    paths: [install.sh, install.ps1, install-desktop.ps1, .github/workflows/install-scripts.yml]
   pull_request:
-    paths: [install.sh, install.ps1, .github/workflows/install-scripts.yml]
+    paths: [install.sh, install.ps1, install-desktop.ps1, .github/workflows/install-scripts.yml]
   release:
     types: [published]
   workflow_dispatch:
@@ -60,6 +62,18 @@ jobs:
           test "$after" != "$before"
           project=$("$bin/wrongmemory" --json project list | jq -r '.projects[0].projectId')
           "$bin/wrongmemory" --json search "$project" "install smoke" | grep -q "install.sh smoke on $RUNNER_OS"
+      - name: Uninstall removes the binaries and PATH blocks and keeps the data
+        run: |
+          set -eu
+          bin="$HOME/.local/share/wrongmemory/bin"
+          "$bin/wrongmemory" uninstall
+          for f in wrongmemory wrongmemoryd wrongmemory.old wrongmemoryd.old install.json; do
+            if [ -e "$bin/$f" ]; then echo "left behind: $bin/$f"; exit 1; fi
+          done
+          for rc in "$HOME/.profile" "$HOME/.bashrc" "${ZDOTDIR:-$HOME}/.zshrc"; do
+            if [ -f "$rc" ] && grep -q '# >>> wrongmemory >>>' "$rc"; then echo "PATH block left in $rc"; exit 1; fi
+          done
+          test -f "$HOME/.wrongmemory/registry.db"
 
   windows:
     runs-on: windows-latest
@@ -67,6 +81,30 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
+      - name: The PowerShell scripts parse in Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          foreach ($Script in 'install.ps1', 'install-desktop.ps1') {
+            $Errors = $null
+            [void][Management.Automation.Language.Parser]::ParseFile((Resolve-Path $Script), [ref]$null, [ref]$Errors)
+            if ($Errors) { $Errors | ForEach-Object { Write-Host $_ }; throw "$Script does not parse" }
+          }
+      - name: The PowerShell scripts parse in PowerShell 7
+        shell: pwsh
+        run: |
+          foreach ($Script in 'install.ps1', 'install-desktop.ps1') {
+            $Errors = $null
+            [void][Management.Automation.Language.Parser]::ParseFile((Resolve-Path $Script), [ref]$null, [ref]$Errors)
+            if ($Errors) { $Errors | ForEach-Object { Write-Host $_ }; throw "$Script does not parse" }
+          }
+      - name: install-desktop.ps1 refuses a version without a desktop bundle
+        shell: pwsh
+        run: |
+          $env:WRONGMEMORY_VERSION = '0.1.12'
+          $Refused = $false
+          try { ./install-desktop.ps1 } catch { $Refused = $_.Exception.Message -match 'published from WrongMemory 0\.2\.1' }
+          if (-not $Refused) { throw 'install-desktop.ps1 accepted 0.1.12' }
+          if (Test-Path (Join-Path $env:LOCALAPPDATA 'WrongMemory\bin')) { throw 'the refused install left files behind' }
       - name: Install the latest release with Windows PowerShell 5.1, piped into Invoke-Expression
         shell: powershell
         run: |
@@ -99,3 +137,51 @@ jobs:
           $project = (& "$bin\wrongmemory.exe" --json project list | ConvertFrom-Json).projects[0].projectId
           $hits = & "$bin\wrongmemory.exe" --json search $project "install smoke" | Out-String
           if ($hits -notmatch 'install.ps1 smoke on Windows') { throw 'search after the update did not find the record' }
+      - name: Uninstall removes the binaries and keeps the data
+        shell: pwsh
+        run: |
+          $bin = Join-Path $env:LOCALAPPDATA 'WrongMemory\bin'
+          & "$bin\wrongmemory.exe" uninstall
+          if ($LASTEXITCODE -ne 0) { throw "uninstall exited $LASTEXITCODE" }
+          # The running wrongmemory.exe may only be renamed aside; the rest must be gone.
+          foreach ($f in 'wrongmemoryd.exe', 'wrongmemoryd.exe.old', 'install.json') {
+            if (Test-Path (Join-Path $bin $f)) { throw "left behind: $f" }
+          }
+          if (-not (Test-Path (Join-Path $env:USERPROFILE '.wrongmemory\registry.db'))) { throw 'uninstall removed the data root' }
+
+  windows-desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      # install-desktop.ps1 fetches install.ps1 from `main`, so this runs the
+      # checked-out install.ps1 the same way it does: with WRONGMEMORY_DESKTOP=1.
+      - name: Install the desktop bundle of the latest release with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $env:WRONGMEMORY_NO_MODIFY_PATH = '1'
+          $env:WRONGMEMORY_DESKTOP = '1'
+          Get-Content -Raw install.ps1 | Invoke-Expression
+      - name: The CLI, daemon and desktop report one version; resources are installed
+        shell: pwsh
+        run: |
+          $bin = Join-Path $env:LOCALAPPDATA 'WrongMemory\bin'
+          $Versions = foreach ($Exe in 'wrongmemory', 'wrongmemoryd', 'wrongmemory-desktop') {
+            $Banner = & (Join-Path $bin "$Exe.exe") --version | Select-Object -First 1
+            if ($LASTEXITCODE -ne 0) { throw "$Exe --version exited $LASTEXITCODE" }
+            Write-Host $Banner
+            ($Banner -split '\s+')[-1]
+          }
+          if (@($Versions | Sort-Object -Unique).Count -ne 1) { throw "version mismatch: $($Versions -join ', ')" }
+          if (-not (Test-Path (Join-Path $bin 'desktop-resources\owned.json'))) { throw 'desktop resources are missing' }
+          if (Get-Process wrongmemory-desktop -ErrorAction SilentlyContinue) { throw 'the installer opened the desktop' }
+      - name: Uninstall removes the desktop and its resources
+        shell: pwsh
+        run: |
+          $bin = Join-Path $env:LOCALAPPDATA 'WrongMemory\bin'
+          & "$bin\wrongmemory.exe" uninstall
+          if ($LASTEXITCODE -ne 0) { throw "uninstall exited $LASTEXITCODE" }
+          foreach ($f in 'wrongmemory-desktop.exe', 'wrongmemoryd.exe', 'desktop-resources', 'install.json') {
+            if (Test-Path (Join-Path $bin $f)) { throw "left behind: $f" }
+          }
