@@ -168,8 +168,15 @@ jobs:
         run: |
           $bin = Join-Path $env:LOCALAPPDATA 'WrongMemory\bin'
           $Versions = foreach ($Exe in 'wrongmemory', 'wrongmemoryd', 'wrongmemory-desktop') {
-            $Banner = & (Join-Path $bin "$Exe.exe") --version | Select-Object -First 1
-            if ($LASTEXITCODE -ne 0) { throw "$Exe --version exited $LASTEXITCODE" }
+            # wrongmemory-desktop is a GUI-subsystem executable, which `&` does
+            # not wait for or capture; read every banner through a redirected process.
+            $Info = [Diagnostics.ProcessStartInfo]::new((Join-Path $bin "$Exe.exe"), '--version')
+            $Info.UseShellExecute = $false
+            $Info.RedirectStandardOutput = $true
+            $Process = [Diagnostics.Process]::Start($Info)
+            $Banner = ($Process.StandardOutput.ReadToEnd() -split "`r?`n")[0].Trim()
+            if (-not $Process.WaitForExit(30000)) { $Process.Kill(); throw "$Exe --version did not exit" }
+            if ($Process.ExitCode -ne 0) { throw "$Exe --version exited $($Process.ExitCode)" }
             Write-Host $Banner
             ($Banner -split '\s+')[-1]
           }
