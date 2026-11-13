@@ -1,6 +1,30 @@
 # Implementation status
 
-Last updated: 2026-11-11.
+Last updated: 2026-11-13.
+
+## Installer and README refresh (2026-11-13, WM-700 / WM-704)
+
+No new release: v0.2.1 stays the published and latest version. The one-line installers are served from `main`, so these changes take effect when the branch merges; the copies attached to the v0.2.1 release are unchanged.
+
+- `install-desktop.ps1` refuses a pinned `WRONGMEMORY_VERSION` below 0.2.1, or one that is not a version, before downloading anything. Before, a pinned 0.2.0 fetched an `install.ps1` that has no published desktop bundle to find, and 0.1.x silently installed the headless build.
+- `install.sh` reports that the desktop is Windows-only when `WRONGMEMORY_DESKTOP=1` is set, and checks for `mktemp`, `grep`, `sed` and `cut` up front. Both script headers name 0.2.1 as the version example.
+- `install-scripts.yml` now also runs on changes to `install-desktop.ps1`. It parses both PowerShell scripts in Windows PowerShell 5.1 and PowerShell 7, tests the desktop refusal, adds an uninstall step on Linux, macOS and Windows (binaries and PATH blocks gone, data root kept), and adds a `windows-desktop` job that installs the latest desktop bundle with the checked-out `install.ps1`, compares the three version banners and uninstalls.
+- `release.yml`'s draft notes carry the tagged one-line installers and the tag/workflow-bound `gh attestation verify` command. They take effect at the next tag.
+- README: platform table, installer steps, options, version pinning, manual/offline install with the bound attestation command, update, uninstall, a cross-platform quick start, client connection, a desktop section and the desktop checks. Preview framing and NOT RUN boundaries are unchanged.
+
+| Command (2026-11-13, Windows 11 + WSL Ubuntu) | Result |
+|---|---|
+| `[Parser]::ParseFile` on `install.ps1` and `install-desktop.ps1` in Windows PowerShell 5.1.26100 and PowerShell 7.6.9 | PASS 4/4 |
+| `sh -n install.sh`; ShellCheck v0.10.0 (Docker `koalaman/shellcheck:v0.10.0`) | PASS; no findings |
+| `install-desktop.ps1` with `WRONGMEMORY_VERSION` `0.1.12`, `v0.2.0`, `banana`, in both shells | PASS 6/6 refused before any download; `WRONGMEMORY_DESKTOP` restored; no prefix created |
+| Modified `install.ps1` piped into `Invoke-Expression` in Windows PowerShell 5.1, `WRONGMEMORY_DESKTOP=1`, `WRONGMEMORY_VERIFY_ATTESTATION=1`, disposable prefix and data root, `WRONGMEMORY_NO_MODIFY_PATH=1`, against the published v0.2.1 | PASS: checksum and attestation verified; three banners `0.2.1`; `desktop-resources/owned.json` present; no GUI process; no store created. `uninstall --prefix --data-root` removed the daemon, desktop, resources and `install.json` (the running CLI renamed `.delete-me`); data kept; user `Path` unchanged |
+| Modified `install.sh` under `dash` in WSL Ubuntu, disposable `HOME`, `WRONGMEMORY_DESKTOP=1`, against the published v0.2.1 | PASS: Windows-only warning, checksums, `.profile`/`.bashrc` blocks, a login shell finds `wrongmemory`; `project add --managed`, `remember`, `search`; `uninstall` removed binaries, `install.json` and both blocks and kept the data root |
+| Draft release notes rendered from `release.yml` with `GITHUB_REF_NAME=v0.2.2` | PASS: tagged URLs, pinned `WRONGMEMORY_VERSION=0.2.2`, bound attestation command |
+| `cargo fmt --all -- --check`; `cargo clippy --workspace --all-targets --locked -- -D warnings`; `cargo test --workspace --locked` (separate `--target-dir`, so the running debug demo daemon was not replaced) | PASS; 201 passed, 2 ignored opt-in store-copy probes |
+| Hosted `install scripts` on PR #5, first run | unix ubuntu, unix macOS and windows PASS; windows-desktop FAIL in the test step itself: `wrongmemory-desktop` is a GUI-subsystem executable, so `&` in PowerShell 7 neither waits for nor captures it, and `| Select-Object -First 1` left `$LASTEXITCODE` unset. The step now reads each banner through a redirected `System.Diagnostics.Process`; locally PASS in PowerShell 7 and 5.1 against the published v0.2.1 (three banners 0.2.1, uninstall exit 0) |
+| Hosted `install scripts` run [43425842145](https://github.com/WrongStack/wrongmemory/actions/runs/43425842145) on `ae8106f`, with `ci` run [43425842427](https://github.com/WrongStack/wrongmemory/actions/runs/43425842427) | PASS: unix ubuntu and macOS, windows, windows-desktop; `ci` Windows, Linux, macOS and desktop-windows PASS |
+
+The live installation, its daemon, autostart entry and user `Path` were not changed. No Rust source changed.
 
 ## v0.2.1 published (WM-704 / WM-800-RELEASE)
 

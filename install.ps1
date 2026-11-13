@@ -2,8 +2,10 @@
 #
 #   irm https://raw.githubusercontent.com/WrongStack/wrongmemory/main/install.ps1 | iex
 #
+# install-desktop.ps1 runs this script with WRONGMEMORY_DESKTOP=1.
+#
 # Environment:
-#   WRONGMEMORY_VERSION         release to install, e.g. 0.1.9 (default: latest)
+#   WRONGMEMORY_VERSION         release to install, e.g. 0.2.1 (default: latest)
 #   WRONGMEMORY_INSTALL_DIR     install directory (default: %LOCALAPPDATA%\WrongMemory\bin)
 #   WRONGMEMORY_DOWNLOAD_BASE   mirror serving the release assets (overrides the version URL)
 #   WRONGMEMORY_AUTOSTART=1     start the daemon at sign-in (a per-user Run value)

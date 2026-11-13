@@ -151,11 +151,26 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           cat > notes.md <<EOF
-          WrongMemory ${GITHUB_REF_NAME}, per-user: Windows x64, Linux x64 (glibc 2.34+), macOS arm64.
+          WrongMemory ${GITHUB_REF_NAME}, per-user: Windows x64, Linux x64 (glibc 2.34+), macOS arm64. The native desktop is Windows x64 only.
+
+          ### Install this release
+
+          \`\`\`powershell
+          # Windows: CLI + daemon
+          irm https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_REF_NAME}/install.ps1 | iex
+          # Windows: native desktop + CLI + daemon
+          irm https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_REF_NAME}/install-desktop.ps1 | iex
+          \`\`\`
+
+          \`\`\`sh
+          # Linux x64, macOS arm64
+          curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_REF_NAME}/install.sh | WRONGMEMORY_VERSION=${GITHUB_REF_NAME#v} sh
+          \`\`\`
+
+          The Windows scripts install the latest release; set \`\$env:WRONGMEMORY_VERSION = '${GITHUB_REF_NAME#v}'\` first to pin this one. Offline: unpack, then \`bin/wrongmemory install\` (\`bin\\wrongmemory.exe install\`, or \`install --desktop\` from the desktop ZIP). See docs/operations.md.
 
           - Binaries are **unsigned**: no Authenticode signature, no Apple notarization. Verify each archive or executable against SHA256SUMS and the GitHub build-provenance attestation:
-            \`gh attestation verify <file> --repo ${GITHUB_REPOSITORY}\`
-          - Install: unpack, then \`bin/wrongmemory install\` (\`bin\\wrongmemory.exe install\` on Windows). See docs/operations.md.
+            \`gh attestation verify <file> --repo ${GITHUB_REPOSITORY} --signer-workflow ${GITHUB_REPOSITORY}/.github/workflows/release.yml --source-ref ${GITHUB_REF}\`
           - Scope and verification status: docs/status.md.
           EOF
           gh release create "$GITHUB_REF_NAME" dist/* --draft --title "WrongMemory $GITHUB_REF_NAME" --notes-file notes.md
