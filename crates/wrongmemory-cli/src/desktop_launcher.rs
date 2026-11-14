@@ -1,12 +1,15 @@
-//! Application-menu launcher for the optional native desktop on Linux.
+//! Launchers for the optional native desktop.
 //!
-//! `install --desktop` writes a Desktop Entry and its icon under the user's
-//! XDG data directory so the desktop appears in the application menu, and
-//! `uninstall` removes them. Both files carry an ownership marker; a file
+//! - **Linux:** `install --desktop` writes a Desktop Entry and its icon under
+//!   the user's XDG data directory so the desktop appears in the application
+//!   menu.
+//! - **macOS:** it creates a minimal `~/Applications/WrongMemory.app` whose
+//!   executable `exec`s the installed `wrongmemory-desktop` (see [`app_bundle`]).
+//!
+//! `uninstall` removes them. Every file carries an ownership marker; a file
 //! without it, a symlink or anything that is not a regular file is left alone.
-//! macOS and Windows get no launcher here (the desktop is started as
-//! `wrongmemory-desktop`); their entries need platform bundling that is not
-//! implemented.
+//! Windows gets no launcher here (no Start Menu shortcut yet); the desktop is
+//! started as `wrongmemory-desktop`.
 #![cfg_attr(not(any(target_os = "linux", target_os = "freebsd")), allow(dead_code))]
 
 use std::io;
@@ -172,6 +175,151 @@ pub fn uninstall(data_home: &Path) -> io::Result<Vec<PathBuf>> {
     Ok(removed)
 }
 
+/// macOS application bundle that launches the installed desktop binary.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub mod app_bundle {
+    use super::{invalid, replaceable};
+    use std::io;
+    use std::path::{Path, PathBuf};
+
+    const NAME: &str = "WrongMemory.app";
+    const EXECUTABLE: &str = "WrongMemory";
+    const MARKER: &str = "wrongmemory-owned";
+
+    /// `~/Applications`, the per-user location Finder and Spotlight index.
+    pub fn applications_dir() -> Option<PathBuf> {
+        std::env::var_os("HOME")
+            .filter(|h| !h.is_empty())
+            .map(|h| PathBuf::from(h).join("Applications"))
+    }
+
+    pub fn bundle(applications: &Path) -> PathBuf {
+        applications.join(NAME)
+    }
+
+    fn files(app: &Path) -> [PathBuf; 3] {
+        let contents = app.join("Contents");
+        [
+            contents.join("Info.plist"),
+            contents.join("MacOS").join(EXECUTABLE),
+            contents.join("Resources").join(MARKER),
+        ]
+    }
+
+    /// POSIX single-quoted shell word.
+    fn shell_word(s: &str) -> String {
+        format!("'{}'", s.replace('\'', r"'\''"))
+    }
+
+    fn xml(s: &str) -> String {
+        s.replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+    }
+
+    pub fn info_plist(version: &str) -> String {
+        format!(
+            concat!(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n",
+                "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n",
+                "<plist version=\"1.0\">\n<dict>\n",
+                "  <key>CFBundleIdentifier</key><string>{id}</string>\n",
+                "  <key>CFBundleName</key><string>WrongMemory</string>\n",
+                "  <key>CFBundleDisplayName</key><string>WrongMemory</string>\n",
+                "  <key>CFBundleExecutable</key><string>{exe}</string>\n",
+                "  <key>CFBundlePackageType</key><string>APPL</string>\n",
+                "  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>\n",
+                "  <key>CFBundleShortVersionString</key><string>{v}</string>\n",
+                "  <key>CFBundleVersion</key><string>{v}</string>\n",
+                "  <key>LSMinimumSystemVersion</key><string>11.0</string>\n",
+                "  <key>NSHighResolutionCapable</key><true/>\n",
+                "</dict>\n</plist>\n"
+            ),
+            id = super::APP_ID,
+            exe = EXECUTABLE,
+            v = xml(version),
+        )
+    }
+
+    pub fn launcher_script(exe: &Path) -> io::Result<String> {
+        let exe = exe
+            .to_str()
+            .ok_or_else(|| invalid("The desktop executable path is not UTF-8"))?;
+        if exe.chars().any(char::is_control) {
+            return Err(invalid(
+                "The desktop executable path contains control characters",
+            ));
+        }
+        Ok(format!(
+            "#!/bin/sh\n# Written by `wrongmemory install --desktop`; removed by `wrongmemory uninstall`.\nexec {} \"$@\"\n",
+            shell_word(exe)
+        ))
+    }
+
+    fn owned(app: &Path) -> io::Result<bool> {
+        let [_, _, marker] = files(app);
+        replaceable(&marker)
+    }
+
+    /// Create or refresh the bundle. An existing `WrongMemory.app` without the
+    /// marker is never touched.
+    pub fn install(applications: &Path, exe: &Path, version: &str) -> io::Result<PathBuf> {
+        let app = bundle(applications);
+        if std::fs::symlink_metadata(&app).is_ok() && !owned(&app)? {
+            return Err(invalid(
+                "WrongMemory.app exists and is not owned by WrongMemory",
+            ));
+        }
+        let [plist, executable, marker] = files(&app);
+        let script = launcher_script(exe)?;
+        for (path, bytes) in [
+            (&plist, info_plist(version).into_bytes()),
+            (&executable, script.into_bytes()),
+            (&marker, b"wrongmemory install --desktop\n".to_vec()),
+        ] {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            replaceable(path)?;
+            std::fs::write(path, bytes)?;
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&executable, std::fs::Permissions::from_mode(0o755))?;
+        }
+        Ok(app)
+    }
+
+    /// Remove an owned bundle: only the three written files, then the
+    /// directories if they are empty. Returns the bundle path when removed.
+    pub fn uninstall(applications: &Path) -> io::Result<Option<PathBuf>> {
+        let app = bundle(applications);
+        if !owned(&app)? {
+            return Ok(None);
+        }
+        let all = files(&app);
+        for f in &all {
+            replaceable(f)?;
+        }
+        for f in &all {
+            if f.exists() {
+                std::fs::remove_file(f)?;
+            }
+        }
+        let contents = app.join("Contents");
+        for dir in [
+            contents.join("MacOS"),
+            contents.join("Resources"),
+            contents,
+            app.clone(),
+        ] {
+            let _ = std::fs::remove_dir(dir);
+        }
+        Ok(Some(app))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -244,5 +392,80 @@ mod tests {
             String::from_utf8_lossy(&out.stdout),
             String::from_utf8_lossy(&out.stderr)
         );
+    }
+
+    #[test]
+    fn app_bundle_is_owned_and_removed_without_touching_foreign_files() {
+        let temp = tempfile::tempdir().unwrap();
+        let apps = temp.path();
+        let exe = apps.join("it's here/wrongmemory-desktop");
+        let app = app_bundle::install(apps, &exe, "0.2.1").unwrap();
+        let script = std::fs::read_to_string(app.join("Contents/MacOS/WrongMemory")).unwrap();
+        assert!(script.contains("exec '"), "{script}");
+        assert!(script.contains(r"it'\''s here"), "{script}");
+        let plist = std::fs::read_to_string(app.join("Contents/Info.plist")).unwrap();
+        assert!(plist.contains(APP_ID) && plist.contains("<string>0.2.1</string>"));
+        // A user file inside the bundle survives uninstall, and so does its directory.
+        std::fs::write(app.join("Contents/notes.txt"), "keep").unwrap();
+        assert!(app_bundle::uninstall(apps).unwrap().is_some());
+        assert!(!app.join("Contents/Info.plist").exists());
+        assert_eq!(
+            std::fs::read_to_string(app.join("Contents/notes.txt")).unwrap(),
+            "keep"
+        );
+        // A foreign WrongMemory.app is neither replaced nor removed.
+        let foreign = temp.path().join("other");
+        std::fs::create_dir_all(foreign.join("WrongMemory.app/Contents")).unwrap();
+        assert!(app_bundle::install(&foreign, &exe, "0.2.1").is_err());
+        assert!(app_bundle::uninstall(&foreign).unwrap().is_none());
+        assert!(foreign.join("WrongMemory.app/Contents").exists());
+    }
+
+    /// On macOS: Info.plist passes `plutil -lint`, and opening the bundle
+    /// through LaunchServices runs its executable, which execs the target
+    /// (here a script that leaves a marker instead of opening a window).
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn macos_bundle_lints_and_launches_through_launch_services() {
+        use std::os::unix::fs::PermissionsExt;
+        let temp = tempfile::tempdir().unwrap();
+        let marker = temp.path().join("launched");
+        let target = temp.path().join("fake desktop");
+        std::fs::write(
+            &target,
+            format!("#!/bin/sh\ntouch '{}'\n", marker.display()),
+        )
+        .unwrap();
+        std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let app = app_bundle::install(temp.path(), &target, "0.2.1").unwrap();
+        let lint = std::process::Command::new("plutil")
+            .arg("-lint")
+            .arg(app.join("Contents/Info.plist"))
+            .output()
+            .unwrap();
+        assert!(
+            lint.status.success(),
+            "{}",
+            String::from_utf8_lossy(&lint.stdout)
+        );
+        let open = std::process::Command::new("open")
+            .arg("-n")
+            .arg(&app)
+            .output()
+            .unwrap();
+        assert!(
+            open.status.success(),
+            "{}",
+            String::from_utf8_lossy(&open.stderr)
+        );
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+        while !marker.exists() && std::time::Instant::now() < deadline {
+            std::thread::sleep(std::time::Duration::from_millis(200));
+        }
+        assert!(
+            marker.exists(),
+            "LaunchServices did not run the bundle executable"
+        );
+        app_bundle::uninstall(temp.path()).unwrap();
     }
 }

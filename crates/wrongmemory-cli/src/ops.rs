@@ -805,6 +805,21 @@ pub async fn run_install(root: &DataRoot, json_mode: bool, a: InstallArgs) -> i3
             },
             None => json!({"error": "no XDG data directory"}),
         }
+    } else if desktop_resources.is_some() && cfg!(target_os = "macos") {
+        match crate::desktop_launcher::app_bundle::applications_dir() {
+            Some(apps) => match crate::desktop_launcher::app_bundle::install(
+                &apps,
+                &prefix.join(exe_name("wrongmemory-desktop")),
+                env!("CARGO_PKG_VERSION"),
+            ) {
+                Ok(app) => json!({"app": app.display().to_string()}),
+                Err(e) => {
+                    eprintln!("wrongmemory install: desktop launcher not written: {e}");
+                    json!({"error": e.to_string()})
+                }
+            },
+            None => json!({"error": "HOME is not set"}),
+        }
     } else {
         serde_json::Value::Null
     };
@@ -978,6 +993,15 @@ pub async fn run_uninstall(root: &DataRoot, json_mode: bool, a: UninstallArgs) -
     {
         match crate::desktop_launcher::uninstall(&data_home) {
             Ok(paths) => removed.extend(paths.iter().map(|p| p.display().to_string())),
+            Err(e) => eprintln!("wrongmemory uninstall: desktop launcher preserved: {e}"),
+        }
+    }
+    if cfg!(target_os = "macos")
+        && let Some(apps) = crate::desktop_launcher::app_bundle::applications_dir()
+    {
+        match crate::desktop_launcher::app_bundle::uninstall(&apps) {
+            Ok(Some(app)) => removed.push(app.display().to_string()),
+            Ok(None) => {}
             Err(e) => eprintln!("wrongmemory uninstall: desktop launcher preserved: {e}"),
         }
     }

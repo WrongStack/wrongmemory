@@ -29,6 +29,7 @@ Status: accepted. The same `apps/desktop` workspace, toolchain and exact GPUI Ki
 - Supplementary license material covers the union of the Windows, Linux and macOS dependency graphs.
 - Windows binaries link with an 8 MiB main-thread stack, matching Linux/macOS, because unoptimized GPUI element trees overflowed the default 1 MiB.
 
-- Linux `install --desktop` writes an owned Desktop Entry and icon below `$XDG_DATA_HOME`; the window `app_id` / X11 `WM_CLASS` is `com.wrongstack.WrongMemory` to match `StartupWMClass`. CI requires `desktop-file-validate` to accept the generated entry. A macOS `.app` bundle and a Windows Start Menu shortcut are not implemented.
+- Linux `install --desktop` writes an owned Desktop Entry and icon below `$XDG_DATA_HOME`; the window `app_id` / X11 `WM_CLASS` is `com.wrongstack.WrongMemory` to match `StartupWMClass`. CI requires `desktop-file-validate` to accept the generated entry. On macOS it creates an owned `~/Applications/WrongMemory.app` whose executable `exec`s the installed binary; a macOS-only test lints its Info.plist and opens it through LaunchServices. A Windows Start Menu shortcut is not implemented.
+- CI runs `scripts/desktop/smoke.ts` on Windows, macOS and Linux (Xvfb + Mesa software Vulkan): the real app renders all five views in both themes against a disposable daemon and fails on an early exit or panic.
 
 Linux desktop launch has been observed under WSLg/X11 only; native Wayland rendering and macOS rendering are NOT RUN until observed. Hosted CI results belong in `docs/status.md`.
