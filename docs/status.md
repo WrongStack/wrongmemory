@@ -79,7 +79,7 @@ Window check, crash detection, icons and the Windows shortcut (follow-up):
 
 The desktop sets no explicit AppUserModelID, so Windows groups the running window with the shortcut by executable path.
 
-The live installation (`%LOCALAPPDATA%\WrongMemory`, its daemon on `~/.wrongmemory`) was not touched. WSL Ubuntu received development packages (GPUI build headers, Mesa Vulkan, ImageMagick, x11-utils, ShellCheck), Rust 1.99.1 and a user-local Bun 1.4.3 in `~/.bun-wm`.
+The live installation (`%LOCALAPPDATA%\WrongMemory`, its daemon on `~/.wrongmemory`) was not touched. WSL Ubuntu received development packages (GPUI build headers, Mesa Vulkan, ImageMagick, x11-utils, librsvg2-bin, ShellCheck), Rust 1.99.1 and a user-local Bun 1.4.3 in `~/.bun-wm`.
 
 ## Installer and README refresh (2026-11-13, WM-700 / WM-704)
 
