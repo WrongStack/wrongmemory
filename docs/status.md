@@ -36,7 +36,9 @@ Changes:
 | Windows visual pass, 100% scaling, disposable fixture: all five views and Review comparison (before the keyboard follow-up), light and dark, palette, disconnected start / Start service / reconnect | PASS after the fixes; after the follow-up, keyboard-only: Ctrl+K at startup, Down×2 + Enter to Relations, palette again to Health and Clients (single-line copyable paths, intrinsic button width), backdrop dim measured (250 -> 180) |
 | Review Up/Down, Tab order through the whole window, palette project/action rows by keyboard (Windows) | NOT RUN: the window lost the foreground to the user and input stopped |
 | Linux native Wayland | Process starts and stays up; rendering NOT RUN (no Wayland capture) |
-| Hosted CI for the new `desktop-unix` jobs; macOS build, tests, license inventory and rendering | NOT RUN (not pushed) |
+| Hosted `ci` run [43613563569](https://github.com/WrongStack/wrongmemory/actions/runs/43613563569) on `757a85d` (workflow_dispatch on `feat/cross-platform-desktop`) | PASS 6/6: desktop-windows, desktop-unix ubuntu-latest, desktop-unix macos-latest (Clippy, tests, five real-daemon runs, package tests, build), unix ubuntu/macOS (core incl. `desktop_install` tests on Unix), windows |
+| Hosted `install scripts` run [43613566588](https://github.com/WrongStack/wrongmemory/actions/runs/43613566588) on `757a85d` | PASS 4/4, including the new refusal of `WRONGMEMORY_DESKTOP=1` against v0.2.1 on Ubuntu and macOS |
+| Release `desktop-unix` packaging job (tag-only), macOS license inventory and rendering | NOT RUN |
 | Accessibility/screen reader, IME, 150/200% DPI, GPU fallback, sleep/resume, sustained frame performance | NOT RUN |
 
 Not provided: a macOS `.app` bundle and a Linux `.desktop` launcher, so the installed desktop has no Dock / application-menu entry and is started as `wrongmemory-desktop`.
