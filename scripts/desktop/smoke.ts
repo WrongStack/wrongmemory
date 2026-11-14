@@ -63,7 +63,20 @@ export async function smoke(app: string, binary: string, seconds: number): Promi
     }
   } finally {
     Bun.spawnSync([binary, '--data-root', root, 'daemon', 'stop'], { stdout: 'ignore', stderr: 'ignore', timeout: 30000 });
-    rmSync(scratch, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
+    // `daemon stop` only requests the stop; wait until status reports it gone
+    // so its files are released (Windows refuses to delete open files).
+    const stopDeadline = Date.now() + 30000;
+    while (Date.now() < stopDeadline) {
+      const status = Bun.spawnSync([binary, '--data-root', root, '--json', 'daemon', 'status'], { stdout: 'ignore', stderr: 'ignore', timeout: 10000 });
+      if (status.exitCode !== 0) break;
+      await Bun.sleep(250);
+    }
+    try {
+      rmSync(scratch, { recursive: true, force: true, maxRetries: 20, retryDelay: 500 });
+    } catch (e) {
+      // The renders already passed; a leftover temp directory is not a desktop failure.
+      console.warn('warning: could not remove ' + scratch + ': ' + (e as Error).message);
+    }
   }
   return { runs };
 }
