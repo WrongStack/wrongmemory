@@ -639,6 +639,13 @@ impl Workbench {
                     }
                     View::Relations => {
                         this.graph_layout = Graph::from_reply(&value);
+                        // Fit a graph that would overflow its panel instead of
+                        // clipping nodes at the edge; a user zoom that already
+                        // fits is kept.
+                        let fit = this.graph_layout.fit_zoom(this.graph_available_width());
+                        if fit < this.graph_zoom {
+                            this.graph_zoom = fit;
+                        }
                         this.graph = value;
                     }
                     View::Health => this.operations = value,
@@ -943,6 +950,11 @@ impl Workbench {
             self.focus_main(window, cx);
         }
         cx.notify();
+    }
+
+    /// Width the relations board can use: the working panel minus its padding.
+    fn graph_available_width(&self) -> f32 {
+        (self.preferences.library_width - 48.).max(200.)
     }
 
     fn toggle_theme(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -2456,7 +2468,7 @@ impl Workbench {
                     )
                     .child(field("Version", if version.is_empty() { "—".to_string() } else { version }, cx))
                     .child(self.path_field("data-root", "Data root", self.root.path().display().to_string(), cx))
-                    .child(field("Platform", format!("{} · {}", std::env::consts::OS, std::env::consts::ARCH), cx)),
+                    .child(field("Platform", platform_label(), cx)),
             )
             .child(empty_state(
                 IconName::ShieldCheck,
@@ -3003,4 +3015,21 @@ impl Render for Workbench {
         }
         shell
     }
+}
+
+/// Readable operating system and architecture, e.g. "macOS arm64".
+fn platform_label() -> String {
+    let os = match std::env::consts::OS {
+        "macos" => "macOS",
+        "windows" => "Windows",
+        "linux" => "Linux",
+        "freebsd" => "FreeBSD",
+        other => other,
+    };
+    let arch = match std::env::consts::ARCH {
+        "aarch64" => "arm64",
+        "x86_64" => "x64",
+        other => other,
+    };
+    format!("{os} {arch}")
 }

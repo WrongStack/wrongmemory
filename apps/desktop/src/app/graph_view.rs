@@ -1,4 +1,5 @@
 use super::*;
+use wrongmemory_desktop::model::NODE_WIDTH;
 
 impl Workbench {
     pub(super) fn relations(&mut self, cx: &mut Context<Self>) -> AnyElement {
@@ -12,14 +13,14 @@ impl Workbench {
                 let a = &graph.nodes[*a];
                 let b = &graph.nodes[*b];
                 (
-                    point(px((a.x + 210.) * zoom), px((a.y + 38.) * zoom)),
+                    point(px((a.x + NODE_WIDTH) * zoom), px((a.y + 38.) * zoom)),
                     point(px(b.x * zoom), px((b.y + 38.) * zoom)),
                     relation == "contradicts",
                 )
             })
             .collect::<Vec<_>>();
         let graph_height = (graph.height * zoom).max(400.);
-        let graph_width = (graph.width * zoom).max(500.);
+        let graph_width = graph.content_width() * zoom;
         let canvas = canvas(
             |_, _, _| (),
             move |bounds, _, window, cx| {
@@ -75,10 +76,12 @@ impl Workbench {
                     .absolute()
                     .left(px(node.x * zoom))
                     .top(px(node.y * zoom))
-                    .w(px(210. * zoom))
+                    .w(px(NODE_WIDTH * zoom))
                     .h(px(76. * zoom))
-                    .px_3()
-                    .py_2()
+                    // Padding, text and icon scale with the board so a zoomed
+                    // node keeps its proportions instead of clipping its label.
+                    .px(px(12. * zoom))
+                    .py(px(8. * zoom))
                     .rounded_lg()
                     .border_1()
                     .border_color(if is_memory {
@@ -108,16 +111,17 @@ impl Workbench {
                         div()
                             .flex()
                             .items_center()
-                            .gap_1()
-                            .text_xs()
+                            .gap(px(4. * zoom))
+                            .text_size(px(12. * zoom))
                             .text_color(cx.theme().muted_foreground)
-                            .child(Icon::new(icon).size_3())
+                            .child(Icon::new(icon).size(px(12. * zoom)))
                             .child(kind),
                     )
                     .child(
                         div()
-                            .mt_1()
-                            .text_xs()
+                            .mt(px(4. * zoom))
+                            .text_size(px(12. * zoom))
+                            .line_height(px(18. * zoom))
                             .line_clamp(2)
                             .text_ellipsis()
                             .child(preview(&node.label, 64)),
@@ -179,7 +183,9 @@ impl Workbench {
                                     .icon(IconName::Maximize)
                                     .label("Fit")
                                     .on_click(cx.listener(|this, _, _, cx| {
-                                        this.graph_zoom = 0.6;
+                                        this.graph_zoom = this
+                                            .graph_layout
+                                            .fit_zoom(this.graph_available_width());
                                         this.persist(cx);
                                         this.graph_scroll.set_offset(point(px(0.), px(0.)));
                                         cx.notify();
