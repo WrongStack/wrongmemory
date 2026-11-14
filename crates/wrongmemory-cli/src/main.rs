@@ -6,6 +6,7 @@
 mod autostart_unix;
 mod connect;
 mod desktop_install;
+mod desktop_launcher;
 mod http;
 mod mcp;
 mod ops;

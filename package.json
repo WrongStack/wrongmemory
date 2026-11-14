@@ -19,6 +19,7 @@
     "desktop:build": "cd apps/desktop && cargo build --release --locked",
     "desktop:package": "bun scripts/desktop/package.ts",
     "desktop:package:test": "bun test scripts/desktop/package.test.ts",
+    "desktop:smoke": "bun scripts/desktop/smoke.ts",
     "oracle:mutations": "bun scripts/oracle/build-mutation-fixtures.ts",
     "certification:surface": "bun scripts/certification/build-sage-surface.ts",
     "inventory:mcp-tools": "bun scripts/inventory/mcp-tools.ts",

@@ -48,6 +48,63 @@ jobs:
         run: bun run desktop:package:test
       - name: Build native executable
         run: cargo build --locked
+      - name: Render every view in both themes (runtime smoke)
+        working-directory: .
+        run: bun scripts/desktop/smoke.ts --app target/desktop/debug/wrongmemory-desktop.exe --cli target/debug/wrongmemory.exe
+
+  desktop-unix:
+    # The same GPUI desktop on Linux (X11/Wayland through wgpu/Vulkan) and
+    # macOS (Metal). Format runs once, in desktop-windows.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: apps/desktop
+    env:
+      WRONGMEMORY_TEST_CLI: ${{ github.workspace }}/target/debug/wrongmemory
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version-file: .bun-version
+      - name: Native GUI libraries (Linux)
+        if: runner.os == 'Linux'
+        working-directory: .
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang cmake pkg-config libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libvulkan-dev libx11-xcb-dev libxcb1-dev libfontconfig1-dev libfreetype6-dev libzstd-dev libssl-dev xvfb mesa-vulkan-drivers libvulkan1
+      - name: Build core fixtures with the core toolchain
+        working-directory: .
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal
+          cargo +1.93.0 build --locked -p wrongmemory-cli -p wrongmemoryd
+      - name: Install the independent desktop toolchain
+        run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
+      - name: Desktop Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Desktop tests
+        run: cargo test --workspace --locked
+      - name: Five consecutive real-daemon desktop runs
+        run: |
+          for round in 1 2 3 4 5; do
+            cargo test --test daemon --locked
+          done
+      - name: Package regression tests
+        working-directory: .
+        run: bun run desktop:package:test
+      - name: Build native executable
+        run: cargo build --locked
+      - name: Render every view in both themes (runtime smoke)
+        working-directory: .
+        run: |
+          smoke="bun scripts/desktop/smoke.ts --app target/desktop/debug/wrongmemory-desktop --cli target/debug/wrongmemory"
+          # Linux renders through Mesa's software Vulkan under Xvfb; macOS uses the runner's session.
+          if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a $smoke; else $smoke; fi
 
   unix:
     # Unix sockets, flock singleton, peer-uid checks, detached spawn and the
@@ -68,9 +125,15 @@ jobs:
           bun-version-file: .bun-version
       - name: Install pinned toolchain
         run: rustup show active-toolchain || rustup toolchain install
+      - name: Desktop Entry validator (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends desktop-file-utils
       - name: Clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Test
+        env:
+          # The generated application entry must pass freedesktop's validator.
+          WRONGMEMORY_REQUIRE_DESKTOP_FILE_VALIDATE: ${{ runner.os == 'Linux' && '1' || '' }}
         run: cargo test --workspace --locked
       - name: TypeScript client and contract parity
         run: bun run test:client

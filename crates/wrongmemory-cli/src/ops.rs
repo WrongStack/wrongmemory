@@ -72,7 +72,7 @@ pub enum AutostartCmd {
 
 #[derive(Debug, Args)]
 pub struct InstallArgs {
-    /// Install the optional Windows desktop from a verified, extracted desktop bundle.
+    /// Install the optional native desktop from a verified, extracted desktop bundle.
     #[arg(long)]
     pub desktop: bool,
     /// Install directory (default %LOCALAPPDATA%\WrongMemory\bin on Windows,
@@ -785,11 +785,50 @@ pub async fn run_install(root: &DataRoot, json_mode: bool, a: InstallArgs) -> i3
         }
         done.push(dst);
     }
+    // Linux application-menu entry for the desktop. A failure is reported and
+    // recorded, never an install failure: the binaries are already in place.
+    let launcher = if desktop_resources.is_some()
+        && cfg!(any(target_os = "linux", target_os = "freebsd"))
+    {
+        match crate::desktop_launcher::data_home() {
+            Some(data_home) => match crate::desktop_launcher::install(
+                &data_home,
+                &prefix.join(exe_name("wrongmemory-desktop")),
+            ) {
+                Ok(p) => {
+                    json!({"entry": p.entry.display().to_string(), "icon": p.icon.display().to_string()})
+                }
+                Err(e) => {
+                    eprintln!("wrongmemory install: desktop launcher not written: {e}");
+                    json!({"error": e.to_string()})
+                }
+            },
+            None => json!({"error": "no XDG data directory"}),
+        }
+    } else if desktop_resources.is_some() && cfg!(target_os = "macos") {
+        match crate::desktop_launcher::app_bundle::applications_dir() {
+            Some(apps) => match crate::desktop_launcher::app_bundle::install(
+                &apps,
+                &prefix.join(exe_name("wrongmemory-desktop")),
+                env!("CARGO_PKG_VERSION"),
+            ) {
+                Ok(app) => json!({"app": app.display().to_string()}),
+                Err(e) => {
+                    eprintln!("wrongmemory install: desktop launcher not written: {e}");
+                    json!({"error": e.to_string()})
+                }
+            },
+            None => json!({"error": "HOME is not set"}),
+        }
+    } else {
+        serde_json::Value::Null
+    };
     let manifest = json!({
         "version": env!("CARGO_PKG_VERSION"),
         "installedFrom": src_dir.display().to_string(),
         "binaries": done.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
         "desktopResources": desktop_resources,
+        "desktopLauncher": launcher,
         "rollback": format!(
             "previous binaries (if any) are kept as *{}.old",
             std::env::consts::EXE_SUFFIX
@@ -947,6 +986,23 @@ pub async fn run_uninstall(root: &DataRoot, json_mode: bool, a: UninstallArgs) -
             if std::fs::remove_file(&p).is_ok() {
                 removed.push(p.display().to_string());
             }
+        }
+    }
+    if cfg!(any(target_os = "linux", target_os = "freebsd"))
+        && let Some(data_home) = crate::desktop_launcher::data_home()
+    {
+        match crate::desktop_launcher::uninstall(&data_home) {
+            Ok(paths) => removed.extend(paths.iter().map(|p| p.display().to_string())),
+            Err(e) => eprintln!("wrongmemory uninstall: desktop launcher preserved: {e}"),
+        }
+    }
+    if cfg!(target_os = "macos")
+        && let Some(apps) = crate::desktop_launcher::app_bundle::applications_dir()
+    {
+        match crate::desktop_launcher::app_bundle::uninstall(&apps) {
+            Ok(Some(app)) => removed.push(app.display().to_string()),
+            Ok(None) => {}
+            Err(e) => eprintln!("wrongmemory uninstall: desktop launcher preserved: {e}"),
         }
     }
     if let Err(e) = crate::desktop_install::uninstall(&prefix) {

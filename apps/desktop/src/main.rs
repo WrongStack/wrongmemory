@@ -29,54 +29,48 @@ fn main() -> anyhow::Result<()> {
         Ok(p) => (p, None),
         Err(e) => (Preferences::default(), Some(e.to_string())),
     };
-    application()
-        .with_assets(gpui_kit::assets::Assets)
-        .run(move |cx| {
-            gpui_kit::init(cx);
-            let mode = match preferences.appearance {
-                Appearance::Dark => gpui_kit::component::ThemeMode::Dark,
-                Appearance::Light => gpui_kit::component::ThemeMode::Light,
-                Appearance::System => gpui_kit::component::ThemeMode::from(cx.window_appearance()),
-            };
-            gpui_kit::component::Theme::change(mode, None, cx);
-            app::bind_keys(cx);
-            cx.on_window_closed(|cx, _| {
-                if cx.windows().is_empty() {
-                    cx.quit();
-                }
-            })
-            .detach();
-            gpui_kit::open_window(
-                WindowOptions {
-                    window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
-                        None,
-                        size(px(1280.), px(800.)),
-                        cx,
-                    ))),
-                    window_min_size: Some(size(px(940.), px(600.))),
-                    titlebar: Some(TitlebarOptions {
-                        title: Some("WrongMemory".into()),
-                        ..Default::default()
-                    }),
+    application().with_assets(app::AppAssets).run(move |cx| {
+        gpui_kit::init(cx);
+        let mode = match preferences.appearance {
+            Appearance::Dark => gpui_kit::component::ThemeMode::Dark,
+            Appearance::Light => gpui_kit::component::ThemeMode::Light,
+            Appearance::System => gpui_kit::component::ThemeMode::from(cx.window_appearance()),
+        };
+        gpui_kit::component::Theme::change(mode, None, cx);
+        app::apply_platform_font(cx);
+        app::bind_keys(cx);
+        cx.on_window_closed(|cx, _| {
+            if cx.windows().is_empty() {
+                cx.quit();
+            }
+        })
+        .detach();
+        gpui_kit::open_window(
+            WindowOptions {
+                window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
+                    None,
+                    size(px(1280.), px(800.)),
+                    cx,
+                ))),
+                window_min_size: Some(size(px(940.), px(600.))),
+                // Matches the Linux launcher's StartupWMClass written by
+                // `wrongmemory install --desktop`.
+                app_id: Some("com.wrongstack.WrongMemory".into()),
+                titlebar: Some(TitlebarOptions {
+                    title: Some("WrongMemory".into()),
                     ..Default::default()
-                },
-                cx,
-                move |window, cx| {
-                    cx.new(|cx| {
-                        app::Workbench::new(
-                            root,
-                            cli,
-                            client,
-                            preferences,
-                            settings_error,
-                            window,
-                            cx,
-                        )
-                    })
-                },
-            )
-            .expect("open WrongMemory desktop");
-            cx.activate(true);
-        });
+                }),
+                ..Default::default()
+            },
+            cx,
+            move |window, cx| {
+                cx.new(|cx| {
+                    app::Workbench::new(root, cli, client, preferences, settings_error, window, cx)
+                })
+            },
+        )
+        .expect("open WrongMemory desktop");
+        cx.activate(true);
+    });
     Ok(())
 }
