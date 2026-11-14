@@ -4,7 +4,12 @@
 // It needs a display (Xvfb on Linux CI, the session on macOS/Windows) and
 // never touches the user's data root.
 //
-//   bun scripts/desktop/smoke.ts --app <wrongmemory-desktop> --cli <wrongmemory> [--seconds 6] [--screenshots <dir>]
+//   bun scripts/desktop/smoke.ts --app <wrongmemory-desktop> --cli <wrongmemory> [--seconds 6] [--screenshots <dir>] [--require-window]
+//
+// Each run must also show a visible top-level window of at least 600x400
+// (Windows user32, macOS CoreGraphics, X11 xwininfo). If the platform probe
+// cannot run, the check is skipped with a warning unless --require-window
+// makes that a failure (CI does).
 //
 // --screenshots captures the whole screen once per view before the app is
 // closed (macOS `screencapture`, Linux `import -window root` under X,
@@ -37,6 +42,59 @@ function capture(file: string): string | null {
   return result.exitCode === 0 ? null : (args[0] + ' failed: ' + result.stderr.toString().trim());
 }
 
+// A visible top-level window of the app, its size, or why none was found.
+// `unavailable` means the platform probe itself could not run.
+type WindowProbe = { width: number; height: number } | { missing: string; unavailable?: boolean };
+
+const MIN_VISIBLE = { width: 600, height: 400 };
+
+export function probeWindow(pid: number): WindowProbe {
+  const env = { ...process.env };
+  let args: string[];
+  if (process.platform === 'win32') {
+    delete env.PSModulePath;
+    // MainWindowHandle is the first visible, unowned top-level window.
+    const ps = `$p = Get-Process -Id ${pid} -ErrorAction SilentlyContinue; if (-not $p -or $p.MainWindowHandle -eq 0) { 'none'; exit }
+Add-Type -Namespace WmSmoke -Name User32 -MemberDefinition '[DllImport("user32.dll")] public static extern bool GetWindowRect(System.IntPtr h, out RECT r); [DllImport("user32.dll")] public static extern bool IsIconic(System.IntPtr h); public struct RECT { public int L, T, R, B; }'
+$r = New-Object WmSmoke.User32+RECT; [void][WmSmoke.User32]::GetWindowRect($p.MainWindowHandle, [ref]$r)
+if ([WmSmoke.User32]::IsIconic($p.MainWindowHandle)) { 'minimized' } else { '{0}x{1}' -f ($r.R - $r.L), ($r.B - $r.T) }`;
+    args = ['powershell', '-NoProfile', '-Command', ps];
+  } else if (process.platform === 'darwin') {
+    // CoreGraphics reports owner PID and bounds without the screen-recording
+    // permission. 1 = kCGWindowListOptionOnScreenOnly, 0 = kCGNullWindowID.
+    const js = `ObjC.import('CoreGraphics');
+const all = ObjC.deepUnwrap(ObjC.castRefToObject($.CGWindowListCopyWindowInfo(1, 0))) || [];
+const mine = all.filter(w => w.kCGWindowOwnerPID === ${pid} && w.kCGWindowLayer === 0).map(w => w.kCGWindowBounds);
+mine.length ? mine.map(b => Math.round(b.Width) + 'x' + Math.round(b.Height)).join(' ') : 'none';`;
+    args = ['osascript', '-l', 'JavaScript', '-e', js];
+  } else {
+    // X11: the app sets WM_CLASS to its app id; xwininfo also lists unmapped
+    // windows, so check each match's map state.
+    const tree = Bun.spawnSync(['xwininfo', '-root', '-tree'], { stdout: 'pipe', stderr: 'pipe', timeout: 10000 });
+    if (tree.exitCode !== 0) return { missing: 'xwininfo failed: ' + tree.stderr.toString().trim(), unavailable: true };
+    const ids = tree.stdout.toString().split('\n')
+      .filter(line => line.includes('"com.wrongstack.WrongMemory"'))
+      .map(line => line.trim().split(/\s+/)[0]);
+    for (const id of ids) {
+      const info = Bun.spawnSync(['xwininfo', '-id', id], { stdout: 'pipe', stderr: 'ignore', timeout: 10000 }).stdout.toString();
+      const width = Number(/Width:\s+(\d+)/.exec(info)?.[1]);
+      const height = Number(/Height:\s+(\d+)/.exec(info)?.[1]);
+      if (info.includes('Map State: IsViewable') && width >= MIN_VISIBLE.width && height >= MIN_VISIBLE.height) return { width, height };
+    }
+    return { missing: ids.length ? 'window not viewable or too small' : 'no window' };
+  }
+  const result = Bun.spawnSync(args, { stdout: 'pipe', stderr: 'pipe', timeout: 30000, env });
+  if (result.exitCode !== 0) return { missing: args[0] + ' failed: ' + result.stderr.toString().trim(), unavailable: true };
+  const out = result.stdout.toString().trim();
+  for (const size of out.split(/\s+/)) {
+    const match = /^(\d+)x(\d+)$/.exec(size);
+    if (match && Number(match[1]) >= MIN_VISIBLE.width && Number(match[2]) >= MIN_VISIBLE.height) {
+      return { width: Number(match[1]), height: Number(match[2]) };
+    }
+  }
+  return { missing: out === 'none' ? 'no window' : 'window ' + out };
+}
+
 function alive(pid: number): boolean {
   try { process.kill(pid, 0); return true; } catch { return false; }
 }
@@ -48,7 +106,7 @@ function cli(binary: string, root: string, args: string[]): any {
   return out ? JSON.parse(out) : null;
 }
 
-export async function smoke(app: string, binary: string, seconds: number, screenshots?: string): Promise<{ runs: number; screenshots: number }> {
+export async function smoke(app: string, binary: string, seconds: number, screenshots?: string, requireWindow = false): Promise<{ runs: number; screenshots: number; windows: number }> {
   const scratch = mkdtempSync(join(tmpdir(), 'wm-desktop-smoke-'));
   const root = join(scratch, 'root');
   const project = join(scratch, 'project');
@@ -56,6 +114,7 @@ export async function smoke(app: string, binary: string, seconds: number, screen
   writeFileSync(join(project, 'src', 'main.rs'), 'fn main() {}\n');
   let runs = 0;
   let shots = 0;
+  let windows = 0;
   if (screenshots) mkdirSync(screenshots, { recursive: true });
   try {
     const projectId = cli(binary, root, ['project', 'add', project, '--managed']).project.projectId as string;
@@ -75,7 +134,10 @@ export async function smoke(app: string, binary: string, seconds: number, screen
         const deadline = Date.now() + seconds * 1000;
         const shotAt = deadline - 1500;
         let shot = !screenshots;
+        const probeFrom = Date.now() + 1000;
+        let seen: WindowProbe = { missing: 'not probed' };
         while (Date.now() < deadline && child.exitCode === null) {
+          if ('missing' in seen && !seen.unavailable && Date.now() >= probeFrom) seen = probeWindow(child.pid);
           if (!shot && Date.now() >= shotAt) {
             shot = true;
             const problem = capture(join(screenshots!, `${theme}-${view}.png`));
@@ -91,8 +153,18 @@ export async function smoke(app: string, binary: string, seconds: number, screen
         if (exited !== null || output.includes('panicked')) {
           throw new Error(`desktop ${exited !== null ? 'exited with ' + exited : 'panicked'} in ${theme}/${view}:\n${output.slice(-4000)}`);
         }
+        let shown = '';
+        if ('missing' in seen) {
+          if (!seen.unavailable || requireWindow) {
+            throw new Error(`desktop showed no visible window in ${theme}/${view}: ${seen.missing}\n${output.slice(-4000)}`);
+          }
+          console.warn(`warning: window check skipped: ${seen.missing}`);
+        } else {
+          windows++;
+          shown = ` (${seen.width}x${seen.height})`;
+        }
         runs++;
-        console.log(`ok ${theme}/${view}`);
+        console.log(`ok ${theme}/${view}${shown}`);
       }
     }
   } finally {
@@ -112,11 +184,11 @@ export async function smoke(app: string, binary: string, seconds: number, screen
       console.warn('warning: could not remove ' + scratch + ': ' + (e as Error).message);
     }
   }
-  return { runs, screenshots: shots };
+  return { runs, screenshots: shots, windows };
 }
 
 if (import.meta.main) {
   const shotsDir = process.argv.includes('--screenshots') ? resolve(arg('--screenshots')) : undefined;
-  const result = await smoke(resolve(arg('--app')), resolve(arg('--cli')), Number(arg('--seconds', '6')), shotsDir);
+  const result = await smoke(resolve(arg('--app')), resolve(arg('--cli')), Number(arg('--seconds', '6')), shotsDir, process.argv.includes('--require-window'));
   console.log(JSON.stringify(result));
 }

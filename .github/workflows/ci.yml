@@ -50,7 +50,7 @@ jobs:
         run: cargo build --locked
       - name: Render every view in both themes (runtime smoke)
         working-directory: .
-        run: bun scripts/desktop/smoke.ts --app target/desktop/debug/wrongmemory-desktop.exe --cli target/debug/wrongmemory.exe --screenshots dist-smoke
+        run: bun scripts/desktop/smoke.ts --app target/desktop/debug/wrongmemory-desktop.exe --cli target/debug/wrongmemory.exe --screenshots dist-smoke --require-window
       - name: Upload smoke screenshots
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -84,7 +84,7 @@ jobs:
         working-directory: .
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends clang cmake pkg-config libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libvulkan-dev libx11-xcb-dev libxcb1-dev libfontconfig1-dev libfreetype6-dev libzstd-dev libssl-dev xvfb mesa-vulkan-drivers libvulkan1 imagemagick
+          sudo apt-get install -y --no-install-recommends clang cmake pkg-config libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libvulkan-dev libx11-xcb-dev libxcb1-dev libfontconfig1-dev libfreetype6-dev libzstd-dev libssl-dev xvfb mesa-vulkan-drivers libvulkan1 imagemagick x11-utils
       - name: Build core fixtures with the core toolchain
         working-directory: .
         run: |
@@ -109,7 +109,7 @@ jobs:
       - name: Render every view in both themes (runtime smoke)
         working-directory: .
         run: |
-          smoke="bun scripts/desktop/smoke.ts --app target/desktop/debug/wrongmemory-desktop --cli target/debug/wrongmemory --screenshots dist-smoke"
+          smoke="bun scripts/desktop/smoke.ts --app target/desktop/debug/wrongmemory-desktop --cli target/debug/wrongmemory --screenshots dist-smoke --require-window"
           # Linux renders through Mesa's software Vulkan under Xvfb; macOS uses the runner's session.
           if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a -s "-screen 0 1440x900x24" $smoke; else $smoke; fi
       - name: Upload smoke screenshots
