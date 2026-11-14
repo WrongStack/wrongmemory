@@ -626,7 +626,11 @@ mod tests {
         let programs = temp.path().join("Programs");
         let lnk = start_menu::install(&programs, &exe).unwrap();
         let (target, _) = start_menu::read(&lnk).unwrap();
-        assert_eq!(std::path::Path::new(&target), exe);
+        // The Shell stores the long form of an 8.3 temp path (CI runners).
+        assert_eq!(
+            std::fs::canonicalize(&target).unwrap(),
+            std::fs::canonicalize(&exe).unwrap()
+        );
         // Refresh in place.
         assert_eq!(start_menu::install(&programs, &exe).unwrap(), lnk);
         assert_eq!(start_menu::uninstall(&programs).unwrap(), Some(lnk.clone()));
