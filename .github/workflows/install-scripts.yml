@@ -83,6 +83,8 @@ jobs:
             if [ -f "$rc" ] && grep -q '# >>> wrongmemory >>>' "$rc"; then echo "PATH block left in $rc"; exit 1; fi
           done
           test -f "$HOME/.wrongmemory/registry.db"
+          # No desktop was installed, so no application entry may exist.
+          test ! -e "${XDG_DATA_HOME:-$HOME/.local/share}/applications/com.wrongstack.WrongMemory.desktop"
 
   windows:
     runs-on: windows-latest

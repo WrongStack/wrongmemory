@@ -116,9 +116,15 @@ jobs:
           bun-version-file: .bun-version
       - name: Install pinned toolchain
         run: rustup show active-toolchain || rustup toolchain install
+      - name: Desktop Entry validator (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends desktop-file-utils
       - name: Clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Test
+        env:
+          # The generated application entry must pass freedesktop's validator.
+          WRONGMEMORY_REQUIRE_DESKTOP_FILE_VALIDATE: ${{ runner.os == 'Linux' && '1' || '' }}
         run: cargo test --workspace --locked
       - name: TypeScript client and contract parity
         run: bun run test:client

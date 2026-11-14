@@ -104,7 +104,7 @@ Run the same installer command again; nothing is added to `PATH` twice. The prev
 wrongmemory uninstall
 ```
 
-This stops the daemon and removes the binaries, the desktop and its license material, the autostart entry and the `PATH` entries. Memory stores, grants and logs under `~/.wrongmemory` are kept. `wrongmemory uninstall --remove-data --yes` also deletes that data root, including the stores WrongMemory manages; adopted WrongStack stores are never touched.
+This stops the daemon and removes the binaries, the desktop and its license material, the Linux application-menu entry, the autostart entry and the `PATH` entries. Memory stores, grants and logs under `~/.wrongmemory` are kept. `wrongmemory uninstall --remove-data --yes` also deletes that data root, including the stores WrongMemory manages; adopted WrongStack stores are never touched.
 
 ## Quick start
 
@@ -152,7 +152,7 @@ WrongStack 1.4.0 installs the Windows build only. WrongStack 1.5.6 includes #434
 
 ## Desktop (preview: Windows, Linux, macOS)
 
-`wrongmemory-desktop` is an optional native GPUI workbench on the same authenticated service. Every machine runs one per-user daemon; the desktop, WrongStack and MCP clients are all clients of it. The desktop owns no database, and closing it leaves the daemon and other clients running. It has a paged library, a full-text evidence inspector, revision-checked edits, review decisions, a relations view, client grants, health/jobs and a command palette (Ctrl+K, Cmd+K on macOS). Installation never opens it; start it yourself.
+`wrongmemory-desktop` is an optional native GPUI workbench on the same authenticated service. Every machine runs one per-user daemon; the desktop, WrongStack and MCP clients are all clients of it. The desktop owns no database, and closing it leaves the daemon and other clients running. It has a paged library, a full-text evidence inspector, revision-checked edits, review decisions, a relations view, client grants, health/jobs and a command palette (Ctrl+K, Cmd+K on macOS). Installation never opens it. On Linux, `install --desktop` adds an application-menu entry with an icon; on Windows and macOS start `wrongmemory-desktop` yourself (no Start Menu shortcut or `.app` bundle yet).
 
 One code base builds for all three platforms. Windows is published since 0.2.1. Linux has been built, tested against real daemons, packaged, installed and launched under WSLg (X11); macOS builds and tests run in hosted CI only. Release bundles for Linux x64 and macOS arm64 ship from the next release. Accessibility, IME, high-DPI, GPU fallback, sleep/resume, native Wayland rendering, macOS rendering and sustained frame performance are NOT RUN. Details: [apps/desktop/README.md](apps/desktop/README.md).
 

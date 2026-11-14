@@ -41,7 +41,16 @@ Changes:
 | Release `desktop-unix` packaging job (tag-only), macOS license inventory and rendering | NOT RUN |
 | Accessibility/screen reader, IME, 150/200% DPI, GPU fallback, sleep/resume, sustained frame performance | NOT RUN |
 
-Not provided: a macOS `.app` bundle and a Linux `.desktop` launcher, so the installed desktop has no Dock / application-menu entry and is started as `wrongmemory-desktop`.
+Linux launcher (follow-up): `install --desktop` writes `$XDG_DATA_HOME/applications/com.wrongstack.WrongMemory.desktop` and a scalable icon, both owned and removed by uninstall; the window `app_id` matches.
+
+| Check | Result |
+|---|---|
+| `desktop_launcher` unit tests (Exec quoting per the Desktop Entry spec, owned-only install/uninstall, foreign entry left alone) on Windows and Linux; `desktop-file-validate` required on Linux | PASS 3/3 on Linux with the validator. First run FAILED: the validator flagged two main categories (`Development;Utility;`); now `Development;` only |
+| Linux end to end with `XDG_DATA_HOME` in a temp directory: bundle -> `install.sh` `WRONGMEMORY_DESKTOP=1` -> entry and icon written and valid -> uninstall | PASS: `Exec`/`TryExec` point at the installed binary, real `~/.local/share` untouched, both files removed, data kept |
+| X11 `WM_CLASS` of the running window under WSLg | PASS: `com.wrongstack.WrongMemory` (matches `StartupWMClass`) |
+| Launching from a desktop environment's application menu | NOT RUN (WSLg has no application menu) |
+
+Not provided: a macOS `.app` bundle and a Windows Start Menu shortcut; on those platforms the desktop is started as `wrongmemory-desktop`.
 
 The live installation (`%LOCALAPPDATA%\WrongMemory`, its daemon on `~/.wrongmemory`) was not touched. WSL Ubuntu received development packages (GPUI build headers, Mesa Vulkan, ImageMagick, x11-utils, ShellCheck), Rust 1.99.1 and a user-local Bun 1.4.3 in `~/.bun-wm`.
 

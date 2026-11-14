@@ -53,6 +53,9 @@ fn main() -> anyhow::Result<()> {
                     cx,
                 ))),
                 window_min_size: Some(size(px(940.), px(600.))),
+                // Matches the Linux launcher's StartupWMClass written by
+                // `wrongmemory install --desktop`.
+                app_id: Some("com.wrongstack.WrongMemory".into()),
                 titlebar: Some(TitlebarOptions {
                     title: Some("WrongMemory".into()),
                     ..Default::default()

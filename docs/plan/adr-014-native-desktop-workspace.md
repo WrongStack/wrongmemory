@@ -29,4 +29,6 @@ Status: accepted. The same `apps/desktop` workspace, toolchain and exact GPUI Ki
 - Supplementary license material covers the union of the Windows, Linux and macOS dependency graphs.
 - Windows binaries link with an 8 MiB main-thread stack, matching Linux/macOS, because unoptimized GPUI element trees overflowed the default 1 MiB.
 
+- Linux `install --desktop` writes an owned Desktop Entry and icon below `$XDG_DATA_HOME`; the window `app_id` / X11 `WM_CLASS` is `com.wrongstack.WrongMemory` to match `StartupWMClass`. CI requires `desktop-file-validate` to accept the generated entry. A macOS `.app` bundle and a Windows Start Menu shortcut are not implemented.
+
 Linux desktop launch has been observed under WSLg/X11 only; native Wayland rendering and macOS rendering are NOT RUN until observed. Hosted CI results belong in `docs/status.md`.
