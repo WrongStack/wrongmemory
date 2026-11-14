@@ -123,6 +123,19 @@ pub struct Graph {
     pub width: f32,
 }
 
+/// Minimum usable window size; the window never shrinks below it.
+pub const MIN_WINDOW: (f32, f32) = (940., 600.);
+
+/// Default window size: 1280×800, reduced to leave a margin inside the usable
+/// screen area, but never below [`MIN_WINDOW`].
+pub fn initial_window_size(visible: Option<(f32, f32)>) -> (f32, f32) {
+    let (w, h) = visible.unwrap_or((f32::MAX, f32::MAX));
+    (
+        (w - 48.).min(1280.).max(MIN_WINDOW.0),
+        (h - 48.).min(800.).max(MIN_WINDOW.1),
+    )
+}
+
 /// Rendered node width at 100% zoom; layout and view share it.
 pub const NODE_WIDTH: f32 = 210.;
 
@@ -241,6 +254,14 @@ impl Graph {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn default_window_fits_small_screens_but_not_below_the_minimum() {
+        assert_eq!(initial_window_size(None), (1280., 800.));
+        assert_eq!(initial_window_size(Some((2560., 1400.))), (1280., 800.));
+        assert_eq!(initial_window_size(Some((1024., 728.))), (976., 680.));
+        assert_eq!(initial_window_size(Some((800., 600.))), MIN_WINDOW);
+    }
 
     #[test]
     fn graph_fit_uses_the_laid_out_extent() {

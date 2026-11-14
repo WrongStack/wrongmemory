@@ -49,10 +49,22 @@ fn main() -> anyhow::Result<()> {
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
                     None,
-                    size(px(1280.), px(800.)),
+                    {
+                        // Fit the default window inside the usable screen area so
+                        // small displays never start with a title bar off-screen.
+                        let visible = cx.primary_display().map(|d| {
+                            let b = d.visible_bounds().size;
+                            (f32::from(b.width), f32::from(b.height))
+                        });
+                        let (w, h) = wrongmemory_desktop::model::initial_window_size(visible);
+                        size(px(w), px(h))
+                    },
                     cx,
                 ))),
-                window_min_size: Some(size(px(940.), px(600.))),
+                window_min_size: Some(size(
+                    px(wrongmemory_desktop::model::MIN_WINDOW.0),
+                    px(wrongmemory_desktop::model::MIN_WINDOW.1),
+                )),
                 // Matches the Linux launcher's StartupWMClass written by
                 // `wrongmemory install --desktop`.
                 app_id: Some("com.wrongstack.WrongMemory".into()),
