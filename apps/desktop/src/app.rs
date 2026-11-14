@@ -259,7 +259,7 @@ impl Workbench {
         this.overview(window, cx);
         // Application shortcuts (Ctrl/Cmd+K, F, R) dispatch through the focused
         // element, so the workbench holds focus from the first frame.
-        this.focus.focus(window, cx);
+        this.focus_main(window, cx);
         let owner = cx.entity().downgrade();
         this._subscriptions
             .push(window.observe_window_appearance(move |window, cx| {
@@ -542,6 +542,18 @@ impl Workbench {
         self.palette = false;
         self.reset();
         self.load(window, cx);
+        self.focus_main(window, cx);
+    }
+
+    /// Keyboard focus for the working view: the record list in Library and
+    /// Review, so Up/Down select immediately; the workbench elsewhere. Both
+    /// sit inside the workbench, so application shortcuts keep working.
+    fn focus_main(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if matches!(self.view, View::Library | View::Review) {
+            self.list_focus.focus(window, cx);
+        } else {
+            self.focus.focus(window, cx);
+        }
     }
 
     fn select_project(&mut self, project: String, window: &mut Window, cx: &mut Context<Self>) {
@@ -928,7 +940,7 @@ impl Workbench {
         if open {
             self.palette_focus.focus(window, cx);
         } else {
-            self.focus.focus(window, cx);
+            self.focus_main(window, cx);
         }
         cx.notify();
     }

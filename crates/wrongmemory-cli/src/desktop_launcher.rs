@@ -222,7 +222,8 @@ mod tests {
             .is_ok();
         if !available {
             assert!(
-                std::env::var_os("WRONGMEMORY_REQUIRE_DESKTOP_FILE_VALIDATE").is_none(),
+                std::env::var_os("WRONGMEMORY_REQUIRE_DESKTOP_FILE_VALIDATE")
+                    .is_none_or(|v| v.is_empty()),
                 "desktop-file-validate is required but not installed"
             );
             return;
