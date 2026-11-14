@@ -4,7 +4,12 @@
 // It needs a display (Xvfb on Linux CI, the session on macOS/Windows) and
 // never touches the user's data root.
 //
-//   bun scripts/desktop/smoke.ts --app <wrongmemory-desktop> --cli <wrongmemory> [--seconds 6]
+//   bun scripts/desktop/smoke.ts --app <wrongmemory-desktop> --cli <wrongmemory> [--seconds 6] [--screenshots <dir>]
+//
+// --screenshots captures the whole screen once per view before the app is
+// closed (macOS `screencapture`, Linux `import -window root` under X,
+// Windows a GDI screen copy). Use it only on a disposable session such as a
+// CI runner: it records everything visible on the screen.
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -19,6 +24,23 @@ function arg(name: string, fallback?: string): string {
   return value;
 }
 
+function capture(file: string): string | null {
+  const env = { ...process.env };
+  let args: string[];
+  if (process.platform === 'darwin') args = ['screencapture', '-x', file];
+  else if (process.platform === 'win32') {
+    delete env.PSModulePath;
+    const ps = `Add-Type -AssemblyName System.Windows.Forms,System.Drawing; $b=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds; $i=New-Object System.Drawing.Bitmap $b.Width,$b.Height; $g=[System.Drawing.Graphics]::FromImage($i); $g.CopyFromScreen($b.Location,[System.Drawing.Point]::Empty,$b.Size); $i.Save('${file.replace(/'/g, "''")}')`;
+    args = ['powershell', '-NoProfile', '-Command', ps];
+  } else args = ['import', '-window', 'root', file];
+  const result = Bun.spawnSync(args, { stdout: 'pipe', stderr: 'pipe', timeout: 30000, env });
+  return result.exitCode === 0 ? null : (args[0] + ' failed: ' + result.stderr.toString().trim());
+}
+
+function alive(pid: number): boolean {
+  try { process.kill(pid, 0); return true; } catch { return false; }
+}
+
 function cli(binary: string, root: string, args: string[]): any {
   const result = Bun.spawnSync([binary, '--data-root', root, '--json', ...args], { stdout: 'pipe', stderr: 'pipe', timeout: 60000 });
   if (result.exitCode !== 0) throw new Error('fixture command failed: ' + args.join(' ') + '\n' + result.stderr.toString());
@@ -26,13 +48,15 @@ function cli(binary: string, root: string, args: string[]): any {
   return out ? JSON.parse(out) : null;
 }
 
-export async function smoke(app: string, binary: string, seconds: number): Promise<{ runs: number }> {
+export async function smoke(app: string, binary: string, seconds: number, screenshots?: string): Promise<{ runs: number; screenshots: number }> {
   const scratch = mkdtempSync(join(tmpdir(), 'wm-desktop-smoke-'));
   const root = join(scratch, 'root');
   const project = join(scratch, 'project');
   mkdirSync(join(project, 'src'), { recursive: true });
   writeFileSync(join(project, 'src', 'main.rs'), 'fn main() {}\n');
   let runs = 0;
+  let shots = 0;
+  if (screenshots) mkdirSync(screenshots, { recursive: true });
   try {
     const projectId = cli(binary, root, ['project', 'add', project, '--managed']).project.projectId as string;
     cli(binary, root, ['remember', projectId, 'Release builds must run cargo fmt before packaging.', '--kind', 'convention', '--file', 'src/main.rs']);
@@ -49,7 +73,17 @@ export async function smoke(app: string, binary: string, seconds: number): Promi
           stdout: Bun.file(log), stderr: Bun.file(log + '.err'), env: { ...process.env, RUST_BACKTRACE: '1' },
         });
         const deadline = Date.now() + seconds * 1000;
-        while (Date.now() < deadline && child.exitCode === null) await Bun.sleep(200);
+        const shotAt = deadline - 1500;
+        let shot = !screenshots;
+        while (Date.now() < deadline && child.exitCode === null) {
+          if (!shot && Date.now() >= shotAt) {
+            shot = true;
+            const problem = capture(join(screenshots!, `${theme}-${view}.png`));
+            if (problem) console.warn(`warning: screenshot ${theme}/${view}: ${problem}`);
+            else shots++;
+          }
+          await Bun.sleep(200);
+        }
         const exited = child.exitCode;
         if (exited === null) child.kill();
         await child.exited;
@@ -62,15 +96,15 @@ export async function smoke(app: string, binary: string, seconds: number): Promi
       }
     }
   } finally {
+    // `daemon stop` only requests the stop and the discovery file disappears
+    // before the process exits, so wait for the PID itself; Windows refuses
+    // to delete files a live process holds.
+    const status = Bun.spawnSync([binary, '--data-root', root, '--json', 'daemon', 'status'], { stdout: 'pipe', stderr: 'ignore', timeout: 10000 });
+    let pid = 0;
+    try { pid = Number(JSON.parse(status.stdout.toString()).pid) || 0; } catch { pid = 0; }
     Bun.spawnSync([binary, '--data-root', root, 'daemon', 'stop'], { stdout: 'ignore', stderr: 'ignore', timeout: 30000 });
-    // `daemon stop` only requests the stop; wait until status reports it gone
-    // so its files are released (Windows refuses to delete open files).
     const stopDeadline = Date.now() + 30000;
-    while (Date.now() < stopDeadline) {
-      const status = Bun.spawnSync([binary, '--data-root', root, '--json', 'daemon', 'status'], { stdout: 'ignore', stderr: 'ignore', timeout: 10000 });
-      if (status.exitCode !== 0) break;
-      await Bun.sleep(250);
-    }
+    while (pid && alive(pid) && Date.now() < stopDeadline) await Bun.sleep(250);
     try {
       rmSync(scratch, { recursive: true, force: true, maxRetries: 20, retryDelay: 500 });
     } catch (e) {
@@ -78,10 +112,11 @@ export async function smoke(app: string, binary: string, seconds: number): Promi
       console.warn('warning: could not remove ' + scratch + ': ' + (e as Error).message);
     }
   }
-  return { runs };
+  return { runs, screenshots: shots };
 }
 
 if (import.meta.main) {
-  const result = await smoke(resolve(arg('--app')), resolve(arg('--cli')), Number(arg('--seconds', '6')));
+  const shotsDir = process.argv.includes('--screenshots') ? resolve(arg('--screenshots')) : undefined;
+  const result = await smoke(resolve(arg('--app')), resolve(arg('--cli')), Number(arg('--seconds', '6')), shotsDir);
   console.log(JSON.stringify(result));
 }
