@@ -785,7 +785,8 @@ pub async fn run_install(root: &DataRoot, json_mode: bool, a: InstallArgs) -> i3
         }
         done.push(dst);
     }
-    // Linux application-menu entry for the desktop. A failure is reported and
+    // Desktop launcher: Linux application-menu entry, macOS WrongMemory.app,
+    // Windows Start Menu shortcut. A failure is reported and
     // recorded, never an install failure: the binaries are already in place.
     let launcher = if desktop_resources.is_some()
         && cfg!(any(target_os = "linux", target_os = "freebsd"))
@@ -819,6 +820,20 @@ pub async fn run_install(root: &DataRoot, json_mode: bool, a: InstallArgs) -> i3
                 }
             },
             None => json!({"error": "HOME is not set"}),
+        }
+    } else if desktop_resources.is_some() && cfg!(windows) {
+        match crate::desktop_launcher::start_menu::programs_dir() {
+            Some(programs) => match crate::desktop_launcher::start_menu::install(
+                &programs,
+                &prefix.join(exe_name("wrongmemory-desktop")),
+            ) {
+                Ok(lnk) => json!({"shortcut": lnk.display().to_string()}),
+                Err(e) => {
+                    eprintln!("wrongmemory install: desktop launcher not written: {e}");
+                    json!({"error": e.to_string()})
+                }
+            },
+            None => json!({"error": "APPDATA is not set"}),
         }
     } else {
         serde_json::Value::Null
@@ -1001,6 +1016,15 @@ pub async fn run_uninstall(root: &DataRoot, json_mode: bool, a: UninstallArgs) -
     {
         match crate::desktop_launcher::app_bundle::uninstall(&apps) {
             Ok(Some(app)) => removed.push(app.display().to_string()),
+            Ok(None) => {}
+            Err(e) => eprintln!("wrongmemory uninstall: desktop launcher preserved: {e}"),
+        }
+    }
+    if cfg!(windows)
+        && let Some(programs) = crate::desktop_launcher::start_menu::programs_dir()
+    {
+        match crate::desktop_launcher::start_menu::uninstall(&programs) {
+            Ok(Some(lnk)) => removed.push(lnk.display().to_string()),
             Ok(None) => {}
             Err(e) => eprintln!("wrongmemory uninstall: desktop launcher preserved: {e}"),
         }

@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 // Runtime smoke test for the native desktop: render every view in both
-// themes against a disposable daemon and fail on an early exit or a panic.
-// It needs a display (Xvfb on Linux CI, the session on macOS/Windows) and
-// never touches the user's data root.
+// themes against a disposable daemon and fail on an early exit, a crash or a
+// missing window. It needs a display (Xvfb on Linux CI, the session on
+// macOS/Windows) and never touches the user's data root.
 //
 //   bun scripts/desktop/smoke.ts --app <wrongmemory-desktop> --cli <wrongmemory> [--seconds 6] [--screenshots <dir>] [--require-window]
 //
@@ -48,16 +48,21 @@ type WindowProbe = { width: number; height: number } | { missing: string; unavai
 
 const MIN_VISIBLE = { width: 600, height: 400 };
 
+// Output that means the app crashed: a Rust panic, an uncaught Objective-C
+// exception (macOS), or an abort from the Rust runtime.
+const CRASH_MARKERS = ['panicked', 'uncaught exception', 'fatal runtime error'];
+
 export function probeWindow(pid: number): WindowProbe {
   const env = { ...process.env };
   let args: string[];
   if (process.platform === 'win32') {
     delete env.PSModulePath;
-    // MainWindowHandle is the first visible, unowned top-level window.
+    // MainWindowHandle is the first visible, unowned top-level window. The
+    // class icon (GCLP_HICON) comes from the exe's embedded icon resource.
     const ps = `$p = Get-Process -Id ${pid} -ErrorAction SilentlyContinue; if (-not $p -or $p.MainWindowHandle -eq 0) { 'none'; exit }
-Add-Type -Namespace WmSmoke -Name User32 -MemberDefinition '[DllImport("user32.dll")] public static extern bool GetWindowRect(System.IntPtr h, out RECT r); [DllImport("user32.dll")] public static extern bool IsIconic(System.IntPtr h); public struct RECT { public int L, T, R, B; }'
-$r = New-Object WmSmoke.User32+RECT; [void][WmSmoke.User32]::GetWindowRect($p.MainWindowHandle, [ref]$r)
-if ([WmSmoke.User32]::IsIconic($p.MainWindowHandle)) { 'minimized' } else { '{0}x{1}' -f ($r.R - $r.L), ($r.B - $r.T) }`;
+Add-Type -Namespace WmSmoke -Name User32 -MemberDefinition '[DllImport("user32.dll")] public static extern bool GetWindowRect(System.IntPtr h, out RECT r); [DllImport("user32.dll")] public static extern bool IsIconic(System.IntPtr h); [DllImport("user32.dll")] public static extern System.IntPtr GetClassLongPtrW(System.IntPtr h, int i); public struct RECT { public int L, T, R, B; }'
+$h = $p.MainWindowHandle; $r = New-Object WmSmoke.User32+RECT; [void][WmSmoke.User32]::GetWindowRect($h, [ref]$r)
+if ([WmSmoke.User32]::IsIconic($h)) { 'minimized' } elseif ([WmSmoke.User32]::GetClassLongPtrW($h, -14) -eq 0) { 'without-icon' } else { '{0}x{1}' -f ($r.R - $r.L), ($r.B - $r.T) }`;
     args = ['powershell', '-NoProfile', '-Command', ps];
   } else if (process.platform === 'darwin') {
     // CoreGraphics reports owner PID and bounds without the screen-recording
@@ -150,13 +155,17 @@ export async function smoke(app: string, binary: string, seconds: number, screen
         if (exited === null) child.kill();
         await child.exited;
         const output = readFileSync(log, 'utf8') + readFileSync(log + '.err', 'utf8');
-        if (exited !== null || output.includes('panicked')) {
-          throw new Error(`desktop ${exited !== null ? 'exited with ' + exited : 'panicked'} in ${theme}/${view}:\n${output.slice(-4000)}`);
+        // A crashed macOS app can stay alive in the crash reporter past the
+        // deadline, so its output is checked as well as its exit.
+        const crash = CRASH_MARKERS.find(marker => output.includes(marker));
+        if (exited !== null || crash) {
+          const cause = output.split('\n').filter(line => CRASH_MARKERS.some(m => line.includes(m)) || line.includes('reason:')).slice(0, 5).join('\n');
+          throw new Error(`desktop ${exited !== null ? 'exited with ' + exited : 'crashed (' + crash + ')'} in ${theme}/${view}:\n${cause}\n...\n${output.slice(-4000)}`);
         }
         let shown = '';
         if ('missing' in seen) {
           if (!seen.unavailable || requireWindow) {
-            throw new Error(`desktop showed no visible window in ${theme}/${view}: ${seen.missing}\n${output.slice(-4000)}`);
+            throw new Error(`desktop window check failed in ${theme}/${view}: ${seen.missing}\n${output.slice(-4000)}`);
           }
           console.warn(`warning: window check skipped: ${seen.missing}`);
         } else {

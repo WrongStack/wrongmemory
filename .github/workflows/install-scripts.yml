@@ -203,3 +203,6 @@ jobs:
           foreach ($f in 'wrongmemory-desktop.exe', 'wrongmemoryd.exe', 'desktop-resources', 'install.json') {
             if (Test-Path (Join-Path $bin $f)) { throw "left behind: $f" }
           }
+          # Releases after 0.2.1 add a Start Menu shortcut; uninstall must remove it.
+          $Shortcut = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\WrongMemory.lnk'
+          if (Test-Path $Shortcut) { throw "left behind: $Shortcut" }

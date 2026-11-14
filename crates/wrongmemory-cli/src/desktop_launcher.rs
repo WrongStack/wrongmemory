@@ -3,13 +3,14 @@
 //! - **Linux:** `install --desktop` writes a Desktop Entry and its icon under
 //!   the user's XDG data directory so the desktop appears in the application
 //!   menu.
-//! - **macOS:** it creates a minimal `~/Applications/WrongMemory.app` whose
-//!   executable `exec`s the installed `wrongmemory-desktop` (see [`app_bundle`]).
+//! - **macOS:** it creates a minimal `~/Applications/WrongMemory.app` with the
+//!   app icon, whose executable `exec`s the installed `wrongmemory-desktop`
+//!   (see [`app_bundle`]).
+//! - **Windows:** it writes a per-user Start Menu shortcut (see [`start_menu`]);
+//!   the icon is embedded in `wrongmemory-desktop.exe` itself.
 //!
 //! `uninstall` removes them. Every file carries an ownership marker; a file
 //! without it, a symlink or anything that is not a regular file is left alone.
-//! Windows gets no launcher here (no Start Menu shortcut yet); the desktop is
-//! started as `wrongmemory-desktop`.
 #![cfg_attr(not(any(target_os = "linux", target_os = "freebsd")), allow(dead_code))]
 
 use std::io;
@@ -185,6 +186,9 @@ pub mod app_bundle {
     const NAME: &str = "WrongMemory.app";
     const EXECUTABLE: &str = "WrongMemory";
     const MARKER: &str = "wrongmemory-owned";
+    const ICON_FILE: &str = "WrongMemory.icns";
+    /// Generated from the SVG icon by `scripts/desktop/build-icons.ts`.
+    const ICNS: &[u8] = include_bytes!("../assets/wrongmemory-desktop.icns");
 
     /// `~/Applications`, the per-user location Finder and Spotlight index.
     pub fn applications_dir() -> Option<PathBuf> {
@@ -197,12 +201,13 @@ pub mod app_bundle {
         applications.join(NAME)
     }
 
-    fn files(app: &Path) -> [PathBuf; 3] {
+    fn files(app: &Path) -> [PathBuf; 4] {
         let contents = app.join("Contents");
         [
             contents.join("Info.plist"),
             contents.join("MacOS").join(EXECUTABLE),
             contents.join("Resources").join(MARKER),
+            contents.join("Resources").join(ICON_FILE),
         ]
     }
 
@@ -227,6 +232,7 @@ pub mod app_bundle {
                 "  <key>CFBundleName</key><string>WrongMemory</string>\n",
                 "  <key>CFBundleDisplayName</key><string>WrongMemory</string>\n",
                 "  <key>CFBundleExecutable</key><string>{exe}</string>\n",
+                "  <key>CFBundleIconFile</key><string>{icon}</string>\n",
                 "  <key>CFBundlePackageType</key><string>APPL</string>\n",
                 "  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>\n",
                 "  <key>CFBundleShortVersionString</key><string>{v}</string>\n",
@@ -237,6 +243,7 @@ pub mod app_bundle {
             ),
             id = super::APP_ID,
             exe = EXECUTABLE,
+            icon = ICON_FILE,
             v = xml(version),
         )
     }
@@ -257,7 +264,7 @@ pub mod app_bundle {
     }
 
     fn owned(app: &Path) -> io::Result<bool> {
-        let [_, _, marker] = files(app);
+        let [_, _, marker, _] = files(app);
         replaceable(&marker)
     }
 
@@ -270,12 +277,13 @@ pub mod app_bundle {
                 "WrongMemory.app exists and is not owned by WrongMemory",
             ));
         }
-        let [plist, executable, marker] = files(&app);
+        let [plist, executable, marker, icon] = files(&app);
         let script = launcher_script(exe)?;
         for (path, bytes) in [
             (&plist, info_plist(version).into_bytes()),
             (&executable, script.into_bytes()),
             (&marker, b"wrongmemory install --desktop\n".to_vec()),
+            (&icon, ICNS.to_vec()),
         ] {
             if let Some(parent) = path.parent() {
                 std::fs::create_dir_all(parent)?;
@@ -291,7 +299,7 @@ pub mod app_bundle {
         Ok(app)
     }
 
-    /// Remove an owned bundle: only the three written files, then the
+    /// Remove an owned bundle: only the four written files, then the
     /// directories if they are empty. Returns the bundle path when removed.
     pub fn uninstall(applications: &Path) -> io::Result<Option<PathBuf>> {
         let app = bundle(applications);
@@ -317,6 +325,117 @@ pub mod app_bundle {
             let _ = std::fs::remove_dir(dir);
         }
         Ok(Some(app))
+    }
+}
+
+/// Windows: a per-user Start Menu shortcut, `WrongMemory.lnk`, pointing at the
+/// installed `wrongmemory-desktop.exe` (whose embedded icon it shows).
+///
+/// The shortcut is written and read through the Shell's own `WScript.Shell`
+/// COM object in Windows PowerShell, so its binary format is the Shell's.
+/// Paths reach the script only through environment variables, never through
+/// the script text. Ownership is the shortcut's description; a shortcut with
+/// another description is neither replaced nor removed. The desktop sets no
+/// explicit AppUserModelID, so the taskbar groups the running window with
+/// this shortcut by executable path.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub mod start_menu {
+    use super::{invalid, replaceable};
+    use std::ffi::OsStr;
+    use std::io;
+    use std::path::{Path, PathBuf};
+    use std::process::Command;
+
+    const NAME: &str = "WrongMemory.lnk";
+    const DESCRIPTION: &str = "WrongMemory knowledge workbench (installed by wrongmemory)";
+
+    /// `%APPDATA%\Microsoft\Windows\Start Menu\Programs`.
+    pub fn programs_dir() -> Option<PathBuf> {
+        std::env::var_os("APPDATA")
+            .filter(|a| !a.is_empty())
+            .map(|a| PathBuf::from(a).join(r"Microsoft\Windows\Start Menu\Programs"))
+    }
+
+    pub fn shortcut(programs: &Path) -> PathBuf {
+        programs.join(NAME)
+    }
+
+    fn powershell(script: &str, vars: &[(&str, &OsStr)]) -> io::Result<String> {
+        let exe = std::env::var_os("SystemRoot")
+            .map(|root| PathBuf::from(root).join(r"System32\WindowsPowerShell\v1.0\powershell.exe"))
+            .unwrap_or_else(|| PathBuf::from("powershell.exe"));
+        let script = format!(
+            "$ErrorActionPreference = 'Stop'; [Console]::OutputEncoding = [Text.Encoding]::UTF8\n{script}"
+        );
+        let output = Command::new(exe)
+            .args(["-NoLogo", "-NoProfile", "-NonInteractive", "-Command"])
+            .arg(script)
+            // A PowerShell 7 parent's module path breaks Windows PowerShell.
+            .env_remove("PSModulePath")
+            .envs(vars.iter().copied())
+            .output()?;
+        if !output.status.success() {
+            return Err(io::Error::other(format!(
+                "Windows PowerShell failed: {}",
+                String::from_utf8_lossy(&output.stderr).trim()
+            )));
+        }
+        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    }
+
+    /// Target path and description of an existing shortcut.
+    pub fn read(lnk: &Path) -> io::Result<(String, String)> {
+        let out = powershell(
+            "$s = (New-Object -ComObject WScript.Shell).CreateShortcut($env:WM_SHORTCUT)\n\
+             [Console]::Out.Write($s.TargetPath + \"`n\" + $s.Description)",
+            &[("WM_SHORTCUT", lnk.as_os_str())],
+        )?;
+        let (target, description) = out.split_once('\n').unwrap_or((&out, ""));
+        Ok((target.to_string(), description.to_string()))
+    }
+
+    fn owned(lnk: &Path) -> io::Result<bool> {
+        if !replaceable(lnk)? {
+            return Ok(false);
+        }
+        // A file the Shell cannot read as a shortcut is not ours.
+        Ok(read(lnk).is_ok_and(|(_, description)| description == DESCRIPTION))
+    }
+
+    /// Create or refresh the shortcut. An existing `WrongMemory.lnk` that is
+    /// not owned is never touched.
+    pub fn install(programs: &Path, exe: &Path) -> io::Result<PathBuf> {
+        let lnk = shortcut(programs);
+        if replaceable(&lnk)? && !owned(&lnk)? {
+            return Err(invalid(
+                "WrongMemory.lnk exists and is not owned by WrongMemory",
+            ));
+        }
+        std::fs::create_dir_all(programs)?;
+        powershell(
+            "$s = (New-Object -ComObject WScript.Shell).CreateShortcut($env:WM_SHORTCUT)\n\
+             $s.TargetPath = $env:WM_TARGET\n\
+             $s.WorkingDirectory = [IO.Path]::GetDirectoryName($env:WM_TARGET)\n\
+             $s.IconLocation = $env:WM_TARGET + ',0'\n\
+             $s.Description = $env:WM_DESCRIPTION\n\
+             $s.Save()",
+            &[
+                ("WM_SHORTCUT", lnk.as_os_str()),
+                ("WM_TARGET", exe.as_os_str()),
+                ("WM_DESCRIPTION", OsStr::new(DESCRIPTION)),
+            ],
+        )?;
+        Ok(lnk)
+    }
+
+    /// Remove an owned shortcut. Returns its path when removed.
+    pub fn uninstall(programs: &Path) -> io::Result<Option<PathBuf>> {
+        let lnk = shortcut(programs);
+        if !owned(&lnk)? {
+            return Ok(None);
+        }
+        std::fs::remove_file(&lnk)?;
+        Ok(Some(lnk))
     }
 }
 
@@ -405,10 +524,18 @@ mod tests {
         assert!(script.contains(r"it'\''s here"), "{script}");
         let plist = std::fs::read_to_string(app.join("Contents/Info.plist")).unwrap();
         assert!(plist.contains(APP_ID) && plist.contains("<string>0.2.1</string>"));
+        assert!(plist.contains("<key>CFBundleIconFile</key><string>WrongMemory.icns</string>"));
+        let icns = std::fs::read(app.join("Contents/Resources/WrongMemory.icns")).unwrap();
+        assert_eq!(&icns[..4], b"icns");
+        assert_eq!(
+            u32::from_be_bytes(icns[4..8].try_into().unwrap()) as usize,
+            icns.len()
+        );
         // A user file inside the bundle survives uninstall, and so does its directory.
         std::fs::write(app.join("Contents/notes.txt"), "keep").unwrap();
         assert!(app_bundle::uninstall(apps).unwrap().is_some());
         assert!(!app.join("Contents/Info.plist").exists());
+        assert!(!app.join("Contents/Resources").exists());
         assert_eq!(
             std::fs::read_to_string(app.join("Contents/notes.txt")).unwrap(),
             "keep"
@@ -448,6 +575,19 @@ mod tests {
             "{}",
             String::from_utf8_lossy(&lint.stdout)
         );
+        // iconutil rejects a malformed icns.
+        let iconset = temp.path().join("check.iconset");
+        let icon = std::process::Command::new("iconutil")
+            .args(["--convert", "iconset", "--output"])
+            .arg(&iconset)
+            .arg(app.join("Contents/Resources/WrongMemory.icns"))
+            .output()
+            .unwrap();
+        assert!(
+            icon.status.success() && iconset.join("icon_512x512@2x.png").exists(),
+            "{}",
+            String::from_utf8_lossy(&icon.stderr)
+        );
         let open = std::process::Command::new("open")
             .arg("-n")
             .arg(&app)
@@ -467,5 +607,63 @@ mod tests {
             "LaunchServices did not run the bundle executable"
         );
         app_bundle::uninstall(temp.path()).unwrap();
+    }
+
+    /// On Windows, in a temporary Programs directory: the Shell reads the
+    /// written shortcut back with the exact target (quote, space and
+    /// non-ASCII path), a refresh keeps it owned, and a foreign shortcut or a
+    /// directory with the same name is neither replaced nor removed.
+    #[cfg(windows)]
+    #[test]
+    fn start_menu_shortcut_is_owned_and_removed_without_touching_foreign_files() {
+        let temp = tempfile::tempdir().unwrap();
+        let exe = temp
+            .path()
+            .join("it's hëre")
+            .join("wrongmemory-desktop.exe");
+        std::fs::create_dir_all(exe.parent().unwrap()).unwrap();
+        std::fs::write(&exe, b"").unwrap();
+        let programs = temp.path().join("Programs");
+        let lnk = start_menu::install(&programs, &exe).unwrap();
+        let (target, _) = start_menu::read(&lnk).unwrap();
+        assert_eq!(std::path::Path::new(&target), exe);
+        // Refresh in place.
+        assert_eq!(start_menu::install(&programs, &exe).unwrap(), lnk);
+        assert_eq!(start_menu::uninstall(&programs).unwrap(), Some(lnk.clone()));
+        assert!(!lnk.exists());
+        assert_eq!(start_menu::uninstall(&programs).unwrap(), None);
+
+        // A shortcut someone else wrote under the same name.
+        let foreign = temp.path().join("foreign");
+        std::fs::create_dir_all(&foreign).unwrap();
+        let theirs = start_menu::shortcut(&foreign);
+        let made = std::process::Command::new("powershell")
+            .args(["-NoProfile", "-Command", "$s = (New-Object -ComObject WScript.Shell).CreateShortcut($env:WM_SHORTCUT); $s.TargetPath = $env:WM_TARGET; $s.Description = 'theirs'; $s.Save()"])
+            .env_remove("PSModulePath")
+            .env("WM_SHORTCUT", &theirs)
+            .env("WM_TARGET", &exe)
+            .status()
+            .unwrap();
+        assert!(made.success());
+        let before = std::fs::read(&theirs).unwrap();
+        assert!(start_menu::install(&foreign, &exe).is_err());
+        assert_eq!(start_menu::uninstall(&foreign).unwrap(), None);
+        assert_eq!(std::fs::read(&theirs).unwrap(), before);
+
+        // A directory named like the shortcut, and a file that is no shortcut.
+        let odd = temp.path().join("odd");
+        std::fs::create_dir_all(start_menu::shortcut(&odd)).unwrap();
+        assert!(start_menu::install(&odd, &exe).is_err());
+        assert!(start_menu::uninstall(&odd).is_err());
+        assert!(start_menu::shortcut(&odd).is_dir());
+        let junk = temp.path().join("junk");
+        std::fs::create_dir_all(&junk).unwrap();
+        std::fs::write(start_menu::shortcut(&junk), b"not a shortcut").unwrap();
+        assert!(start_menu::install(&junk, &exe).is_err());
+        assert_eq!(start_menu::uninstall(&junk).unwrap(), None);
+        assert_eq!(
+            std::fs::read(start_menu::shortcut(&junk)).unwrap(),
+            b"not a shortcut"
+        );
     }
 }
