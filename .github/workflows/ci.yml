@@ -48,6 +48,9 @@ jobs:
         run: bun run desktop:package:test
       - name: Build native executable
         run: cargo build --locked
+      - name: Render every view in both themes (runtime smoke)
+        working-directory: .
+        run: bun scripts/desktop/smoke.ts --app target/desktop/debug/wrongmemory-desktop.exe --cli target/debug/wrongmemory.exe
 
   desktop-unix:
     # The same GPUI desktop on Linux (X11/Wayland through wgpu/Vulkan) and
@@ -74,7 +77,7 @@ jobs:
         working-directory: .
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends clang cmake pkg-config libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libvulkan-dev libx11-xcb-dev libxcb1-dev libfontconfig1-dev libfreetype6-dev libzstd-dev libssl-dev
+          sudo apt-get install -y --no-install-recommends clang cmake pkg-config libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libvulkan-dev libx11-xcb-dev libxcb1-dev libfontconfig1-dev libfreetype6-dev libzstd-dev libssl-dev xvfb mesa-vulkan-drivers libvulkan1
       - name: Build core fixtures with the core toolchain
         working-directory: .
         run: |
@@ -96,6 +99,12 @@ jobs:
         run: bun run desktop:package:test
       - name: Build native executable
         run: cargo build --locked
+      - name: Render every view in both themes (runtime smoke)
+        working-directory: .
+        run: |
+          smoke="bun scripts/desktop/smoke.ts --app target/desktop/debug/wrongmemory-desktop --cli target/debug/wrongmemory"
+          # Linux renders through Mesa's software Vulkan under Xvfb; macOS uses the runner's session.
+          if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a $smoke; else $smoke; fi
 
   unix:
     # Unix sockets, flock singleton, peer-uid checks, detached spawn and the

@@ -27,6 +27,8 @@ cargo test --workspace --locked
 cargo build --release --locked
 ```
 
+`bun run desktop:smoke -- --app <wrongmemory-desktop> --cli <wrongmemory>` starts the real app against a disposable daemon, renders all five views in light and dark, and fails on an early exit or a panic; CI runs it on Windows, on macOS and under Xvfb with Mesa's software Vulkan on Linux. It needs a display and opens windows, so run it where that is acceptable.
+
 Set `WRONGMEMORY_TEST_CLI` to a built core CLI when it is not in the repository's default debug output. Tests spawn real disposable daemons and fail if the binary is missing. Lifecycle/client changes require five consecutive daemon integration runs. If an older debug desktop is open, use `--target-dir ../../target/desktop-verify` for checks to avoid replacing it.
 
 From the root, `bun run desktop:package` builds the release executables and creates, for the host platform, a ZIP (Windows) or tar.gz (Linux, macOS), the bare GUI executable, SHA256SUMS, manifest and dependency license inventory/texts in `dist-desktop`. Use `--out <fresh directory>` for another run; existing packages are never overwritten. `--skip-build` packages existing release binaries. `bun run desktop:package:test` verifies archive structure and overwrite refusal.
