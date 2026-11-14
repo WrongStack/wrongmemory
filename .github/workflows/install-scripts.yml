@@ -32,6 +32,15 @@ jobs:
       - name: ShellCheck
         if: runner.os == 'Linux'
         run: shellcheck install.sh
+      - name: A release without a native desktop bundle for this platform is refused
+        # v0.2.1 publishes only the Windows desktop; nothing may be installed.
+        run: |
+          set -eu
+          if WRONGMEMORY_VERSION=0.2.1 WRONGMEMORY_DESKTOP=1 WRONGMEMORY_INSTALL_DIR="$RUNNER_TEMP/refused" sh install.sh 2>"$RUNNER_TEMP/refused.err"; then
+            echo "install.sh installed without a desktop bundle"; exit 1
+          fi
+          grep -q 'no native desktop bundle' "$RUNNER_TEMP/refused.err"
+          test ! -e "$RUNNER_TEMP/refused"
       - name: Install the latest release, piped into sh
         run: sh < install.sh
       - name: A new login shell finds wrongmemory on PATH

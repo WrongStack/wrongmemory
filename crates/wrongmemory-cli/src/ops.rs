@@ -72,7 +72,7 @@ pub enum AutostartCmd {
 
 #[derive(Debug, Args)]
 pub struct InstallArgs {
-    /// Install the optional Windows desktop from a verified, extracted desktop bundle.
+    /// Install the optional native desktop from a verified, extracted desktop bundle.
     #[arg(long)]
     pub desktop: bool,
     /// Install directory (default %LOCALAPPDATA%\WrongMemory\bin on Windows,

@@ -4,9 +4,17 @@ import {mkdirSync,readFileSync,readdirSync,existsSync,writeFileSync} from 'node:
 import {dirname,join,resolve,posix} from 'node:path';
 import {createHash} from 'node:crypto';
 const repo=resolve(import.meta.dir,'../..');
-const result=Bun.spawnSync(['cargo','metadata','--format-version','1','--locked','--filter-platform','x86_64-pc-windows-msvc'],{cwd:join(repo,'apps/desktop'),stdout:'pipe',stderr:'inherit'});
-if(result.exitCode)throw Error('Cargo metadata failed');
-const metadata=JSON.parse(result.stdout.toString());
+// Union of every platform a desktop package is built for; a crate used only
+// on Linux or macOS still needs license material in that package.
+const triples=['x86_64-pc-windows-msvc','x86_64-unknown-linux-gnu','aarch64-unknown-linux-gnu','aarch64-apple-darwin','x86_64-apple-darwin'];
+const byId=new Map<string,any>();
+for(const triple of triples){
+ const result=Bun.spawnSync(['cargo','metadata','--format-version','1','--locked','--filter-platform',triple],{cwd:join(repo,'apps/desktop'),stdout:'pipe',stderr:'inherit'});
+ if(result.exitCode)throw Error('Cargo metadata failed for '+triple);
+ const m=JSON.parse(result.stdout.toString());const active=new Set(m.resolve.nodes.map((n:any)=>n.id));
+ for(const p of m.packages)if(active.has(p.id))byId.set(p.id,p);
+}
+const metadata={packages:[...byId.values()].sort((a,b)=>(a.name+'@'+a.version).localeCompare(b.name+'@'+b.version))};
 const target=join(repo,'apps/desktop/third-party-licenses');mkdirSync(target,{recursive:true});
 const cache=new Map<string,Promise<string|null>>();
 function get(url:string):Promise<string|null>{if(!cache.has(url))cache.set(url,(async()=>{try{const r=await fetch(url,{signal:AbortSignal.timeout(7000)});if(!r.ok)return null;const text=await r.text();return text.length>100&&!text.includes('<html')?text:null;}catch{return null;}})());return cache.get(url)!;}

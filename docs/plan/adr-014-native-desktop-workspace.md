@@ -18,3 +18,15 @@ The desktop depends on the existing contracts and IPC crates by path, never stor
 - Versions are aligned by the package script; no silent desktop/core mismatch. Future framework updates must update exact pins and the lockfile and repeat the desktop gate.
 
 This records the workspace strategy and delivered source; it does not certify native 1.0, an installed update path, or external MCP clients. See [native product program](native-desktop-gpui.md) and [current status](../status.md).
+
+## Addendum 2026-11-14: Linux and macOS targets
+
+Status: accepted. The same `apps/desktop` workspace, toolchain and exact GPUI Kit 0.9.1 pins now target Linux x64 and macOS arm64 as well as Windows x64. No storage, contract or IPC change; the desktop remains a client of the one per-user daemon that WrongStack and MCP clients use.
+
+- CI adds a `desktop-unix` job (ubuntu-latest, macos-latest): Clippy, tests, five consecutive real-daemon runs, package regression tests and the executable build. Format runs once on Windows.
+- Release automation adds a `desktop-unix` job (ubuntu-22.04 for the glibc floor, macos-latest) that packages, verifies and re-runs the daemon suite against the extracted CLI; publish depends on it. Linux/macOS bundles are tar.gz to keep executable bits.
+- `wrongmemory install --desktop` admits the executables of the platform it runs on (`bin/<name>` plus the platform suffix) and refuses bundles for another platform. `install.sh` gains `WRONGMEMORY_DESKTOP=1`.
+- Supplementary license material covers the union of the Windows, Linux and macOS dependency graphs.
+- Windows binaries link with an 8 MiB main-thread stack, matching Linux/macOS, because unoptimized GPUI element trees overflowed the default 1 MiB.
+
+Linux desktop launch has been observed under WSLg/X11 only; native Wayland rendering and macOS rendering are NOT RUN until observed. Hosted CI results belong in `docs/status.md`.

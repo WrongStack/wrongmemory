@@ -12,6 +12,7 @@
 #   WRONGMEMORY_NO_MODIFY_PATH=1  leave shell startup files untouched
 #   WRONGMEMORY_VERIFY_ATTESTATION=1
 #                               also verify GitHub build provenance (needs a signed-in `gh`)
+#   WRONGMEMORY_DESKTOP=1       install the native GPUI desktop bundle as well (needs `tar`)
 #
 # Downloads `wrongmemory` and `wrongmemoryd` for this platform, verifies both
 # against the release's SHA256SUMS, then runs `wrongmemory install`, which
@@ -43,10 +44,6 @@ need awk
 need grep
 need sed
 need cut
-
-if [ "${WRONGMEMORY_DESKTOP:-}" = 1 ]; then
-  printf 'wrongmemory install: the native desktop ships for Windows x64 only; installing the headless CLI and daemon.\n' >&2
-fi
 
 os=$(uname -s)
 arch=$(uname -m)
@@ -117,30 +114,72 @@ trap 'rm -rf "$tmp"' EXIT INT TERM
 
 fetch "$base/SHA256SUMS" "$tmp/SHA256SUMS" || fail "download failed: $base/SHA256SUMS"
 
-for exe in wrongmemory wrongmemoryd; do
-  asset="$exe-$platform"
-  printf 'Downloading %s...\n' "$asset"
-  fetch "$base/$asset" "$tmp/$asset" || fail "download failed: $base/$asset"
-  if ! expected=$(awk -v name="$asset" '
+# Download one release asset and verify it against SHA256SUMS (and, when
+# requested, its build provenance) before anything uses its bytes.
+verified() {
+  printf 'Downloading %s...\n' "$1"
+  fetch "$base/$1" "$2" || fail "download failed: $base/$1"
+  if ! expected=$(awk -v name="$1" '
     $2 == name || $2 == "*"name { count++; hash=$1 }
     END { if (count == 1) print hash; else exit 1 }
   ' "$tmp/SHA256SUMS"); then
-    fail "SHA256SUMS must contain exactly one entry for $asset"
+    fail "SHA256SUMS must contain exactly one entry for $1"
   fi
-  actual=$(sha256 "$tmp/$asset")
-  [ "$expected" = "$actual" ] || fail "checksum mismatch for $asset"
+  actual=$(sha256 "$2")
+  [ "$expected" = "$actual" ] || fail "checksum mismatch for $1"
   if [ "${WRONGMEMORY_VERIFY_ATTESTATION:-}" = 1 ]; then
     need gh
-    gh attestation verify "$tmp/$asset" --repo "$REPO" >/dev/null ||
-      fail "build provenance attestation did not verify for $asset"
+    gh attestation verify "$2" --repo "$REPO" >/dev/null ||
+      fail "build provenance attestation did not verify for $1"
   fi
-  # Only verified bytes become executable, under the name `wrongmemory install` expects.
-  chmod 755 "$tmp/$asset"
-  mv -f "$tmp/$asset" "$tmp/$exe"
-  if [ "$os" = darwin ] && command -v xattr >/dev/null 2>&1; then
-    xattr -d com.apple.quarantine "$tmp/$exe" >/dev/null 2>&1 || true
+}
+
+install_src="$tmp"
+desktop_flag=""
+if [ "${WRONGMEMORY_DESKTOP:-}" = 1 ]; then
+  need tar
+  case "$platform" in
+    linux-x64) desktop_platform=linux-x64 ;;
+    darwin-arm64) desktop_platform=macos-arm64 ;;
+  esac
+  desktop_asset=$(awk -v suffix="-$desktop_platform.tar.gz" '
+    { name = $2; sub(/^\*/, "", name) }
+    name ~ /^wrongmemory-desktop-[0-9]+\.[0-9]+\.[0-9]+-/ && substr(name, length(name) - length(suffix) + 1) == suffix { count++; found = name }
+    END { if (count == 1) print found; else exit 1 }
+  ' "$tmp/SHA256SUMS") ||
+    fail "this release has no native desktop bundle for $desktop_platform; unset WRONGMEMORY_DESKTOP to install the CLI and daemon"
+  verified "$desktop_asset" "$tmp/$desktop_asset"
+  # Refuse absolute paths, parent references and links before extracting.
+  tar -tzf "$tmp/$desktop_asset" >"$tmp/bundle.list" || fail "the desktop bundle is not a readable tar.gz"
+  if grep -Eq '(^/|(^|/)\.\.(/|$))' "$tmp/bundle.list"; then
+    fail "the desktop bundle contains unsafe paths"
   fi
-done
+  if tar -tvzf "$tmp/$desktop_asset" | grep -Eq '^[lh]'; then
+    fail "the desktop bundle contains links"
+  fi
+  mkdir "$tmp/bundle"
+  tar -xzf "$tmp/$desktop_asset" -C "$tmp/bundle" || fail "extracting the desktop bundle failed"
+  # `wrongmemory install --desktop` re-verifies every file against MANIFEST.json.
+  install_src="$tmp/bundle/bin"
+  desktop_flag="--desktop"
+  for exe in wrongmemory wrongmemoryd wrongmemory-desktop; do
+    [ -f "$install_src/$exe" ] || fail "the desktop bundle is missing bin/$exe"
+    if [ "$os" = darwin ] && command -v xattr >/dev/null 2>&1; then
+      xattr -d com.apple.quarantine "$install_src/$exe" >/dev/null 2>&1 || true
+    fi
+  done
+else
+  for exe in wrongmemory wrongmemoryd; do
+    asset="$exe-$platform"
+    verified "$asset" "$tmp/$asset"
+    # Only verified bytes become executable, under the name `wrongmemory install` expects.
+    chmod 755 "$tmp/$asset"
+    mv -f "$tmp/$asset" "$tmp/$exe"
+    if [ "$os" = darwin ] && command -v xattr >/dev/null 2>&1; then
+      xattr -d com.apple.quarantine "$tmp/$exe" >/dev/null 2>&1 || true
+    fi
+  done
+fi
 printf 'Checksums match SHA256SUMS.\n'
 [ "${WRONGMEMORY_VERIFY_ATTESTATION:-}" = 1 ] && printf 'Build provenance attestations verified.\n'
 
@@ -156,7 +195,7 @@ fi
 # --stop-daemon: releases before 0.1.12 refuse to replace a running daemon
 # without it; later ones always drain it and start it again themselves.
 rc=0
-"$tmp/wrongmemory" --json install --prefix "$prefix" --stop-daemon >"$tmp/install.out" 2>&1 || rc=$?
+"$install_src/wrongmemory" --json install --prefix "$prefix" --stop-daemon $desktop_flag >"$tmp/install.out" 2>&1 || rc=$?
 if [ "$rc" -ne 0 ]; then
   cat "$tmp/install.out" >&2
   fail "wrongmemory install exited $rc"
@@ -257,5 +296,8 @@ fi
 printf '\nNext:\n'
 printf '  wrongmemory doctor                         # check the install and the daemon\n'
 printf '  wrongmemory ui                             # dashboard in the browser\n'
+if [ -n "$desktop_flag" ]; then
+  printf '  wrongmemory-desktop                        # native desktop (no automatic launch)\n'
+fi
 printf '  wstack sage service use wrongmemory        # use it as WrongStack'\''s SAGE memory\n'
 printf 'Update by running this installer again; remove with: wrongmemory uninstall\n'

@@ -13,4 +13,6 @@ cargo test --workspace --locked
 cargo build --locked
 ```
 
-Real-daemon tests require WRONGMEMORY_TEST_CLI pointing to a built core CLI. CI must set it and must not silently accept missing fixture binaries. GUI runtime checks use disposable data roots only. Record native rendering and platform/accessibility checks separately from compile and IPC tests.
+Real-daemon tests require WRONGMEMORY_TEST_CLI pointing to a built core CLI. CI must set it and must not silently accept missing fixture binaries. GUI runtime checks use disposable data roots only. Record native rendering and platform/accessibility checks separately from compile and IPC tests, per platform (Windows, Linux X11, Linux Wayland, macOS).
+
+The same source targets Windows x64, Linux x64 and macOS arm64. Shortcuts go through `ui::binding` (Cmd on macOS). Any `IconName` outside GPUI Kit's default embedded set must be listed in `ui::ExtraIcons`; the `every_referenced_icon_is_embedded` test enforces it. After adding or updating a dependency, run `bun scripts/desktop/collect-licenses.ts` so every platform's package has license material.

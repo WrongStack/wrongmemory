@@ -1,6 +1,47 @@
 # Implementation status
 
-Last updated: 2026-11-13.
+Last updated: 2026-11-14.
+
+## Cross-platform native desktop and visual pass (2026-11-14, WM-800 / WM-800-RELEASE)
+
+No release. v0.2.1 stays the published and latest version; it has a Windows desktop bundle only. Linux x64 and macOS arm64 desktop bundles ship from the next tagged release. Contracts, IPC, storage and oracle fixtures are unchanged. The desktop remains a client of the one per-user daemon that WrongStack and MCP clients use.
+
+Changes:
+
+- Desktop views rebuilt on shared primitives (`apps/desktop/src/app/ui.rs`): semantic status/severity/job/connection tones, centered wrapping empty states, label/value evidence fields (provenance, applicability, record details, maintenance schedule with relative times), single-line copyable paths, tinted banners, underline view tabs with a pending-review count, project rows with root paths, a command palette (views, actions, projects) with a dimmed backdrop, status-bar connection dot and `Kbd` shortcut hints.
+- Keyboard: view tabs, project rows, the Commands entry and palette rows are `Button`s again (Tab focus, Enter/Space); the palette focuses its first item, moves with Up/Down and returns focus to the workbench when closed; the workbench takes focus on open so Ctrl/Cmd+K works before any click; Review supports Up/Down selection like the library. Found by the runtime pass: shortcuts did nothing until a click, and after any palette choice focus was left on a removed element. A `.hover()` on a GPUI Kit `Button` panicked at first render ("hover style already set"); removed. No render-level test covers that class yet.
+- Root causes fixed: Key, Activity and Database (and other icons outside GPUI Kit's default embedded set) rendered as empty gaps; the app now embeds them and `every_referenced_icon_is_embedded` fails for any referenced icon without an SVG (red with `Key` removed, green restored). Empty-state text overflowed its panel. The disconnected state showed two banners, a "Read-only" chip (connectivity is not permission) and "no knowledge" for an absent project. At 940×600 the sidebar shrank to 195 px and broke the brand mid-word; the minimum is now 220 px. The status bar kept "Starting the shared service…" after a successful start.
+- Windows desktop links with an 8 MiB main-thread stack (`apps/desktop/build.rs`): the unoptimized build overflowed the default 1 MiB stack on the first frame.
+- Platform behavior: Cmd shortcuts, an application menu and Cmd+Q on macOS; on Linux the UI font prefers families with static bold faces (Noto Sans, Liberation Sans, DejaVu Sans), because GPUI drew all weights regular from Ubuntu's variable font.
+- Packaging (`scripts/desktop/platform.ts`, `package.ts`, `verify.ts`): host-platform ZIP (Windows) or tar.gz (Linux, macOS), platform executable names, per-target license inventory. `collect-licenses.ts` covers the union of the Windows, Linux and macOS dependency graphs (61 supplemented packages; existing texts byte-identical). `verify.ts` drops an inherited PowerShell 7 `PSModulePath` for Windows PowerShell 5.1, which otherwise loads an incompatible Archive module.
+- `wrongmemory install --desktop` admits the executables of the platform it runs on and refuses another platform's bundle. `install.sh` supports `WRONGMEMORY_DESKTOP=1` (verified tar.gz, unsafe path and link refusal before extraction) and refuses clearly when the release has no bundle for the platform.
+- CI `desktop-unix` (ubuntu-latest, macos-latest) and release `desktop-unix` (ubuntu-22.04, macos-latest; publish depends on it). `install-scripts.yml` tests the refusal against v0.2.1. WM-ADR-014 addendum, plan, READMEs and desktop AGENTS updated.
+
+| Check | Result |
+|---|---|
+| Core `cargo fmt --all -- --check`; `cargo clippy --workspace --all-targets --locked -- -D warnings`; `cargo test --workspace --locked` (Windows) | PASS; 202 passed, 2 ignored opt-in probes. First Clippy run FAILED (`contains()` and items after the test module in `desktop_install.rs`); fixed and re-run PASS |
+| `cargo test --locked -p wrongmemory-cli --tests`, five consecutive rounds (Windows) | PASS 5/5 |
+| `desktop_install` unit tests, now on every OS, including the new foreign-platform refusal | PASS 3/3 (Windows) |
+| `bun run test:client`; `bun run typecheck`; `git diff --check` | PASS; contract parity 55 methods, 23 error codes; 10 tests |
+| Desktop fmt, Clippy, `cargo test --workspace --locked` on the final code (Windows, Rust 1.99.1) | PASS; 9 model/preferences, 5 UI, 5 real-daemon tests |
+| Desktop real-daemon suite, five consecutive runs on the final code (Windows) | PASS 5/5 |
+| Desktop Clippy, tests, five real-daemon runs and build on the final code, Linux (WSL Ubuntu 26.04, Rust 1.99.1, core CLI built with 1.93.0) | PASS; same counts, including `linux_prefers_a_static_bold_family` and `every_referenced_icon_is_embedded`; daemon suite 5/5 |
+| Core `cargo clippy -p wrongmemory-cli --all-targets` (Rust 1.93.0) and `desktop_install` tests on Linux | PASS; 3/3 including the foreign-platform refusal |
+| `bun test scripts/desktop/package.test.ts` | PASS 3/3 on Windows and on Linux (WSL, Bun 1.4.3) |
+| Desktop license inventory for `x86_64-unknown-linux-gnu` and `x86_64-pc-windows-msvc` | PASS. Linux FAILED before the license union (`accesskit_atspi_common@0.19.1`). macOS inventory NOT RUN locally |
+| Linux end to end in WSL: debug bundle -> `verify.ts --runtime` -> local mirror -> `install.sh` with `WRONGMEMORY_DESKTOP=1`, disposable prefix/root -> `wrongmemory-desktop --version` -> uninstall | PASS: 994 manifest files, three executables 0755, banner 0.2.1, prefix removed, data kept (bundle built before the keyboard/visual follow-ups; install code unchanged since) |
+| `install.sh` with `WRONGMEMORY_VERSION=0.2.1 WRONGMEMORY_DESKTOP=1` on Linux | PASS: exit 1, "no native desktop bundle for linux-x64", nothing installed |
+| ShellCheck 0.11.0 on `install.sh`; `sh -n` | PASS |
+| Linux WSLg/X11 visual pass on the final code, disposable fixture, captured by X window id: all five views in light and dark, 940×600, disconnected state | PASS (`.temp_files/ui/lx/`). Synthetic X input does not reach windows under WSLg, so the palette/Tab captures there show no interaction |
+| Windows visual pass, 100% scaling, disposable fixture: all five views and Review comparison (before the keyboard follow-up), light and dark, palette, disconnected start / Start service / reconnect | PASS after the fixes; after the follow-up, keyboard-only: Ctrl+K at startup, Down×2 + Enter to Relations, palette again to Health and Clients (single-line copyable paths, intrinsic button width), backdrop dim measured (250 -> 180) |
+| Review Up/Down, Tab order through the whole window, palette project/action rows by keyboard (Windows) | NOT RUN: the window lost the foreground to the user and input stopped |
+| Linux native Wayland | Process starts and stays up; rendering NOT RUN (no Wayland capture) |
+| Hosted CI for the new `desktop-unix` jobs; macOS build, tests, license inventory and rendering | NOT RUN (not pushed) |
+| Accessibility/screen reader, IME, 150/200% DPI, GPU fallback, sleep/resume, sustained frame performance | NOT RUN |
+
+Not provided: a macOS `.app` bundle and a Linux `.desktop` launcher, so the installed desktop has no Dock / application-menu entry and is started as `wrongmemory-desktop`.
+
+The live installation (`%LOCALAPPDATA%\WrongMemory`, its daemon on `~/.wrongmemory`) was not touched. WSL Ubuntu received development packages (GPUI build headers, Mesa Vulkan, ImageMagick, x11-utils, ShellCheck), Rust 1.99.1 and a user-local Bun 1.4.3 in `~/.bun-wm`.
 
 ## Installer and README refresh (2026-11-13, WM-700 / WM-704)
 

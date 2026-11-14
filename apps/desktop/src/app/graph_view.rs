@@ -53,6 +53,21 @@ impl Workbench {
             .children(graph.nodes.iter().enumerate().map(|(ix, node)| {
                 let id = node.id.clone();
                 let memory = node.memory_id.clone();
+                let kind = if memory.is_some() {
+                    "memory".to_string()
+                } else {
+                    node.id.split(':').next().unwrap_or("anchor").to_string()
+                };
+                let icon = match kind.as_str() {
+                    "memory" => IconName::BookOpen,
+                    "file" => IconName::FileText,
+                    "directory" | "dir" => IconName::Folder,
+                    "package" => IconName::Frame,
+                    "command" => IconName::SquareTerminal,
+                    "agent" => IconName::Bot,
+                    _ => IconName::Asterisk,
+                };
+                let is_memory = memory.is_some();
                 div()
                     .id(("relation-node", ix))
                     .role(Role::Button)
@@ -62,18 +77,24 @@ impl Workbench {
                     .top(px(node.y * zoom))
                     .w(px(210. * zoom))
                     .h(px(76. * zoom))
-                    .p_2()
-                    .rounded_md()
+                    .px_3()
+                    .py_2()
+                    .rounded_lg()
                     .border_1()
-                    .border_color(if memory.is_some() {
-                        cx.theme().primary
+                    .border_color(if is_memory {
+                        cx.theme().primary.opacity(0.55)
                     } else {
                         cx.theme().border
                     })
-                    .bg(cx.theme().background)
+                    .bg(if is_memory {
+                        cx.theme().background
+                    } else {
+                        cx.theme().muted.opacity(0.5)
+                    })
+                    .shadow_xs()
                     .overflow_hidden()
                     .cursor_pointer()
-                    .hover(|style| style.bg(cx.theme().accent))
+                    .hover(|style| style.bg(cx.theme().list_hover))
                     .on_click(cx.listener(move |this, _, window, cx| {
                         if let Some(id) = memory.clone() {
                             this.inspect_id(id, window, cx);
@@ -83,15 +104,24 @@ impl Workbench {
                             this.load(window, cx);
                         }
                     }))
-                    .child(caption(
-                        if node.memory_id.is_some() {
-                            "MEMORY"
-                        } else {
-                            node.id.split(':').next().unwrap_or("ANCHOR")
-                        },
-                        cx,
-                    ))
-                    .child(div().text_xs().child(preview(&node.label, 48)))
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_1()
+                            .text_xs()
+                            .text_color(cx.theme().muted_foreground)
+                            .child(Icon::new(icon).size_3())
+                            .child(kind),
+                    )
+                    .child(
+                        div()
+                            .mt_1()
+                            .text_xs()
+                            .line_clamp(2)
+                            .text_ellipsis()
+                            .child(preview(&node.label, 64)),
+                    )
             }));
         div()
             .size_full()
@@ -103,7 +133,13 @@ impl Workbench {
                     .flex()
                     .flex_col()
                     .gap_3()
-                    .child(Input::new(&self.query))
+                    .child(
+                        Input::new(&self.query).prefix(
+                            Icon::new(IconName::Search)
+                                .size_4()
+                                .text_color(cx.theme().muted_foreground),
+                        ),
+                    )
                     .child(
                         div()
                             .flex()
@@ -112,8 +148,9 @@ impl Workbench {
                             .child(
                                 Button::new("zoom-out")
                                     .ghost()
-                                    .small()
-                                    .label("−")
+                                    .xsmall()
+                                    .icon(IconName::Minus)
+                                    .tooltip("Zoom out")
                                     .disabled(zoom <= 0.5)
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.graph_zoom = (this.graph_zoom - 0.1).max(0.5);
@@ -125,8 +162,9 @@ impl Workbench {
                             .child(
                                 Button::new("zoom-in")
                                     .ghost()
-                                    .small()
-                                    .label("+")
+                                    .xsmall()
+                                    .icon(IconName::Plus)
+                                    .tooltip("Zoom in")
                                     .disabled(zoom >= 1.6)
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.graph_zoom = (this.graph_zoom + 0.1).min(1.6);
@@ -137,7 +175,8 @@ impl Workbench {
                             .child(
                                 Button::new("fit-graph")
                                     .ghost()
-                                    .small()
+                                    .xsmall()
+                                    .icon(IconName::Maximize)
                                     .label("Fit")
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.graph_zoom = 0.6;
@@ -163,7 +202,9 @@ impl Workbench {
                     .child(caption(
                         "Scroll to pan · middle-button drag · select a memory to inspect",
                         cx,
-                    )),
+                    ))
+                    .border_b_1()
+                    .border_color(cx.theme().border),
             )
             .child(
                 div()
@@ -197,7 +238,7 @@ impl Workbench {
                     .child(if graph.nodes.is_empty() {
                         this_empty(self, cx)
                     } else {
-                        board.into_any_element()
+                        div().p_5().child(board).into_any_element()
                     }),
             )
             .into_any_element()
@@ -205,5 +246,5 @@ impl Workbench {
 }
 
 fn this_empty(this: &Workbench, cx: &App) -> AnyElement {
-    this.empty("Explore a connection","Search for a memory, file, directory or symbol. Only the service-authorized subgraph is shown.",cx)
+    this.empty(IconName::Network, "Explore a connection","Search for a memory, file, directory or symbol. Only the service-authorized subgraph is shown.",cx)
 }

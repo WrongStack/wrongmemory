@@ -120,8 +120,71 @@ jobs:
             dist-desktop/wrongmemory-desktop-windows-x64.exe
           if-no-files-found: error
 
+  desktop-unix:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          # Same glibc floor as the headless Linux build.
+          - os: ubuntu-22.04
+            platform: linux-x64
+          - os: macos-latest
+            platform: macos-arm64
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    env:
+      WRONGMEMORY_TEST_CLI: ${{ github.workspace }}/target/debug/wrongmemory
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Native GUI libraries (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang cmake pkg-config libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libvulkan-dev libx11-xcb-dev libxcb1-dev libfontconfig1-dev libfreetype6-dev libzstd-dev libssl-dev
+      - name: Install pinned toolchains
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal
+          rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
+      - name: Build disposable daemon fixtures
+        run: cargo +1.93.0 build --locked -p wrongmemory-cli -p wrongmemoryd
+      - name: Native Clippy
+        working-directory: apps/desktop
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Native tests
+        working-directory: apps/desktop
+        run: cargo test --workspace --locked
+      - name: Five consecutive native daemon runs
+        working-directory: apps/desktop
+        run: |
+          for round in 1 2 3 4 5; do
+            cargo test --test daemon --locked
+          done
+      - name: Package regression tests
+        run: bun run desktop:package:test
+      - name: Package native desktop preview
+        # Root Cargo builds use the core toolchain file, apps/desktop its own.
+        run: bun run desktop:package
+      - name: Verify extracted binaries and packaged daemon IPC
+        working-directory: apps/desktop
+        run: |
+          extracted=$(bun ../../scripts/desktop/verify.ts --out ../../dist-desktop --runtime | bun -e 'console.log(JSON.parse(await Bun.stdin.text()).extracted)')
+          WRONGMEMORY_TEST_CLI="$extracted/bin/wrongmemory" cargo test --test daemon --locked
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dist-desktop-${{ matrix.platform }}
+          path: |
+            dist-desktop/*.tar.gz
+            dist-desktop/wrongmemory-desktop-${{ matrix.platform }}
+          if-no-files-found: error
+
   publish:
-    needs: [build, desktop]
+    needs: [build, desktop, desktop-unix]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -151,7 +214,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           cat > notes.md <<EOF
-          WrongMemory ${GITHUB_REF_NAME}, per-user: Windows x64, Linux x64 (glibc 2.34+), macOS arm64. The native desktop is Windows x64 only.
+          WrongMemory ${GITHUB_REF_NAME}, per-user: Windows x64, Linux x64 (glibc 2.34+), macOS arm64. The optional native GPUI desktop is published for the same three platforms.
 
           ### Install this release
 
@@ -165,9 +228,11 @@ jobs:
           \`\`\`sh
           # Linux x64, macOS arm64
           curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_REF_NAME}/install.sh | WRONGMEMORY_VERSION=${GITHUB_REF_NAME#v} sh
+          # Linux x64, macOS arm64: native desktop + CLI + daemon
+          curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_REF_NAME}/install.sh | WRONGMEMORY_VERSION=${GITHUB_REF_NAME#v} WRONGMEMORY_DESKTOP=1 sh
           \`\`\`
 
-          The Windows scripts install the latest release; set \`\$env:WRONGMEMORY_VERSION = '${GITHUB_REF_NAME#v}'\` first to pin this one. Offline: unpack, then \`bin/wrongmemory install\` (\`bin\\wrongmemory.exe install\`, or \`install --desktop\` from the desktop ZIP). See docs/operations.md.
+          The Windows scripts install the latest release; set \`\$env:WRONGMEMORY_VERSION = '${GITHUB_REF_NAME#v}'\` first to pin this one. Offline: unpack, then \`bin/wrongmemory install\` (\`bin\\wrongmemory.exe install\`, or \`install --desktop\` from a desktop archive). See docs/operations.md.
 
           - Binaries are **unsigned**: no Authenticode signature, no Apple notarization. Verify each archive or executable against SHA256SUMS and the GitHub build-provenance attestation:
             \`gh attestation verify <file> --repo ${GITHUB_REPOSITORY} --signer-workflow ${GITHUB_REPOSITORY}/.github/workflows/release.yml --source-ref ${GITHUB_REF}\`
