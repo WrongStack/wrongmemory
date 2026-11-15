@@ -300,4 +300,9 @@ if [ -n "$desktop_flag" ]; then
   printf '  wrongmemory-desktop                        # native desktop (no automatic launch)\n'
 fi
 printf '  wstack sage service use wrongmemory        # use it as WrongStack'\''s SAGE memory\n'
-printf 'Update by running this installer again; remove with: wrongmemory uninstall\n'
+if [ -n "${WRONGMEMORY_INSTALL_DIR:-}" ]; then
+  # Without --prefix, uninstall targets the default directory.
+  printf "Update by running this installer again; remove with: wrongmemory uninstall --prefix '%s'\n" "$prefix"
+else
+  printf 'Update by running this installer again; remove with: wrongmemory uninstall\n'
+fi

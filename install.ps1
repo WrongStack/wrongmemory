@@ -182,7 +182,12 @@ function Install-WrongMemory {
   Write-Host '  wrongmemory doctor                         # check the install and the daemon'
   Write-Host '  wrongmemory ui                             # dashboard in the browser'
   Write-Host "  wstack sage service use wrongmemory        # use it as WrongStack's SAGE memory"
-  Write-Host 'Update by running this installer again; remove with: wrongmemory uninstall'
+  if ($env:WRONGMEMORY_INSTALL_DIR) {
+    # Without --prefix, uninstall targets the default directory.
+    Write-Host "Update by running this installer again; remove with: wrongmemory uninstall --prefix `"$Prefix`""
+  } else {
+    Write-Host 'Update by running this installer again; remove with: wrongmemory uninstall'
+  }
 }
 
 # Append $Dir to the user PATH unless an entry already names it; true if it changed.

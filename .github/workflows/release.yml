@@ -210,6 +210,13 @@ jobs:
           cd dist
           ls -l
           if command -v sha256sum >/dev/null; then sha256sum -- * > SHA256SUMS; else shasum -a 256 -- * > SHA256SUMS; fi
+      - name: Linked runtime libraries a desktop system has (Linux)
+        # The runner is headless; wrongmemory-desktop links libxcb,
+        # libxkbcommon and libxkbcommon-x11 (apps/desktop/README.md).
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libxcb1 libxkbcommon0 libxkbcommon-x11-0
       - name: Install the desktop bundle, use it and uninstall (Linux, macOS)
         if: runner.os != 'Windows'
         shell: bash
@@ -219,7 +226,7 @@ jobs:
           for i in $(seq 1 50); do curl -fsS -o /dev/null http://127.0.0.1:8765/SHA256SUMS && break; sleep 0.2; done
           bin="$RUNNER_TEMP/wm/bin"
           WRONGMEMORY_DOWNLOAD_BASE=http://127.0.0.1:8765 WRONGMEMORY_DESKTOP=1 WRONGMEMORY_NO_MODIFY_PATH=1 \
-            WRONGMEMORY_INSTALL_DIR="$bin" sh dist/install.sh
+            WRONGMEMORY_INSTALL_DIR="$bin" sh dist/install.sh | tee "$RUNNER_TEMP/install.out"
           versions=$(for exe in wrongmemory wrongmemoryd wrongmemory-desktop; do "$bin/$exe" --version | head -n1 | awk '{print $NF}'; done | sort -u)
           echo "versions: $versions"
           test "$(echo "$versions" | wc -l)" -eq 1
@@ -233,7 +240,8 @@ jobs:
           project=$("$bin/wrongmemory" --json project add "$RUNNER_TEMP/proj" --managed | jq -r .project.projectId)
           "$bin/wrongmemory" --json remember "$project" "release rehearsal on $RUNNER_OS" > /dev/null
           "$bin/wrongmemory" --json search "$project" "release rehearsal" | grep -q "release rehearsal on $RUNNER_OS"
-          "$bin/wrongmemory" uninstall
+          grep -qF "wrongmemory uninstall --prefix '$bin'" "$RUNNER_TEMP/install.out"
+          "$bin/wrongmemory" uninstall --prefix "$bin"
           for f in wrongmemory wrongmemoryd wrongmemory-desktop desktop-resources install.json; do
             if [ -e "$bin/$f" ]; then echo "left behind: $bin/$f"; exit 1; fi
           done
@@ -251,8 +259,10 @@ jobs:
             $bin = Join-Path $env:RUNNER_TEMP 'wm' | Join-Path -ChildPath 'bin'
             $env:WRONGMEMORY_INSTALL_DIR = $bin
             # Windows PowerShell 5.1, the way `irm | iex` runs it.
-            powershell -NoProfile -ExecutionPolicy Bypass -Command 'Get-Content -Raw dist/install.ps1 | Invoke-Expression'
-            if ($LASTEXITCODE -ne 0) { throw "install.ps1 exited $LASTEXITCODE" }
+            $Out = powershell -NoProfile -ExecutionPolicy Bypass -Command 'Get-Content -Raw dist/install.ps1 | Invoke-Expression' | Out-String
+            if ($LASTEXITCODE -ne 0) { Write-Host $Out; throw "install.ps1 exited $LASTEXITCODE" }
+            Write-Host $Out
+            if (-not $Out.Contains("wrongmemory uninstall --prefix `"$bin`"")) { throw 'the closing hint does not name the install directory' }
           } finally {
             Stop-Process -Id $Server.Id -ErrorAction SilentlyContinue
           }
@@ -276,8 +286,9 @@ jobs:
           & "$bin\wrongmemory.exe" --json remember $project 'release rehearsal on Windows' | Out-Null
           $hits = & "$bin\wrongmemory.exe" --json search $project 'release rehearsal' | Out-String
           if ($hits -notmatch 'release rehearsal on Windows') { throw 'search did not find the record' }
-          & "$bin\wrongmemory.exe" uninstall
+          & "$bin\wrongmemory.exe" uninstall --prefix $bin
           if ($LASTEXITCODE -ne 0) { throw "uninstall exited $LASTEXITCODE" }
+          # The running wrongmemory.exe may only be renamed aside; the rest must be gone.
           foreach ($f in 'wrongmemory-desktop.exe', 'wrongmemoryd.exe', 'desktop-resources', 'install.json') {
             if (Test-Path (Join-Path $bin $f)) { throw "left behind: $f" }
           }
