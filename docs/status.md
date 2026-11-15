@@ -1,6 +1,6 @@
 # Implementation status
 
-Last updated: 2026-11-14.
+Last updated: 2026-11-15.
 
 ## Cross-platform native desktop and visual pass (2026-11-14, WM-800 / WM-800-RELEASE)
 
@@ -39,7 +39,7 @@ Changes:
 | Linux native Wayland | Process starts and stays up; rendering NOT RUN (no Wayland capture) |
 | Hosted `ci` run [43613563569](https://github.com/WrongStack/wrongmemory/actions/runs/43613563569) on `757a85d` (workflow_dispatch on `feat/cross-platform-desktop`) | PASS 6/6: desktop-windows, desktop-unix ubuntu-latest, desktop-unix macos-latest (Clippy, tests, five real-daemon runs, package tests, build), unix ubuntu/macOS (core incl. `desktop_install` tests on Unix), windows |
 | Hosted `install scripts` run [43613566588](https://github.com/WrongStack/wrongmemory/actions/runs/43613566588) on `757a85d` | PASS 4/4, including the new refusal of `WRONGMEMORY_DESKTOP=1` against v0.2.1 on Ubuntu and macOS |
-| Release `desktop-unix` packaging job (tag-only), macOS license inventory and rendering | NOT RUN |
+| Release `desktop-unix` packaging job, macOS license inventory | PASS in the release rehearsal (below); macOS rendering: smoke screenshots (below) |
 | Accessibility/screen reader, IME, 150/200% DPI, GPU fallback, sleep/resume, sustained frame performance | NOT RUN |
 
 Linux launcher (follow-up): `install --desktop` writes `$XDG_DATA_HOME/applications/com.wrongstack.WrongMemory.desktop` and a scalable icon, both owned and removed by uninstall; the window `app_id` matches.
@@ -78,6 +78,17 @@ Window check, crash detection, icons and the Windows shortcut (follow-up):
 | Start Menu search/pinning and taskbar grouping on a real desktop | NOT RUN |
 
 The desktop sets no explicit AppUserModelID, so Windows groups the running window with the shortcut by executable path.
+
+Release rehearsal (follow-up, 2026-11-15): `release.yml` gains `workflow_dispatch`. A manual run builds and packages every platform from the chosen ref, then the `rehearse` job (Ubuntu 22.04, macOS, Windows) serves the assets `publish` would upload from localhost, installs them with the shipped `install.sh` / `install.ps1` (`WRONGMEMORY_DESKTOP=1`, `WRONGMEMORY_DOWNLOAD_BASE`, temp install directory), checks one version across the three executables, the launcher (application entry, `WrongMemory.app` icon, Start Menu shortcut), a remember/search round trip, and uninstall. `publish` runs only for a pushed `v*` tag. No tag, release or draft was created.
+
+| Check | Result |
+| --- | --- |
+| First rehearsal, run [43699656065](https://github.com/WrongStack/wrongmemory/actions/runs/43699656065) on `3d439d3` | Release `build` 3/3, `desktop` and `desktop-unix` (ubuntu-22.04, macos-latest: package, verify, daemon suite against the extracted CLI) PASS, the first run of the release `desktop-unix` job; `publish` skipped. `rehearse` FAILED 3/3: (1) `wrongmemory-desktop --version` on stock Ubuntu 22.04: `libxkbcommon-x11.so.0: cannot open shared object file` (a documented linked runtime library, absent on the headless runner); (2) macOS and Windows: `wrongmemory uninstall` run from the custom directory removed the launcher but left the binaries, because without `--prefix` it targets the default directory, while both installers printed plain `wrongmemory uninstall` |
+| Fixes | Rehearsal installs `libxcb1 libxkbcommon0 libxkbcommon-x11-0` (what a desktop system has) and uninstalls with `--prefix`; `install.sh` and `install.ps1` print `wrongmemory uninstall --prefix <dir>` when `WRONGMEMORY_INSTALL_DIR` is set; `docs/operations.md` no longer says `install.sh` is headless-only. ShellCheck, `sh -n`, Windows PowerShell 5.1 and PowerShell 7 parse PASS locally |
+| Second rehearsal, run [43701632842](https://github.com/WrongStack/wrongmemory/actions/runs/43701632842) on `87089fd` | PASS 10/10 jobs, `publish` skipped. `rehearse` PASS on Ubuntu 22.04, macOS and Windows, including the new uninstall hint and no leftover binaries, resources, `install.json` or launcher |
+| `ci` [43701629611](https://github.com/WrongStack/wrongmemory/actions/runs/43701629611) and `install scripts` [43701629625](https://github.com/WrongStack/wrongmemory/actions/runs/43701629625) on `87089fd` | PASS 6/6 and 4/4 |
+| `wrongmemory uninstall` without `--prefix`, run from a custom directory | Known, unchanged: it still removes the per-user launcher (which points at that directory) and leaves the binaries. Not changed here because it alters CLI behaviour |
+| Publishing a tag; installing a published Linux/macOS desktop bundle from GitHub | NOT RUN (no release) |
 
 The live installation (`%LOCALAPPDATA%\WrongMemory`, its daemon on `~/.wrongmemory`) was not touched. WSL Ubuntu received development packages (GPUI build headers, Mesa Vulkan, ImageMagick, x11-utils, librsvg2-bin, ShellCheck), Rust 1.99.1 and a user-local Bun 1.4.3 in `~/.bun-wm`.
 
