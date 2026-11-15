@@ -143,6 +143,60 @@ mod tests {
         assert_eq!(&ours, same_keys);
     }
 
+    /// Stores written by older SAGE versions have no `unicode_text` column,
+    /// which the schema treats as optional (five adopted stores on a user
+    /// machine failed every write and maintenance pass with "table memories
+    /// has no column named unicode_text"). Writes, maintenance and queries
+    /// must work on such a store, and must not add the column.
+    #[test]
+    fn stores_without_unicode_text_accept_writes_maintenance_and_queries() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("p").join("sage.db");
+        SageStore::create_managed(&path, NOW).unwrap();
+        Connection::open(&path)
+            .unwrap()
+            .execute_batch(
+                "DROP TRIGGER memories_unicode_text_invalidate;
+                 DROP INDEX idx_memories_unicode_text_pending;
+                 ALTER TABLE memories DROP COLUMN unicode_text;",
+            )
+            .unwrap();
+        let (mut store, insp) = SageStore::open(&path, true, Some(tmp.path().into()), NOW).unwrap();
+        assert_eq!(insp.verdict, Verdict::Compatible, "{}", insp.detail);
+        assert!(!insp.unicode_text_column);
+
+        let id = remember(&mut store, "Builds run on the release runner", None);
+        let mut input = serde_json::Map::new();
+        input.insert("text".into(), json!("Builds run on the main runner"));
+        store.update(&id, &input, &ctx(None, None), false).unwrap();
+        let v = Viewer::default();
+        let hits = store.search("main runner", 5, None, None, &v).unwrap();
+        assert_eq!(hits.hits.len(), 1);
+        // No usable term: the LIKE channel.
+        let like = store.search("n r", 5, None, None, &v).unwrap();
+        assert_eq!(like.hits.len(), 1);
+        let page = store
+            .list_page(None, None, Some("MAIN"), Some(5), None, &v)
+            .unwrap();
+        assert_eq!(page.memories.len(), 1);
+        store
+            .hygiene(&crate::hygiene::HygieneOptions::default(), &ctx(None, None))
+            .unwrap();
+        store
+            .delete(&id, "done with it", true, false, &ctx(None, None), true)
+            .unwrap();
+
+        let columns: i64 = Connection::open(&path)
+            .unwrap()
+            .query_row(
+                "SELECT count(*) FROM pragma_table_info('memories') WHERE name = 'unicode_text'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(columns, 0, "the column must not be added");
+    }
+
     fn wrongmemory_test_read_only(path: &Path) -> Connection {
         Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap()
     }

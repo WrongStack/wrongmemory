@@ -23,8 +23,9 @@ use crate::MutationCtx;
 use crate::rules;
 use crate::similarity;
 use crate::store::{
-    SageStore, StoreResult, Viewer, anchor_node, audit, decode_memory, fingerprint, insert_memory,
-    legacy_scope_for, sql_err, sync_anchor_edges,
+    SageStore, StoreResult, Viewer, anchor_node, audit, decode_memory, fingerprint,
+    has_unicode_text, insert_memory, legacy_scope_for, memory_insert_sql, sql_err,
+    sync_anchor_edges,
 };
 use crate::text::{
     collapse_js_space, js_length, normalize_slashes, normalize_text_key, unicode_fold,
@@ -155,12 +156,38 @@ pub(crate) fn upsert_raw(conn: &Connection, m: &mut Map<String, Value>) -> Store
         .get("tags")
         .map(Value::to_string)
         .unwrap_or_else(|| "[]".into());
-    conn.execute(
-        "INSERT INTO memories
-           (id, data, status, kind, scope, legacy_scope, importance, confidence, freshness,
-            updated_at, created_at, audience, tags, owner_session_id, canonical_text, unicode_text)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
-         ON CONFLICT(id) DO UPDATE SET
+    let legacy_scope = rec
+        .legacy_scope
+        .as_deref()
+        .unwrap_or(legacy_scope_for(&rec.scope));
+    let canonical = normalize_text_key(&rec.text);
+    let folded = unicode_fold(&rec.text);
+    // `unicode_text` is optional (older SAGE stores lack it); when present,
+    // a text change clears it through `memories_unicode_text_invalidate`.
+    let unicode = has_unicode_text(conn).map_err(sql_err)?;
+    let mut values: Vec<&dyn rusqlite::ToSql> = vec![
+        &rec.id,
+        &data,
+        &rec.status,
+        &rec.kind,
+        &rec.scope,
+        &legacy_scope,
+        &rec.importance,
+        &rec.confidence,
+        &rec.freshness,
+        &rec.updated_at,
+        &rec.created_at,
+        &audience,
+        &tags,
+        &rec.owner_session_id,
+        &canonical,
+        &folded,
+    ];
+    if !unicode {
+        values.pop();
+    }
+    let sql = format!(
+        "{} ON CONFLICT(id) DO UPDATE SET
            data = excluded.data, status = excluded.status, kind = excluded.kind,
            scope = excluded.scope, legacy_scope = excluded.legacy_scope,
            importance = excluded.importance, confidence = excluded.confidence,
@@ -168,28 +195,9 @@ pub(crate) fn upsert_raw(conn: &Connection, m: &mut Map<String, Value>) -> Store
            created_at = excluded.created_at, audience = excluded.audience,
            tags = excluded.tags, owner_session_id = excluded.owner_session_id,
            canonical_text = excluded.canonical_text",
-        params![
-            rec.id,
-            data,
-            rec.status,
-            rec.kind,
-            rec.scope,
-            rec.legacy_scope
-                .as_deref()
-                .unwrap_or(legacy_scope_for(&rec.scope)),
-            rec.importance,
-            rec.confidence,
-            rec.freshness,
-            rec.updated_at,
-            rec.created_at,
-            audience,
-            tags,
-            rec.owner_session_id,
-            normalize_text_key(&rec.text),
-            unicode_fold(&rec.text),
-        ],
-    )
-    .map_err(sql_err)?;
+        memory_insert_sql(unicode)
+    );
+    conn.execute(&sql, values.as_slice()).map_err(sql_err)?;
     Ok(rec)
 }
 

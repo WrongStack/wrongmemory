@@ -78,7 +78,7 @@ pub struct SageStore {
     path: PathBuf,
     writable: bool,
     fts: bool,
-    unicode_text: bool,
+    pub(crate) unicode_text: bool,
     pub(crate) project_root: Option<PathBuf>,
 }
 
@@ -1007,6 +1007,33 @@ pub(crate) fn legacy_scope_for(scope: &str) -> &'static str {
     }
 }
 
+/// Whether `memories` has the optional `unicode_text` projection. Stores
+/// written by older SAGE versions lack it: writes then leave it out, and
+/// readers fold the text on the fly. No write adds the column.
+pub(crate) fn has_unicode_text(conn: &Connection) -> rusqlite::Result<bool> {
+    conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM pragma_table_info('memories') WHERE name = 'unicode_text')",
+        [],
+        |r| r.get(0),
+    )
+}
+
+/// `INSERT INTO memories (...) VALUES (?1, ...)` with `unicode_text` as the
+/// last column only when the store has it.
+pub(crate) fn memory_insert_sql(unicode_text: bool) -> String {
+    const COLUMNS: &str = "id, data, status, kind, scope, legacy_scope, importance, confidence, \
+         freshness, updated_at, created_at, audience, tags, owner_session_id, canonical_text";
+    let n = if unicode_text { 16 } else { 15 };
+    let placeholders = (1..=n)
+        .map(|i| format!("?{i}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "INSERT INTO memories ({COLUMNS}{}) VALUES ({placeholders})",
+        if unicode_text { ", unicode_text" } else { "" }
+    )
+}
+
 pub(crate) fn insert_memory(conn: &Connection, m: &SageRecord) -> rusqlite::Result<()> {
     let data = serde_json::to_string(m)
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
@@ -1015,32 +1042,35 @@ pub(crate) fn insert_memory(conn: &Connection, m: &SageRecord) -> rusqlite::Resu
         .as_ref()
         .map(|a| serde_json::to_string(a).unwrap_or_default());
     let tags = serde_json::to_string(&m.tags).unwrap_or_else(|_| "[]".into());
-    conn.execute(
-        "INSERT INTO memories
-           (id, data, status, kind, scope, legacy_scope, importance, confidence, freshness,
-            updated_at, created_at, audience, tags, owner_session_id, canonical_text, unicode_text)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
-        params![
-            m.id,
-            data,
-            m.status,
-            m.kind,
-            m.scope,
-            m.legacy_scope
-                .as_deref()
-                .unwrap_or(legacy_scope_for(&m.scope)),
-            m.importance,
-            m.confidence,
-            m.freshness,
-            m.updated_at,
-            m.created_at,
-            audience,
-            tags,
-            m.owner_session_id,
-            normalize_text_key(&m.text),
-            unicode_fold(&m.text),
-        ],
-    )?;
+    let legacy_scope = m
+        .legacy_scope
+        .as_deref()
+        .unwrap_or(legacy_scope_for(&m.scope));
+    let canonical = normalize_text_key(&m.text);
+    let folded = unicode_fold(&m.text);
+    let unicode = has_unicode_text(conn)?;
+    let mut values: Vec<&dyn rusqlite::ToSql> = vec![
+        &m.id,
+        &data,
+        &m.status,
+        &m.kind,
+        &m.scope,
+        &legacy_scope,
+        &m.importance,
+        &m.confidence,
+        &m.freshness,
+        &m.updated_at,
+        &m.created_at,
+        &audience,
+        &tags,
+        &m.owner_session_id,
+        &canonical,
+        &folded,
+    ];
+    if !unicode {
+        values.pop();
+    }
+    conn.execute(&memory_insert_sql(unicode), values.as_slice())?;
     Ok(())
 }
 

@@ -579,11 +579,15 @@ impl SageStore {
             .map(unicode_fold);
         if let Some(q) = &q {
             args.push(format!("%{}%", escape_like(q)).into());
-            // Folded on the fly so read-only handles need no projection refresh.
-            where_.push(format!(
-                "COALESCE(unicode_text, LOWER(CASE WHEN json_valid(data) THEN json_extract(data, '$.text') END)) LIKE ?{} ESCAPE '\\'",
-                args.len()
-            ));
+            // Folded on the fly so read-only handles need no projection
+            // refresh; stores without the optional column always fold.
+            let folded = "LOWER(CASE WHEN json_valid(data) THEN json_extract(data, '$.text') END)";
+            let text = if self.unicode_text {
+                format!("COALESCE(unicode_text, {folded})")
+            } else {
+                folded.to_string()
+            };
+            where_.push(format!("{text} LIKE ?{} ESCAPE '\\'", args.len()));
         }
         let where_sql = where_.join(" AND ");
         let total: i64 = self
