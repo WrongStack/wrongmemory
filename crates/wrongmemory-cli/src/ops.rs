@@ -95,6 +95,9 @@ pub struct InstallArgs {
 
 #[derive(Debug, Args)]
 pub struct UninstallArgs {
+    /// Install directory to remove. Default: the directory of this
+    /// executable when its install.json lists it (an installed copy), else
+    /// the default install directory.
     #[arg(long)]
     pub prefix: Option<PathBuf>,
     /// Also delete the WrongMemory data root (managed stores, registry,
@@ -149,6 +152,35 @@ fn resolve_prefix(p: Option<&Path>) -> Result<PathBuf, String> {
                 "cannot determine $HOME; pass --prefix".into()
             }
         }),
+    }
+}
+
+/// The directory `uninstall` removes: `--prefix`; else the directory of the
+/// running executable `exe` when the `install.json` there lists it among the
+/// installed binaries; else `default`. An extracted archive has no
+/// install.json, so running uninstall from one targets the default directory.
+fn uninstall_prefix(
+    explicit: Option<&Path>,
+    exe: Option<&Path>,
+    default: impl FnOnce() -> Result<PathBuf, String>,
+) -> Result<PathBuf, String> {
+    if explicit.is_some() {
+        return resolve_prefix(explicit);
+    }
+    let installed = exe.and_then(|exe| {
+        let dir = exe.parent()?;
+        let manifest: Value =
+            serde_json::from_slice(&std::fs::read(dir.join("install.json")).ok()?).ok()?;
+        manifest["binaries"]
+            .as_array()?
+            .iter()
+            .filter_map(Value::as_str)
+            .any(|b| crate::desktop_launcher::same_target(Path::new(b), exe))
+            .then(|| dir.to_path_buf())
+    });
+    match installed {
+        Some(dir) => Ok(dir),
+        None => default(),
     }
 }
 
@@ -936,7 +968,14 @@ pub async fn run_uninstall(root: &DataRoot, json_mode: bool, a: UninstallArgs) -
         );
         return exit_code::INVALID_INPUT;
     }
-    let prefix = match resolve_prefix(a.prefix.as_deref()) {
+    // Not canonicalized: the prefix is compared as text with PATH and
+    // autostart entries, which hold the path as installed.
+    let running = std::env::current_exe()
+        .ok()
+        .and_then(|p| std::path::absolute(p).ok());
+    let prefix = match uninstall_prefix(a.prefix.as_deref(), running.as_deref(), || {
+        resolve_prefix(None)
+    }) {
         Ok(p) => p,
         Err(e) => {
             eprintln!("wrongmemory uninstall: {e}");
@@ -980,6 +1019,39 @@ pub async fn run_uninstall(root: &DataRoot, json_mode: bool, a: UninstallArgs) -
                 .unwrap_or_default()
         ));
     }
+    // Launchers first, while the desktop they start still exists to resolve.
+    // Each is removed only when it starts this prefix's desktop.
+    let desktop = prefix.join(exe_name("wrongmemory-desktop"));
+    let mut kept: Vec<String> = Vec::new();
+    if cfg!(any(target_os = "linux", target_os = "freebsd"))
+        && let Some(data_home) = crate::desktop_launcher::data_home()
+    {
+        match crate::desktop_launcher::uninstall(&data_home, &desktop) {
+            Ok(paths) => removed.extend(paths.iter().map(|p| p.display().to_string())),
+            Err(e) => kept.push(format!("desktop launcher: {e}")),
+        }
+    }
+    if cfg!(target_os = "macos")
+        && let Some(apps) = crate::desktop_launcher::app_bundle::applications_dir()
+    {
+        match crate::desktop_launcher::app_bundle::uninstall(&apps, &desktop) {
+            Ok(Some(app)) => removed.push(app.display().to_string()),
+            Ok(None) => {}
+            Err(e) => kept.push(format!("desktop launcher: {e}")),
+        }
+    }
+    if cfg!(windows)
+        && let Some(programs) = crate::desktop_launcher::start_menu::programs_dir()
+    {
+        match crate::desktop_launcher::start_menu::uninstall(&programs, &desktop) {
+            Ok(Some(lnk)) => removed.push(lnk.display().to_string()),
+            Ok(None) => {}
+            Err(e) => kept.push(format!("desktop launcher: {e}")),
+        }
+    }
+    for k in &kept {
+        eprintln!("wrongmemory uninstall: kept {k}");
+    }
     let me = std::env::current_exe()
         .ok()
         .and_then(|p| std::fs::canonicalize(p).ok());
@@ -1001,32 +1073,6 @@ pub async fn run_uninstall(root: &DataRoot, json_mode: bool, a: UninstallArgs) -
             if std::fs::remove_file(&p).is_ok() {
                 removed.push(p.display().to_string());
             }
-        }
-    }
-    if cfg!(any(target_os = "linux", target_os = "freebsd"))
-        && let Some(data_home) = crate::desktop_launcher::data_home()
-    {
-        match crate::desktop_launcher::uninstall(&data_home) {
-            Ok(paths) => removed.extend(paths.iter().map(|p| p.display().to_string())),
-            Err(e) => eprintln!("wrongmemory uninstall: desktop launcher preserved: {e}"),
-        }
-    }
-    if cfg!(target_os = "macos")
-        && let Some(apps) = crate::desktop_launcher::app_bundle::applications_dir()
-    {
-        match crate::desktop_launcher::app_bundle::uninstall(&apps) {
-            Ok(Some(app)) => removed.push(app.display().to_string()),
-            Ok(None) => {}
-            Err(e) => eprintln!("wrongmemory uninstall: desktop launcher preserved: {e}"),
-        }
-    }
-    if cfg!(windows)
-        && let Some(programs) = crate::desktop_launcher::start_menu::programs_dir()
-    {
-        match crate::desktop_launcher::start_menu::uninstall(&programs) {
-            Ok(Some(lnk)) => removed.push(lnk.display().to_string()),
-            Ok(None) => {}
-            Err(e) => eprintln!("wrongmemory uninstall: desktop launcher preserved: {e}"),
         }
     }
     if let Err(e) = crate::desktop_install::uninstall(&prefix) {
@@ -1065,12 +1111,18 @@ pub async fn run_uninstall(root: &DataRoot, json_mode: bool, a: UninstallArgs) -
             }
         }
     }
-    let v = json!({"removed": removed, "dataKept": !a.remove_data});
+    let v = json!({
+        "prefix": prefix.display().to_string(),
+        "removed": removed,
+        "kept": kept,
+        "dataKept": !a.remove_data,
+    });
     print(
         json_mode,
         &v,
         format!(
-            "removed:\n{}\n{}",
+            "uninstalled from {}\nremoved:\n{}\n{}",
+            prefix.display(),
             removed
                 .iter()
                 .map(|r| format!("  - {r}"))
@@ -1089,6 +1141,46 @@ pub async fn run_uninstall(root: &DataRoot, json_mode: bool, a: UninstallArgs) -
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn uninstall_prefix_prefers_flag_then_listed_install_then_default() {
+        let temp = tempfile::tempdir().unwrap();
+        let dir = temp.path().join("custom bin");
+        std::fs::create_dir_all(&dir).unwrap();
+        let exe = dir.join(exe_name("wrongmemory"));
+        std::fs::write(&exe, b"").unwrap();
+        let default = temp.path().join("default");
+        let dflt = || Ok(default.clone());
+        // An extracted archive: no install.json.
+        assert_eq!(
+            uninstall_prefix(None, Some(&exe), dflt),
+            Ok(default.clone())
+        );
+        // A manifest that does not list this executable, or does not parse.
+        let other = json!({"binaries": [dir.join("someone-else").display().to_string()]});
+        std::fs::write(dir.join("install.json"), other.to_string()).unwrap();
+        assert_eq!(
+            uninstall_prefix(None, Some(&exe), dflt),
+            Ok(default.clone())
+        );
+        std::fs::write(dir.join("install.json"), b"{not json").unwrap();
+        assert_eq!(
+            uninstall_prefix(None, Some(&exe), dflt),
+            Ok(default.clone())
+        );
+        // An installed copy.
+        let mine = json!({"binaries": [exe.display().to_string()]});
+        std::fs::write(dir.join("install.json"), mine.to_string()).unwrap();
+        assert_eq!(uninstall_prefix(None, Some(&exe), dflt), Ok(dir.clone()));
+        // --prefix always wins.
+        let flag = temp.path().join("flag");
+        assert_eq!(
+            uninstall_prefix(Some(&flag), Some(&exe), dflt),
+            Ok(std::path::absolute(&flag).unwrap())
+        );
+        // No executable path and no default.
+        assert!(uninstall_prefix(None, None, || Err("no home".into())).is_err());
+    }
 
     #[test]
     fn redaction() {

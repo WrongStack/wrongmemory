@@ -11,6 +11,9 @@
 //!
 //! `uninstall` removes them. Every file carries an ownership marker; a file
 //! without it, a symlink or anything that is not a regular file is left alone.
+//! So is an owned launcher that starts another install's desktop: uninstall
+//! takes the desktop executable of the install it removes and keeps a
+//! launcher whose target is a different file.
 #![cfg_attr(not(any(target_os = "linux", target_os = "freebsd")), allow(dead_code))]
 
 use std::io;
@@ -112,6 +115,47 @@ fn invalid(message: &str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message)
 }
 
+/// Whether a launcher target names `exe`: the same path, or both resolve to
+/// the same existing file (8.3 names, symlinked directories).
+pub fn same_target(target: &Path, exe: &Path) -> bool {
+    if target == exe
+        || (cfg!(windows)
+            && target
+                .as_os_str()
+                .to_string_lossy()
+                .eq_ignore_ascii_case(&exe.as_os_str().to_string_lossy()))
+    {
+        return true;
+    }
+    matches!(
+        (std::fs::canonicalize(target), std::fs::canonicalize(exe)),
+        (Ok(a), Ok(b)) if a == b
+    )
+}
+
+/// An owned launcher that starts something other than `exe` is kept.
+fn check_target(target: Option<&Path>, exe: &Path) -> io::Result<()> {
+    match target {
+        Some(t) if same_target(t, exe) => Ok(()),
+        Some(t) => Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "it starts {}, not this install's {}; left alone",
+                t.display(),
+                exe.display()
+            ),
+        )),
+        None => Err(invalid("its target cannot be read; left alone")),
+    }
+}
+
+/// The `TryExec` path of an entry written by [`entry_text`].
+fn entry_target(text: &str) -> Option<PathBuf> {
+    text.lines()
+        .find_map(|line| line.strip_prefix("TryExec="))
+        .map(|v| PathBuf::from(v.replace("\\\\", "\\")))
+}
+
 /// A path that may be replaced or removed: absent, or a regular file that is
 /// not a symlink.
 fn replaceable(path: &Path) -> io::Result<bool> {
@@ -158,11 +202,18 @@ pub fn install(data_home: &Path, exe: &Path) -> io::Result<Paths> {
     Ok(p)
 }
 
-/// Remove the launcher when WrongMemory owns it. Returns the removed paths.
-pub fn uninstall(data_home: &Path) -> io::Result<Vec<PathBuf>> {
+/// Remove the launcher when WrongMemory owns it and it starts `exe`. Returns
+/// the removed paths.
+pub fn uninstall(data_home: &Path, exe: &Path) -> io::Result<Vec<PathBuf>> {
     let p = paths(data_home);
     // Preflight both files before removing either.
     let entry = owned_entry(&p.entry)?;
+    if entry {
+        check_target(
+            entry_target(&std::fs::read_to_string(&p.entry)?).as_deref(),
+            exe,
+        )?;
+    }
     let icon = entry && replaceable(&p.icon)?;
     let mut removed = Vec::new();
     if icon {
@@ -179,7 +230,7 @@ pub fn uninstall(data_home: &Path) -> io::Result<Vec<PathBuf>> {
 /// macOS application bundle that launches the installed desktop binary.
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub mod app_bundle {
-    use super::{invalid, replaceable};
+    use super::{check_target, invalid, replaceable};
     use std::io;
     use std::path::{Path, PathBuf};
 
@@ -263,6 +314,16 @@ pub mod app_bundle {
         ))
     }
 
+    /// The path a script written by [`launcher_script`] `exec`s.
+    pub fn script_target(script: &str) -> Option<PathBuf> {
+        let word = script
+            .lines()
+            .find_map(|line| line.strip_prefix("exec "))?
+            .strip_suffix(" \"$@\"")?;
+        let inner = word.strip_prefix('\'')?.strip_suffix('\'')?;
+        Some(PathBuf::from(inner.replace(r"'\''", "'")))
+    }
+
     fn owned(app: &Path) -> io::Result<bool> {
         let [_, _, marker, _] = files(app);
         replaceable(&marker)
@@ -299,9 +360,11 @@ pub mod app_bundle {
         Ok(app)
     }
 
-    /// Remove an owned bundle: only the four written files, then the
-    /// directories if they are empty. Returns the bundle path when removed.
-    pub fn uninstall(applications: &Path) -> io::Result<Option<PathBuf>> {
+    /// Remove an owned bundle that starts `exe`: only the four written files,
+    /// then the directories if they are empty. Returns the bundle path when
+    /// removed. An owned bundle without its executable launches nothing and
+    /// is removed.
+    pub fn uninstall(applications: &Path, exe: &Path) -> io::Result<Option<PathBuf>> {
         let app = bundle(applications);
         if !owned(&app)? {
             return Ok(None);
@@ -309,6 +372,12 @@ pub mod app_bundle {
         let all = files(&app);
         for f in &all {
             replaceable(f)?;
+        }
+        if all[1].exists() {
+            check_target(
+                script_target(&std::fs::read_to_string(&all[1])?).as_deref(),
+                exe,
+            )?;
         }
         for f in &all {
             if f.exists() {
@@ -340,7 +409,7 @@ pub mod app_bundle {
 /// this shortcut by executable path.
 #[cfg_attr(not(windows), allow(dead_code))]
 pub mod start_menu {
-    use super::{invalid, replaceable};
+    use super::{check_target, invalid, replaceable};
     use std::ffi::OsStr;
     use std::io;
     use std::path::{Path, PathBuf};
@@ -394,12 +463,20 @@ pub mod start_menu {
         Ok((target.to_string(), description.to_string()))
     }
 
-    fn owned(lnk: &Path) -> io::Result<bool> {
+    /// The target of an owned shortcut; `None` when it is absent or not ours.
+    fn owned_target(lnk: &Path) -> io::Result<Option<String>> {
         if !replaceable(lnk)? {
-            return Ok(false);
+            return Ok(None);
         }
         // A file the Shell cannot read as a shortcut is not ours.
-        Ok(read(lnk).is_ok_and(|(_, description)| description == DESCRIPTION))
+        Ok(read(lnk)
+            .ok()
+            .filter(|(_, description)| description == DESCRIPTION)
+            .map(|(target, _)| target))
+    }
+
+    fn owned(lnk: &Path) -> io::Result<bool> {
+        Ok(owned_target(lnk)?.is_some())
     }
 
     /// Create or refresh the shortcut. An existing `WrongMemory.lnk` that is
@@ -428,12 +505,13 @@ pub mod start_menu {
         Ok(lnk)
     }
 
-    /// Remove an owned shortcut. Returns its path when removed.
-    pub fn uninstall(programs: &Path) -> io::Result<Option<PathBuf>> {
+    /// Remove an owned shortcut that starts `exe`. Returns its path when removed.
+    pub fn uninstall(programs: &Path, exe: &Path) -> io::Result<Option<PathBuf>> {
         let lnk = shortcut(programs);
-        if !owned(&lnk)? {
+        let Some(target) = owned_target(&lnk)? else {
             return Ok(None);
-        }
+        };
+        check_target(Some(Path::new(&target)), exe)?;
         std::fs::remove_file(&lnk)?;
         Ok(Some(lnk))
     }
@@ -454,6 +532,11 @@ mod tests {
         // `$` is escaped inside quotes, then the backslash itself is escaped.
         assert_eq!(exec_arg("/x/$y"), "\"/x/\\\\$y\"");
         assert!(entry_text(Path::new("/x\n/y"), Path::new("/i.svg")).is_err());
+        // Uninstall reads the target back from TryExec.
+        for exe in ["/opt/wm/wrongmemory-desktop", r"/a\b c/100%/$x/wm"] {
+            let text = entry_text(Path::new(exe), Path::new("/i.svg")).unwrap();
+            assert_eq!(entry_target(&text).unwrap(), Path::new(exe), "{text}");
+        }
     }
 
     #[test]
@@ -468,15 +551,41 @@ mod tests {
         assert_eq!(std::fs::read(&p.icon).unwrap(), ICON);
         // Refreshing an owned launcher is allowed.
         install(data, &exe).unwrap();
-        assert_eq!(uninstall(data).unwrap().len(), 2);
+        // Uninstalling another install keeps the launcher of this one.
+        let other = data.join("elsewhere/wrongmemory-desktop");
+        let kept = uninstall(data, &other).unwrap_err().to_string();
+        assert!(kept.contains("not this install"), "{kept}");
+        assert!(p.entry.exists() && p.icon.exists());
+        assert_eq!(uninstall(data, &exe).unwrap().len(), 2);
         assert!(!p.entry.exists() && !p.icon.exists());
 
         // A foreign entry with the same name is neither replaced nor removed.
         std::fs::create_dir_all(p.entry.parent().unwrap()).unwrap();
         std::fs::write(&p.entry, "[Desktop Entry]\nName=Someone else\n").unwrap();
         assert!(install(data, &exe).is_err());
-        assert!(uninstall(data).unwrap().is_empty());
+        assert!(uninstall(data, &exe).unwrap().is_empty());
         assert!(p.entry.exists());
+    }
+
+    #[test]
+    fn same_target_matches_the_path_or_the_resolved_file() {
+        let temp = tempfile::tempdir().unwrap();
+        let exe = temp.path().join("bin").join("wrongmemory-desktop");
+        std::fs::create_dir_all(exe.parent().unwrap()).unwrap();
+        std::fs::write(&exe, b"").unwrap();
+        assert!(same_target(&exe, &exe));
+        // A different spelling of the same existing file.
+        let dotted = temp.path().join("bin/../bin").join("wrongmemory-desktop");
+        assert_ne!(dotted, exe);
+        assert!(same_target(&dotted, &exe));
+        assert!(!same_target(&temp.path().join("other"), &exe));
+        // Neither exists: only the same path matches.
+        let gone = temp.path().join("gone/wrongmemory-desktop");
+        assert!(same_target(&gone, &gone));
+        assert!(!same_target(
+            &gone,
+            &temp.path().join("gone2/wrongmemory-desktop")
+        ));
     }
 
     /// CI sets WRONGMEMORY_REQUIRE_DESKTOP_FILE_VALIDATE=1 on Linux so the
@@ -522,6 +631,12 @@ mod tests {
         let script = std::fs::read_to_string(app.join("Contents/MacOS/WrongMemory")).unwrap();
         assert!(script.contains("exec '"), "{script}");
         assert!(script.contains(r"it'\''s here"), "{script}");
+        assert_eq!(app_bundle::script_target(&script).unwrap(), exe);
+        let edge = Path::new("/x/ends with'");
+        assert_eq!(
+            app_bundle::script_target(&app_bundle::launcher_script(edge).unwrap()).unwrap(),
+            edge
+        );
         let plist = std::fs::read_to_string(app.join("Contents/Info.plist")).unwrap();
         assert!(plist.contains(APP_ID) && plist.contains("<string>0.2.1</string>"));
         assert!(plist.contains("<key>CFBundleIconFile</key><string>WrongMemory.icns</string>"));
@@ -531,9 +646,13 @@ mod tests {
             u32::from_be_bytes(icns[4..8].try_into().unwrap()) as usize,
             icns.len()
         );
+        // Uninstalling another install keeps this bundle.
+        let other = apps.join("elsewhere/wrongmemory-desktop");
+        assert!(app_bundle::uninstall(apps, &other).is_err());
+        assert!(app.join("Contents/MacOS/WrongMemory").exists());
         // A user file inside the bundle survives uninstall, and so does its directory.
         std::fs::write(app.join("Contents/notes.txt"), "keep").unwrap();
-        assert!(app_bundle::uninstall(apps).unwrap().is_some());
+        assert!(app_bundle::uninstall(apps, &exe).unwrap().is_some());
         assert!(!app.join("Contents/Info.plist").exists());
         assert!(!app.join("Contents/Resources").exists());
         assert_eq!(
@@ -544,7 +663,7 @@ mod tests {
         let foreign = temp.path().join("other");
         std::fs::create_dir_all(foreign.join("WrongMemory.app/Contents")).unwrap();
         assert!(app_bundle::install(&foreign, &exe, "0.2.1").is_err());
-        assert!(app_bundle::uninstall(&foreign).unwrap().is_none());
+        assert!(app_bundle::uninstall(&foreign, &exe).unwrap().is_none());
         assert!(foreign.join("WrongMemory.app/Contents").exists());
     }
 
@@ -606,7 +725,11 @@ mod tests {
             marker.exists(),
             "LaunchServices did not run the bundle executable"
         );
-        app_bundle::uninstall(temp.path()).unwrap();
+        assert!(
+            app_bundle::uninstall(temp.path(), &target)
+                .unwrap()
+                .is_some()
+        );
     }
 
     /// On Windows, in a temporary Programs directory: the Shell reads the
@@ -633,9 +756,19 @@ mod tests {
         );
         // Refresh in place.
         assert_eq!(start_menu::install(&programs, &exe).unwrap(), lnk);
-        assert_eq!(start_menu::uninstall(&programs).unwrap(), Some(lnk.clone()));
+        // Uninstalling another install keeps this shortcut.
+        let other = temp
+            .path()
+            .join("elsewhere")
+            .join("wrongmemory-desktop.exe");
+        assert!(start_menu::uninstall(&programs, &other).is_err());
+        assert!(lnk.exists());
+        assert_eq!(
+            start_menu::uninstall(&programs, &exe).unwrap(),
+            Some(lnk.clone())
+        );
         assert!(!lnk.exists());
-        assert_eq!(start_menu::uninstall(&programs).unwrap(), None);
+        assert_eq!(start_menu::uninstall(&programs, &exe).unwrap(), None);
 
         // A shortcut someone else wrote under the same name.
         let foreign = temp.path().join("foreign");
@@ -651,20 +784,20 @@ mod tests {
         assert!(made.success());
         let before = std::fs::read(&theirs).unwrap();
         assert!(start_menu::install(&foreign, &exe).is_err());
-        assert_eq!(start_menu::uninstall(&foreign).unwrap(), None);
+        assert_eq!(start_menu::uninstall(&foreign, &exe).unwrap(), None);
         assert_eq!(std::fs::read(&theirs).unwrap(), before);
 
         // A directory named like the shortcut, and a file that is no shortcut.
         let odd = temp.path().join("odd");
         std::fs::create_dir_all(start_menu::shortcut(&odd)).unwrap();
         assert!(start_menu::install(&odd, &exe).is_err());
-        assert!(start_menu::uninstall(&odd).is_err());
+        assert!(start_menu::uninstall(&odd, &exe).is_err());
         assert!(start_menu::shortcut(&odd).is_dir());
         let junk = temp.path().join("junk");
         std::fs::create_dir_all(&junk).unwrap();
         std::fs::write(start_menu::shortcut(&junk), b"not a shortcut").unwrap();
         assert!(start_menu::install(&junk, &exe).is_err());
-        assert_eq!(start_menu::uninstall(&junk).unwrap(), None);
+        assert_eq!(start_menu::uninstall(&junk, &exe).unwrap(), None);
         assert_eq!(
             std::fs::read(start_menu::shortcut(&junk)).unwrap(),
             b"not a shortcut"

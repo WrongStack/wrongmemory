@@ -241,7 +241,10 @@ jobs:
           "$bin/wrongmemory" --json remember "$project" "release rehearsal on $RUNNER_OS" > /dev/null
           "$bin/wrongmemory" --json search "$project" "release rehearsal" | grep -q "release rehearsal on $RUNNER_OS"
           grep -qF "wrongmemory uninstall --prefix '$bin'" "$RUNNER_TEMP/install.out"
-          "$bin/wrongmemory" uninstall --prefix "$bin"
+          # Plain uninstall from the custom directory removes that directory
+          # (the installed CLI finds itself in its install.json); Windows
+          # below passes --prefix as the hint says.
+          "$bin/wrongmemory" uninstall
           for f in wrongmemory wrongmemoryd wrongmemory-desktop desktop-resources install.json; do
             if [ -e "$bin/$f" ]; then echo "left behind: $bin/$f"; exit 1; fi
           done

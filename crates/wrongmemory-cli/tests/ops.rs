@@ -304,6 +304,69 @@ fn install_restarts_a_running_daemon_from_the_new_binaries_then_uninstalls() {
     );
 }
 
+/// Run from a custom install directory, the installed CLI's plain
+/// `uninstall` removes that directory, not the default one. Every default
+/// location (install directory, launchers, autostart) points into the temp
+/// directory, so a wrong choice cannot touch this machine's install.
+#[test]
+fn installed_cli_uninstalls_its_own_directory_without_prefix() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let prefix = tmp.path().join("custom dir").join("bin");
+    let user = tmp.path().join("default user");
+    let isolate = |c: &mut Command| {
+        c.arg("--data-root")
+            .arg(&home)
+            .arg("--json")
+            .env("WRONGMEMORY_NO_MODIFY_PATH", "1")
+            .env("LOCALAPPDATA", user.join("local"))
+            .env("APPDATA", user.join("roaming"))
+            .env("HOME", &user)
+            .env("XDG_DATA_HOME", user.join("share"))
+            .env("WRONGMEMORY_AUTOSTART_DIR_OVERRIDE", user.join("units"))
+            .env(
+                "WRONGMEMORY_AUTOSTART_KEY_OVERRIDE",
+                format!(
+                    r"HKCU\Software\WrongMemoryTest\Absent{}",
+                    std::process::id()
+                ),
+            );
+    };
+    let mut install = Command::new(env!("CARGO_BIN_EXE_wrongmemory"));
+    isolate(&mut install);
+    let out = install
+        .args(["install", "--prefix", prefix.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let mut uninstall = Command::new(prefix.join(exe("wrongmemory")));
+    isolate(&mut uninstall);
+    let out = uninstall.arg("uninstall").output().unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let u: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert!(
+        Path::new(u["prefix"].as_str().unwrap()).ends_with(Path::new("custom dir").join("bin")),
+        "{u}"
+    );
+    for f in [exe("wrongmemoryd"), "install.json".to_string()] {
+        assert!(!prefix.join(&f).exists(), "left behind: {f}");
+    }
+    // Windows can only rename the running CLI aside; Unix unlinks it.
+    #[cfg(unix)]
+    assert!(!prefix.join(exe("wrongmemory")).exists());
+    #[cfg(windows)]
+    assert!(prefix.join(tagged("wrongmemory", "delete-me")).exists());
+}
+
 #[cfg(windows)]
 #[test]
 fn autostart_enable_status_disable_with_override_key() {
