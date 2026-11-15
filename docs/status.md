@@ -6,6 +6,12 @@ Last updated: 2026-11-15.
 
 At the user's request: PR #5 and PR #6 merged into `main` with merge commits, version 0.3.0 (both workspaces), tag `v0.3.0`. The release workflow creates a draft; publishing it is the user's step, so until then v0.2.1 stays the latest published version. Results of the tag run and the draft are recorded below once they exist.
 
+| Check | Result |
+| --- | --- |
+| Local gate on the bump (`8abe70f`): core fmt/Clippy/tests, desktop fmt/Clippy/tests, `desktop:package:test`, client typecheck and tests | PASS; core 210 passed, 2 ignored; desktop 21; package 3/3; client 10; `wrongmemory --version` prints 0.3.0. Lockfile diffs are the ten workspace-crate version lines only |
+| Release rehearsal [43710233367](https://github.com/WrongStack/wrongmemory/actions/runs/43710233367) on `8abe70f` | PASS 10/10, `publish` skipped: assets named `0.3.0` (`wrongmemory-desktop-0.3.0-{windows-x64.zip,linux-x64.tar.gz,macos-arm64.tar.gz}`), all three executables report 0.3.0 on each platform; `install scripts` [43710230049](https://github.com/WrongStack/wrongmemory/actions/runs/43710230049) PASS 4/4 |
+| `ci` [43710230091](https://github.com/WrongStack/wrongmemory/actions/runs/43710230091) on `8abe70f` | First attempt 5/6: macOS smoke `no window` at the first view (cold start of the new binary, no app output); the rerun of that job PASSED, 6/6. `smoke.ts` now gives the first launch 15 s extra |
+
 ## Cross-platform native desktop and visual pass (2026-11-14, WM-800 / WM-800-RELEASE)
 
 v0.2.1 has a Windows desktop bundle only. Linux x64 and macOS arm64 desktop bundles are built for 0.3.0. Contracts, IPC, storage and oracle fixtures are unchanged. The desktop remains a client of the one per-user daemon that WrongStack and MCP clients use.

@@ -47,6 +47,8 @@ function capture(file: string): string | null {
 type WindowProbe = { width: number; height: number } | { missing: string; unavailable?: boolean };
 
 const MIN_VISIBLE = { width: 600, height: 400 };
+// Extra seconds for the first launch of a run (cold start).
+const COLD_START_EXTRA_S = 15;
 
 // Output that means the app crashed: a Rust panic, an uncaught Objective-C
 // exception (macOS), or an abort from the Rust runtime.
@@ -136,7 +138,10 @@ export async function smoke(app: string, binary: string, seconds: number, screen
         const child = Bun.spawn([app, '--data-root', root, '--cli', binary], {
           stdout: Bun.file(log), stderr: Bun.file(log + '.err'), env: { ...process.env, RUST_BACKTRACE: '1' },
         });
-        const deadline = Date.now() + seconds * 1000;
+        // The first launch of a freshly built binary is a cold start: on a
+        // macOS runner it once showed no window within 6 s (ci run
+        // 43710230091, passed on rerun), so it gets extra time.
+        const deadline = Date.now() + (runs === 0 ? seconds + COLD_START_EXTRA_S : seconds) * 1000;
         const shotAt = deadline - 1500;
         let shot = !screenshots;
         const probeFrom = Date.now() + 1000;
