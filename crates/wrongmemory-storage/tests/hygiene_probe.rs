@@ -10,6 +10,9 @@
 //! memories, edges and candidates (without generated candidate ids), so two
 //! builds can be compared on the same input.
 //!
+//! `WM_PROBE_OPTIONS` replaces the options (JSON; `{}` is what the daemon's
+//! scheduled pass uses) and `WM_PROBE_NOW` the clock (ISO 8601).
+//!
 //! ```powershell
 //! $env:WM_PROBE_STORE = "<copy>\sage.db"
 //! cargo test --release -p wrongmemory-storage --test hygiene_probe -- --ignored --nocapture
@@ -29,10 +32,12 @@ fn time_hygiene_on_a_store_copy() {
     let path = tmp.path().join("sage.db");
     std::fs::copy(&src, &path).unwrap();
     let root = std::env::var("WM_PROBE_ROOT").ok().map(Into::into);
-    let now = "2026-11-04T18:00:00.000Z";
+    let now = std::env::var("WM_PROBE_NOW").unwrap_or_else(|_| "2026-11-04T18:00:00.000Z".into());
+    let now = now.as_str();
     let (mut store, _) = SageStore::open(&path, true, root, now).unwrap();
-    let opts: HygieneOptions =
-        serde_json::from_str(r#"{"retentionDays":90,"archiveLowConfidenceAfterDays":30}"#).unwrap();
+    let options = std::env::var("WM_PROBE_OPTIONS")
+        .unwrap_or_else(|_| r#"{"retentionDays":90,"archiveLowConfidenceAfterDays":30}"#.into());
+    let opts: HygieneOptions = serde_json::from_str(&options).unwrap();
     let ctx = MutationCtx {
         principal_id: "daemon:maintenance".into(),
         client_label: "probe".into(),

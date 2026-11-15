@@ -2,6 +2,21 @@
 
 Last updated: 2026-11-15.
 
+## Writes to stores without `unicode_text` (2026-11-15, after v0.3.0)
+
+Found while checking that WrongStack works against the 0.3.0 daemon on the user machine. Reads, search and the WrongStack MCP path work (`wstack sage mcp` reaches the bridge as `wrongmemory 0.3.0`; a search on the adopted WrongStack store returned in 7 ms; the 0.3.0 daemon logged no warning or error). But on 5 of the 35 projects, adopted read-write stores written by an older SAGE without the optional `memories.unicode_text` column (DFMT, Elite256, OwnPilot, WindowsTaskManager, WrongTrace), every write failed with `INTERNAL: table memories has no column named unicode_text`: both memory INSERT paths (`mutate::upsert_raw`, `store::insert_memory`) always named the column, although `schema.rs` documents it as optional. Daily maintenance on those stores failed every time (the registry holds only failed hygiene jobs for them), and so would WrongStack writes. `list_page` with a query also named it unguarded. Present since before 0.3.0.
+
+Fix: the INSERTs name `unicode_text` only when the store has it (`has_unicode_text`, `memory_insert_sql`); `list_page` folds on the fly without it. No DDL: the column is not added (WrongStack's own SAGE adds it when it next opens such a store).
+
+| Check | Result |
+| --- | --- |
+| `stores_without_unicode_text_accept_writes_maintenance_and_queries` (remember, update, FTS and LIKE search, `list_page` query, hygiene, delete, column not added) | FAIL before the fix with the production error at `remember`; PASS after |
+| Core gate (Windows) | PASS; 211 passed, 2 ignored |
+| Copies of the five stores (`wrongmemory backup` through the live daemon into `.temp_files`) | Read-only inspector: `unicode_text` absent on exactly these 5 read-write stores |
+| End to end on an adopted copy of DFMT under a disposable data root | Installed 0.3.0: `remember` exit 70, `INTERNAL: table memories has no column named unicode_text`. Fixed build: `memory-committed`, found by search |
+| First scheduled maintenance after the fix, on copies (`hygiene_probe`, now with `WM_PROBE_OPTIONS={}` as the scheduler sends and `WM_PROBE_NOW`, project roots for anchor verification) | DFMT: 48 examined, 4 staled, 2 contradicted, 11 review candidates. Elite256: 75, 1 staled, 5 deleted. WindowsTaskManager: 12, 1 staled. OwnPilot: 138, 1 staled, 1 contradicted, 1 deleted, 3 candidates. WrongTrace: 590, 12 staled, 5 contradicted, 72 deleted, 176 candidates. Deletions are status changes (purged later by retention) |
+| Shipping (0.3.1) and the user machine | NOT RUN: waiting for the user's decision |
+
 ## Release 0.3.0 (2026-11-15, WM-800-RELEASE)
 
 At the user's request: PR #5 and PR #6 merged into `main` with merge commits, version 0.3.0 (both workspaces), tag `v0.3.0`. The release workflow created a draft, which was published as Latest at 2026-11-15 13:34:35 UTC at the user's request, with a "What's new" section added to the generated notes. Release evidence: [docs/releases/v0.3.0.md](releases/v0.3.0.md).
