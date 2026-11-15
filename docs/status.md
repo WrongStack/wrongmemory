@@ -4,13 +4,19 @@ Last updated: 2026-11-15.
 
 ## Release 0.3.0 (2026-11-15, WM-800-RELEASE)
 
-At the user's request: PR #5 and PR #6 merged into `main` with merge commits, version 0.3.0 (both workspaces), tag `v0.3.0`. The release workflow creates a draft; publishing it is the user's step, so until then v0.2.1 stays the latest published version. Results of the tag run and the draft are recorded below once they exist.
+At the user's request: PR #5 and PR #6 merged into `main` with merge commits, version 0.3.0 (both workspaces), tag `v0.3.0`. The release workflow creates a draft; publishing it is the user's step, so until then v0.2.1 stays the latest published version. Results of the tag run and the draft are below.
 
 | Check | Result |
 | --- | --- |
 | Local gate on the bump (`8abe70f`): core fmt/Clippy/tests, desktop fmt/Clippy/tests, `desktop:package:test`, client typecheck and tests | PASS; core 210 passed, 2 ignored; desktop 21; package 3/3; client 10; `wrongmemory --version` prints 0.3.0. Lockfile diffs are the ten workspace-crate version lines only |
 | Release rehearsal [43710233367](https://github.com/WrongStack/wrongmemory/actions/runs/43710233367) on `8abe70f` | PASS 10/10, `publish` skipped: assets named `0.3.0` (`wrongmemory-desktop-0.3.0-{windows-x64.zip,linux-x64.tar.gz,macos-arm64.tar.gz}`), all three executables report 0.3.0 on each platform; `install scripts` [43710230049](https://github.com/WrongStack/wrongmemory/actions/runs/43710230049) PASS 4/4 |
 | `ci` [43710230091](https://github.com/WrongStack/wrongmemory/actions/runs/43710230091) on `8abe70f` | First attempt 5/6: macOS smoke `no window` at the first view (cold start of the new binary, no app output); the rerun of that job PASSED, 6/6. `smoke.ts` now gives the first launch 15 s extra |
+| `ci` [43712942845](https://github.com/WrongStack/wrongmemory/actions/runs/43712942845) on `6294c51` (with the cold-start allowance) | PASS 6/6 |
+| Merges | PR #5 -> `main` as `64f7b91`, PR #6 (retargeted to `main`) as `14be1ed`, both merge commits; `git diff 6294c51 14be1ed` is empty. `ci` [43714164160](https://github.com/WrongStack/wrongmemory/actions/runs/43714164160) and `install scripts` [43714164250](https://github.com/WrongStack/wrongmemory/actions/runs/43714164250) on `14be1ed`: PASS |
+| Tag `v0.3.0` (annotated, on `14be1ed`), release run [43715133943](https://github.com/WrongStack/wrongmemory/actions/runs/43715133943) | PASS: build 3/3, `desktop`, `desktop-unix` 2/2, `publish` created the **draft** "WrongMemory v0.3.0" (not published, not a prerelease) |
+| Draft assets, downloaded | 18 assets plus `SHA256SUMS` with exactly one entry each, all `OK`: three core archives, three desktop bundles (`wrongmemory-desktop-0.3.0-{windows-x64.zip,linux-x64.tar.gz,macos-arm64.tar.gz}`), nine bare executables, `install.sh`, `install.ps1`, `install-desktop.ps1`. `gh attestation verify --signer-workflow .../release.yml --source-ref refs/tags/v0.3.0` PASS for all three desktop bundles |
+| Draft bytes installed on Linux (WSL, temp `HOME`, data root and install directory, local mirror, the draft's `install.sh` with `WRONGMEMORY_DESKTOP=1`) | PASS: three executables 0.3.0, application entry written, `--prefix` hint printed, plain `uninstall` chose the custom directory and removed binaries and launcher |
+| Publishing the draft; `install scripts` on the `release: published` event (latest = 0.3.0, Windows desktop with Start Menu shortcut) | NOT RUN: publishing is the user's step |
 
 ## Cross-platform native desktop and visual pass (2026-11-14, WM-800 / WM-800-RELEASE)
 
