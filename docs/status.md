@@ -2,9 +2,13 @@
 
 Last updated: 2026-11-15.
 
+## Release 0.3.0 (2026-11-15, WM-800-RELEASE)
+
+At the user's request: PR #5 and PR #6 merged into `main` with merge commits, version 0.3.0 (both workspaces), tag `v0.3.0`. The release workflow creates a draft; publishing it is the user's step, so until then v0.2.1 stays the latest published version. Results of the tag run and the draft are recorded below once they exist.
+
 ## Cross-platform native desktop and visual pass (2026-11-14, WM-800 / WM-800-RELEASE)
 
-No release. v0.2.1 stays the published and latest version; it has a Windows desktop bundle only. Linux x64 and macOS arm64 desktop bundles ship from the next tagged release. Contracts, IPC, storage and oracle fixtures are unchanged. The desktop remains a client of the one per-user daemon that WrongStack and MCP clients use.
+v0.2.1 has a Windows desktop bundle only. Linux x64 and macOS arm64 desktop bundles are built for 0.3.0. Contracts, IPC, storage and oracle fixtures are unchanged. The desktop remains a client of the one per-user daemon that WrongStack and MCP clients use.
 
 Changes:
 

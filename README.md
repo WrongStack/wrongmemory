@@ -9,8 +9,8 @@ A per-user local memory service that keeps WrongStack's SAGE knowledge (structur
 | Platform | CLI + daemon + MCP bridge | Native desktop (preview) |
 |---|---|---|
 | Windows x64 | yes | yes (since 0.2.1) |
-| Linux x64, glibc 2.34 or newer (no musl) | yes | source build; release bundle from the next release |
-| macOS arm64 (Apple silicon) | yes | source build (CI only); release bundle from the next release |
+| Linux x64, glibc 2.34 or newer (no musl) | yes | yes (from 0.3.0) |
+| macOS arm64 (Apple silicon) | yes | yes (from 0.3.0; tested on CI runners only) |
 
 Latest release: https://github.com/WrongStack/wrongmemory/releases/latest. Nothing else is needed at runtime: no Bun, Node or source checkout. On Windows on ARM the installer uses the x64 build under emulation, which has not been tested. The macOS build has run on hosted CI runners only; Linux also in WSL Ubuntu. [docs/status.md](docs/status.md) lists what is NOT RUN per platform.
 
@@ -51,7 +51,7 @@ Set these in the environment before running an installer:
 
 | Variable | Effect |
 |---|---|
-| `WRONGMEMORY_VERSION=0.2.1` | Install that release instead of the latest. The desktop bundle exists from 0.2.1. |
+| `WRONGMEMORY_VERSION=0.2.1` | Install that release instead of the latest. The desktop bundle exists from 0.2.1 on Windows and from 0.3.0 on Linux and macOS. |
 | `WRONGMEMORY_INSTALL_DIR=<dir>` | Install somewhere else. |
 | `WRONGMEMORY_AUTOSTART=1` | Start the daemon at sign-in (Windows `Run` value, systemd user unit, or macOS LaunchAgent). |
 | `WRONGMEMORY_VERIFY_ATTESTATION=1` | Also verify the GitHub build provenance of each download. Needs a signed-in `gh`. |
@@ -154,7 +154,7 @@ WrongStack 1.4.0 installs the Windows build only. WrongStack 1.5.6 includes #434
 
 `wrongmemory-desktop` is an optional native GPUI workbench on the same authenticated service. Every machine runs one per-user daemon; the desktop, WrongStack and MCP clients are all clients of it. The desktop owns no database, and closing it leaves the daemon and other clients running. It has a paged library, a full-text evidence inspector, revision-checked edits, review decisions, a relations view, client grants, health/jobs and a command palette (Ctrl+K, Cmd+K on macOS). Installation never opens it. `install --desktop` adds a launcher with the app icon: an application-menu entry on Linux, `~/Applications/WrongMemory.app` on macOS and a Start Menu shortcut on Windows.
 
-One code base builds for all three platforms. Windows is published since 0.2.1. Linux has been built, tested against real daemons, packaged, installed and launched under WSLg (X11); macOS builds and tests run in hosted CI only. Release bundles for Linux x64 and macOS arm64 ship from the next release. Accessibility, IME, high-DPI, GPU fallback, sleep/resume, native Wayland rendering, macOS rendering and sustained frame performance are NOT RUN. Details: [apps/desktop/README.md](apps/desktop/README.md).
+One code base builds for all three platforms. Release bundles exist for Windows x64 from 0.2.1 and for Linux x64 and macOS arm64 from 0.3.0. Linux has been built, tested against real daemons, packaged, installed and launched under WSLg (X11) and Xvfb; macOS builds, tests, launches and renders on hosted CI runners only (screenshots, no hands-on use). Accessibility, IME, high-DPI, GPU fallback, sleep/resume, native Wayland rendering and sustained frame performance are NOT RUN. Details: [apps/desktop/README.md](apps/desktop/README.md).
 
 ## What works
 
