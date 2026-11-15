@@ -4,7 +4,7 @@ Last updated: 2026-11-15.
 
 ## Release 0.3.0 (2026-11-15, WM-800-RELEASE)
 
-At the user's request: PR #5 and PR #6 merged into `main` with merge commits, version 0.3.0 (both workspaces), tag `v0.3.0`. The release workflow creates a draft; publishing it is the user's step, so until then v0.2.1 stays the latest published version. Results of the tag run and the draft are below.
+At the user's request: PR #5 and PR #6 merged into `main` with merge commits, version 0.3.0 (both workspaces), tag `v0.3.0`. The release workflow created a draft, which was published as Latest at 2026-11-15 13:34:35 UTC at the user's request, with a "What's new" section added to the generated notes. Release evidence: [docs/releases/v0.3.0.md](releases/v0.3.0.md).
 
 | Check | Result |
 | --- | --- |
@@ -16,7 +16,7 @@ At the user's request: PR #5 and PR #6 merged into `main` with merge commits, ve
 | Tag `v0.3.0` (annotated, on `14be1ed`), release run [43715133943](https://github.com/WrongStack/wrongmemory/actions/runs/43715133943) | PASS: build 3/3, `desktop`, `desktop-unix` 2/2, `publish` created the **draft** "WrongMemory v0.3.0" (not published, not a prerelease) |
 | Draft assets, downloaded | 18 assets plus `SHA256SUMS` with exactly one entry each, all `OK`: three core archives, three desktop bundles (`wrongmemory-desktop-0.3.0-{windows-x64.zip,linux-x64.tar.gz,macos-arm64.tar.gz}`), nine bare executables, `install.sh`, `install.ps1`, `install-desktop.ps1`. `gh attestation verify --signer-workflow .../release.yml --source-ref refs/tags/v0.3.0` PASS for all three desktop bundles |
 | Draft bytes installed on Linux (WSL, temp `HOME`, data root and install directory, local mirror, the draft's `install.sh` with `WRONGMEMORY_DESKTOP=1`) | PASS: three executables 0.3.0, application entry written, `--prefix` hint printed, plain `uninstall` chose the custom directory and removed binaries and launcher |
-| Publishing the draft; `install scripts` on the `release: published` event (latest = 0.3.0, Windows desktop with Start Menu shortcut) | NOT RUN: publishing is the user's step |
+| Published release: `install scripts` [43719716116](https://github.com/WrongStack/wrongmemory/actions/runs/43719716116) on the `release: published` event | PASS 4/4: latest = 0.3.0 on Ubuntu, macOS, Windows; Windows desktop 0.3.0 with a Start Menu shortcut, removed by uninstall. `releases/latest/download` serves the same `SHA256SUMS` as the draft |
 
 ## Cross-platform native desktop and visual pass (2026-11-14, WM-800 / WM-800-RELEASE)
 
