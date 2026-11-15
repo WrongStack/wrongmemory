@@ -15,7 +15,8 @@ Fix: the INSERTs name `unicode_text` only when the store has it (`has_unicode_te
 | Copies of the five stores (`wrongmemory backup` through the live daemon into `.temp_files`) | Read-only inspector: `unicode_text` absent on exactly these 5 read-write stores |
 | End to end on an adopted copy of DFMT under a disposable data root | Installed 0.3.0: `remember` exit 70, `INTERNAL: table memories has no column named unicode_text`. Fixed build: `memory-committed`, found by search |
 | First scheduled maintenance after the fix, on copies (`hygiene_probe`, now with `WM_PROBE_OPTIONS={}` as the scheduler sends and `WM_PROBE_NOW`, project roots for anchor verification) | DFMT: 48 examined, 4 staled, 2 contradicted, 11 review candidates. Elite256: 75, 1 staled, 5 deleted. WindowsTaskManager: 12, 1 staled. OwnPilot: 138, 1 staled, 1 contradicted, 1 deleted, 3 candidates. WrongTrace: 590, 12 staled, 5 contradicted, 72 deleted, 176 candidates. Deletions are status changes (purged later by retention) |
-| Shipping | At the user's request: PR #7, release 0.3.1, then the user machine (results below) |
+| Shipping | At the user's request: PR #7 merged (`7d75195`), v0.3.1 tagged and published as Latest (evidence: [docs/releases/v0.3.1.md](releases/v0.3.1.md)) |
+| User machine | Backups of the five stores in `~/.wrongmemory/backups/pre-0.3.1-2026-11-15/` (integrity ok); `install-desktop.ps1` with attestation verification installed 0.3.1 (byte-identical to the bundle), daemon restarted as 0.3.1, `doctor` 35/35 compatible. The five stores' maintenance last ran (and failed) at 17:16 with a 6 h cadence, so the first pass on 0.3.1 is due at 23:16 local; NOT YET OBSERVED |
 
 ## Release 0.3.0 (2026-11-15, WM-800-RELEASE)
 
