@@ -3,6 +3,9 @@ name: release
 on:
   push:
     tags: ['v*']
+  # A rehearsal: builds and packages every platform from the chosen ref, then
+  # installs the assembled assets from a local server. Nothing is published.
+  workflow_dispatch:
 
 # Least privilege: the build jobs (which run project code and Bun scripts)
 # are read-only; only the publish job, which runs no project code, can write.
@@ -120,8 +123,184 @@ jobs:
             dist-desktop/wrongmemory-desktop-windows-x64.exe
           if-no-files-found: error
 
+  desktop-unix:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          # Same glibc floor as the headless Linux build.
+          - os: ubuntu-22.04
+            platform: linux-x64
+          - os: macos-latest
+            platform: macos-arm64
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    env:
+      WRONGMEMORY_TEST_CLI: ${{ github.workspace }}/target/debug/wrongmemory
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Native GUI libraries (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang cmake pkg-config libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libvulkan-dev libx11-xcb-dev libxcb1-dev libfontconfig1-dev libfreetype6-dev libzstd-dev libssl-dev
+      - name: Install pinned toolchains
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal
+          rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
+      - name: Build disposable daemon fixtures
+        run: cargo +1.93.0 build --locked -p wrongmemory-cli -p wrongmemoryd
+      - name: Native Clippy
+        working-directory: apps/desktop
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Native tests
+        working-directory: apps/desktop
+        run: cargo test --workspace --locked
+      - name: Five consecutive native daemon runs
+        working-directory: apps/desktop
+        run: |
+          for round in 1 2 3 4 5; do
+            cargo test --test daemon --locked
+          done
+      - name: Package regression tests
+        run: bun run desktop:package:test
+      - name: Package native desktop preview
+        # Root Cargo builds use the core toolchain file, apps/desktop its own.
+        run: bun run desktop:package
+      - name: Verify extracted binaries and packaged daemon IPC
+        working-directory: apps/desktop
+        run: |
+          extracted=$(bun ../../scripts/desktop/verify.ts --out ../../dist-desktop --runtime | bun -e 'console.log(JSON.parse(await Bun.stdin.text()).extracted)')
+          WRONGMEMORY_TEST_CLI="$extracted/bin/wrongmemory" cargo test --test daemon --locked
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dist-desktop-${{ matrix.platform }}
+          path: |
+            dist-desktop/*.tar.gz
+            dist-desktop/wrongmemory-desktop-${{ matrix.platform }}
+          if-no-files-found: error
+
+  rehearse:
+    # Installs, uses and uninstalls the assets `publish` would upload, served
+    # from localhost through the installers' WRONGMEMORY_DOWNLOAD_BASE.
+    if: github.event_name == 'workflow_dispatch'
+    needs: [build, desktop, desktop-unix]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: dist-*
+          merge-multiple: true
+          path: dist
+      - name: Checksums, as publish writes them
+        shell: bash
+        run: |
+          cd dist
+          ls -l
+          if command -v sha256sum >/dev/null; then sha256sum -- * > SHA256SUMS; else shasum -a 256 -- * > SHA256SUMS; fi
+      - name: Linked runtime libraries a desktop system has (Linux)
+        # The runner is headless; wrongmemory-desktop links libxcb,
+        # libxkbcommon and libxkbcommon-x11 (apps/desktop/README.md).
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libxcb1 libxkbcommon0 libxkbcommon-x11-0
+      - name: Install the desktop bundle, use it and uninstall (Linux, macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -eu
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory dist >/dev/null 2>&1 &
+          for i in $(seq 1 50); do curl -fsS -o /dev/null http://127.0.0.1:8765/SHA256SUMS && break; sleep 0.2; done
+          bin="$RUNNER_TEMP/wm/bin"
+          WRONGMEMORY_DOWNLOAD_BASE=http://127.0.0.1:8765 WRONGMEMORY_DESKTOP=1 WRONGMEMORY_NO_MODIFY_PATH=1 \
+            WRONGMEMORY_INSTALL_DIR="$bin" sh dist/install.sh | tee "$RUNNER_TEMP/install.out"
+          versions=$(for exe in wrongmemory wrongmemoryd wrongmemory-desktop; do "$bin/$exe" --version | head -n1 | awk '{print $NF}'; done | sort -u)
+          echo "versions: $versions"
+          test "$(echo "$versions" | wc -l)" -eq 1
+          if [ "$RUNNER_OS" = Linux ]; then
+            launcher="${XDG_DATA_HOME:-$HOME/.local/share}/applications/com.wrongstack.WrongMemory.desktop"
+          else
+            launcher="$HOME/Applications/WrongMemory.app/Contents/Resources/WrongMemory.icns"
+          fi
+          test -f "$launcher"
+          mkdir -p "$RUNNER_TEMP/proj"
+          project=$("$bin/wrongmemory" --json project add "$RUNNER_TEMP/proj" --managed | jq -r .project.projectId)
+          "$bin/wrongmemory" --json remember "$project" "release rehearsal on $RUNNER_OS" > /dev/null
+          "$bin/wrongmemory" --json search "$project" "release rehearsal" | grep -q "release rehearsal on $RUNNER_OS"
+          grep -qF "wrongmemory uninstall --prefix '$bin'" "$RUNNER_TEMP/install.out"
+          # Plain uninstall from the custom directory removes that directory
+          # (the installed CLI finds itself in its install.json); Windows
+          # below passes --prefix as the hint says.
+          "$bin/wrongmemory" uninstall
+          for f in wrongmemory wrongmemoryd wrongmemory-desktop desktop-resources install.json; do
+            if [ -e "$bin/$f" ]; then echo "left behind: $bin/$f"; exit 1; fi
+          done
+          test ! -e "$launcher"
+      - name: Install the desktop bundle, use it and uninstall (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $Server = Start-Process python -ArgumentList '-m', 'http.server', '8765', '--bind', '127.0.0.1', '--directory', (Resolve-Path dist) -PassThru -WindowStyle Hidden
+          try {
+            foreach ($i in 1..50) { try { Invoke-WebRequest http://127.0.0.1:8765/SHA256SUMS -UseBasicParsing | Out-Null; break } catch { Start-Sleep -Milliseconds 200 } }
+            $env:WRONGMEMORY_DOWNLOAD_BASE = 'http://127.0.0.1:8765'
+            $env:WRONGMEMORY_DESKTOP = '1'
+            $env:WRONGMEMORY_NO_MODIFY_PATH = '1'
+            $bin = Join-Path $env:RUNNER_TEMP 'wm' | Join-Path -ChildPath 'bin'
+            $env:WRONGMEMORY_INSTALL_DIR = $bin
+            # Windows PowerShell 5.1, the way `irm | iex` runs it.
+            $Out = powershell -NoProfile -ExecutionPolicy Bypass -Command 'Get-Content -Raw dist/install.ps1 | Invoke-Expression' | Out-String
+            if ($LASTEXITCODE -ne 0) { Write-Host $Out; throw "install.ps1 exited $LASTEXITCODE" }
+            Write-Host $Out
+            if (-not $Out.Contains("wrongmemory uninstall --prefix `"$bin`"")) { throw 'the closing hint does not name the install directory' }
+          } finally {
+            Stop-Process -Id $Server.Id -ErrorAction SilentlyContinue
+          }
+          $Versions = foreach ($Exe in 'wrongmemory', 'wrongmemoryd', 'wrongmemory-desktop') {
+            # wrongmemory-desktop is a GUI-subsystem executable; read its banner through a redirected process.
+            $Info = [Diagnostics.ProcessStartInfo]::new((Join-Path $bin "$Exe.exe"), '--version')
+            $Info.UseShellExecute = $false
+            $Info.RedirectStandardOutput = $true
+            $Process = [Diagnostics.Process]::Start($Info)
+            $Banner = ($Process.StandardOutput.ReadToEnd() -split "`r?`n")[0].Trim()
+            if (-not $Process.WaitForExit(30000)) { $Process.Kill(); throw "$Exe --version did not exit" }
+            Write-Host $Banner
+            ($Banner -split '\s+')[-1]
+          }
+          if (@($Versions | Sort-Object -Unique).Count -ne 1) { throw "version mismatch: $($Versions -join ', ')" }
+          $Shortcut = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\WrongMemory.lnk'
+          if (-not (Test-Path $Shortcut)) { throw "no Start Menu shortcut at $Shortcut" }
+          $proj = Join-Path $env:RUNNER_TEMP 'proj'
+          New-Item -ItemType Directory -Force $proj | Out-Null
+          $project = (& "$bin\wrongmemory.exe" --json project add $proj --managed | ConvertFrom-Json).project.projectId
+          & "$bin\wrongmemory.exe" --json remember $project 'release rehearsal on Windows' | Out-Null
+          $hits = & "$bin\wrongmemory.exe" --json search $project 'release rehearsal' | Out-String
+          if ($hits -notmatch 'release rehearsal on Windows') { throw 'search did not find the record' }
+          & "$bin\wrongmemory.exe" uninstall --prefix $bin
+          if ($LASTEXITCODE -ne 0) { throw "uninstall exited $LASTEXITCODE" }
+          # The running wrongmemory.exe may only be renamed aside; the rest must be gone.
+          foreach ($f in 'wrongmemory-desktop.exe', 'wrongmemoryd.exe', 'desktop-resources', 'install.json') {
+            if (Test-Path (Join-Path $bin $f)) { throw "left behind: $f" }
+          }
+          if (Test-Path $Shortcut) { throw "left behind: $Shortcut" }
+
   publish:
-    needs: [build, desktop]
+    # Only a pushed tag publishes; a manual run is a rehearsal.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [build, desktop, desktop-unix]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -151,7 +330,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           cat > notes.md <<EOF
-          WrongMemory ${GITHUB_REF_NAME}, per-user: Windows x64, Linux x64 (glibc 2.34+), macOS arm64. The native desktop is Windows x64 only.
+          WrongMemory ${GITHUB_REF_NAME}, per-user: Windows x64, Linux x64 (glibc 2.34+), macOS arm64. The optional native GPUI desktop is published for the same three platforms.
 
           ### Install this release
 
@@ -165,9 +344,11 @@ jobs:
           \`\`\`sh
           # Linux x64, macOS arm64
           curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_REF_NAME}/install.sh | WRONGMEMORY_VERSION=${GITHUB_REF_NAME#v} sh
+          # Linux x64, macOS arm64: native desktop + CLI + daemon
+          curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_REF_NAME}/install.sh | WRONGMEMORY_VERSION=${GITHUB_REF_NAME#v} WRONGMEMORY_DESKTOP=1 sh
           \`\`\`
 
-          The Windows scripts install the latest release; set \`\$env:WRONGMEMORY_VERSION = '${GITHUB_REF_NAME#v}'\` first to pin this one. Offline: unpack, then \`bin/wrongmemory install\` (\`bin\\wrongmemory.exe install\`, or \`install --desktop\` from the desktop ZIP). See docs/operations.md.
+          The Windows scripts install the latest release; set \`\$env:WRONGMEMORY_VERSION = '${GITHUB_REF_NAME#v}'\` first to pin this one. Offline: unpack, then \`bin/wrongmemory install\` (\`bin\\wrongmemory.exe install\`, or \`install --desktop\` from a desktop archive). See docs/operations.md.
 
           - Binaries are **unsigned**: no Authenticode signature, no Apple notarization. Verify each archive or executable against SHA256SUMS and the GitHub build-provenance attestation:
             \`gh attestation verify <file> --repo ${GITHUB_REPOSITORY} --signer-workflow ${GITHUB_REPOSITORY}/.github/workflows/release.yml --source-ref ${GITHUB_REF}\`

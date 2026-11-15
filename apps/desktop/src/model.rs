@@ -123,7 +123,42 @@ pub struct Graph {
     pub width: f32,
 }
 
+/// Minimum usable window size; the window never shrinks below it.
+pub const MIN_WINDOW: (f32, f32) = (940., 600.);
+
+/// Default window size: 1280×800, reduced to leave a margin inside the usable
+/// screen area, but never below [`MIN_WINDOW`].
+pub fn initial_window_size(visible: Option<(f32, f32)>) -> (f32, f32) {
+    let (w, h) = visible.unwrap_or((f32::MAX, f32::MAX));
+    (
+        (w - 48.).min(1280.).max(MIN_WINDOW.0),
+        (h - 48.).min(800.).max(MIN_WINDOW.1),
+    )
+}
+
+/// Rendered node width at 100% zoom; layout and view share it.
+pub const NODE_WIDTH: f32 = 210.;
+
 impl Graph {
+    /// Horizontal extent of the laid-out nodes at 100% zoom.
+    pub fn content_width(&self) -> f32 {
+        self.nodes
+            .iter()
+            .map(|n| n.x + NODE_WIDTH)
+            .fold(0., f32::max)
+    }
+
+    /// Zoom at which the whole graph fits `available` pixels, never above
+    /// 100% and never below 75%, where node text stays readable; a wider
+    /// graph scrolls horizontally instead.
+    pub fn fit_zoom(&self, available: f32) -> f32 {
+        let content = self.content_width();
+        if content <= 0. {
+            return 1.;
+        }
+        (available / content).clamp(0.75, 1.)
+    }
+
     /// Layout only the server-authorized subgraph. Missing memory rows never
     /// become phantom ID nodes; structural nodes come only from admitted edges.
     pub fn from_reply(value: &Value) -> Self {
@@ -219,6 +254,42 @@ impl Graph {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn default_window_fits_small_screens_but_not_below_the_minimum() {
+        assert_eq!(initial_window_size(None), (1280., 800.));
+        assert_eq!(initial_window_size(Some((2560., 1400.))), (1280., 800.));
+        assert_eq!(initial_window_size(Some((1024., 728.))), (976., 680.));
+        assert_eq!(initial_window_size(Some((800., 600.))), MIN_WINDOW);
+    }
+
+    #[test]
+    fn graph_fit_uses_the_laid_out_extent() {
+        let graph = Graph {
+            nodes: vec![
+                GraphNode {
+                    id: "a".into(),
+                    label: "a".into(),
+                    memory_id: None,
+                    x: 30.,
+                    y: 0.,
+                },
+                GraphNode {
+                    id: "b".into(),
+                    label: "b".into(),
+                    memory_id: None,
+                    x: 300.,
+                    y: 0.,
+                },
+            ],
+            ..Default::default()
+        };
+        assert_eq!(graph.content_width(), 300. + NODE_WIDTH);
+        assert_eq!(graph.fit_zoom(1000.), 1.);
+        assert!((graph.fit_zoom(408.) - 0.8).abs() < 1e-4);
+        assert_eq!(graph.fit_zoom(10.), 0.75);
+        assert_eq!(Graph::default().fit_zoom(100.), 1.);
+    }
 
     fn memory(id: &str, revision: i64, text: &str) -> Memory {
         serde_json::from_value(serde_json::json!({"id":id,"revision":revision,"text":text,"kind":"fact","status":"active"})).unwrap()

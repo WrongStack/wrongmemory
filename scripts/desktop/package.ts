@@ -3,6 +3,7 @@
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { bareName, binaryNames, desktopPlatform } from './platform.ts';
 
 const repo = resolve(import.meta.dir, '../..');
 const native = join(repo, 'apps/desktop');
@@ -40,17 +41,17 @@ export interface PackageInput {
   source?: { commit: string; dirty: boolean };
 }
 export function stagePackage(input: PackageInput): { stage: string; archive: string; bare: string } {
-  if (process.platform !== 'win32' || process.arch !== 'x64') throw new Error('Native packaging currently supports Windows x64 only');
+  const platform = desktopPlatform();
   const output = resolve(input.output);
   mkdirSync(output, { recursive: true });
-  const name = 'wrongmemory-desktop-' + input.version + '-windows-x64';
-  const archive = join(output, name + '.zip');
-  const bare = join(output, 'wrongmemory-desktop-windows-x64.exe');
+  const name = 'wrongmemory-desktop-' + input.version + '-' + platform.id;
+  const archive = join(output, name + '.' + platform.archive);
+  const bare = join(output, bareName(platform));
   if (existsSync(archive) || existsSync(bare) || existsSync(join(output, 'SHA256SUMS'))) throw new Error('Package output already exists; use a fresh --out directory');
   const stage = join(mkdtempSync(join(output, 'stage-')), name);
   if (!inside(output, stage)) throw new Error('Stage escaped its output directory');
   mkdirSync(join(stage, 'bin'), { recursive: true });
-  const required = ['wrongmemory-desktop.exe', 'wrongmemory.exe', 'wrongmemoryd.exe'];
+  const required = binaryNames(platform);
   for (const file of required) {
     const source = input.binaries[file];
     if (!source) throw new Error('Missing ' + file);
@@ -69,20 +70,26 @@ export function stagePackage(input: PackageInput): { stage: string; archive: str
   }
   writeFileSync(join(stage, 'MANIFEST.json'), JSON.stringify({
     schema: 'wrongmemory/desktop-package@1', name, version: input.version,
-    platform: 'windows-x64', profile: input.profile, signed: false,
+    platform: platform.id, profile: input.profile, signed: false,
     desktopToolchain: '1.99.1', coreToolchain: '1.93.0', framework: 'gpui-kit@0.9.1',
     source: input.source ?? null,
     files: files.sort().map(file => ({ path: file, sha256: sha(join(stage, file)), bytes: lstatSync(join(stage, file)).size })),
   }, null, 2) + '\n');
-  run(['powershell', '-NoProfile', '-File', join(repo, 'scripts/desktop/archive.ps1'), '-Source', stage, '-Destination', archive]);
-  copyFileSync(input.binaries['wrongmemory-desktop.exe']!, bare);
+  if (platform.archive === 'zip') {
+    run(['powershell', '-NoProfile', '-File', join(repo, 'scripts/desktop/archive.ps1'), '-Source', stage, '-Destination', archive]);
+  } else {
+    // tar keeps the executable bits that a ZIP made on Unix would lose.
+    run(['tar', '-czf', archive, '-C', stage, ...readdirSync(stage).sort()]);
+  }
+  copyFileSync(input.binaries[required[0]!]!, bare);
   writeFileSync(join(output, 'SHA256SUMS'), sha(archive) + '  ' + basename(archive) + '\n' + sha(bare) + '  ' + basename(bare) + '\n');
   return { stage, archive, bare };
 }
 
 interface Crate { id: string; name: string; version: string; license: string | null; repository: string | null; manifest_path: string; license_file?: string; authors: string[]; source: string | null }
 export function licenseInventory(output: string): string {
-  const metadata = JSON.parse(run(['cargo', 'metadata', '--format-version', '1', '--locked', '--filter-platform', 'x86_64-pc-windows-msvc'], native, true));
+  const platform = desktopPlatform();
+  const metadata = JSON.parse(run(['cargo', 'metadata', '--format-version', '1', '--locked', '--filter-platform', platform.triple], native, true));
   const active = new Set<string>(metadata.resolve.nodes.map((node: { id: string }) => node.id));
   const packages = (metadata.packages as Crate[]).filter(pkg => active.has(pkg.id));
   const root = join(output, 'licenses');
@@ -119,7 +126,7 @@ export function licenseInventory(output: string): string {
       licenseTextStatus: supplemental?.declarationOnly ? 'upstream-declaration-standard-text-and-source' : 'included', supplementalSources:supplemental?.files??[], texts };
   }).sort((a, b) => (a.name + '@' + a.version).localeCompare(b.name + '@' + b.version));
   const path = join(output, 'THIRD_PARTY.json');
-  writeFileSync(path, JSON.stringify({ schema: 'wrongmemory/desktop-licenses@1', platform: 'windows-x64', packages: entries }, null, 2) + '\n');
+  writeFileSync(path, JSON.stringify({ schema: 'wrongmemory/desktop-licenses@1', platform: platform.id, packages: entries }, null, 2) + '\n');
   return path;
 }
 function main(): void {
@@ -138,10 +145,11 @@ function main(): void {
   }
   mkdirSync(output, { recursive: true });
   const notices = licenseInventory(output);
+  const [desktopExe, cliExe, daemonExe] = binaryNames(desktopPlatform()) as [string, string, string];
   const binaries = {
-    'wrongmemory-desktop.exe': join(repo, 'target/desktop', profile, 'wrongmemory-desktop.exe'),
-    'wrongmemory.exe': join(repo, 'target', profile, 'wrongmemory.exe'),
-    'wrongmemoryd.exe': join(repo, 'target', profile, 'wrongmemoryd.exe'),
+    [desktopExe]: join(repo, 'target/desktop', profile, desktopExe),
+    [cliExe]: join(repo, 'target', profile, cliExe),
+    [daemonExe]: join(repo, 'target', profile, daemonExe),
   };
   for (const path of Object.values(binaries)) {
     const banner = run([path, '--version'], repo, true).trim();

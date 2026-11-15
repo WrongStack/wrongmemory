@@ -35,6 +35,13 @@ fn plain(path: &Path) -> io::Result<()> {
     }
     Ok(())
 }
+/// Bundle paths of the three executables for the platform this CLI runs on
+/// (`bin/wrongmemory.exe` on Windows, `bin/wrongmemory` elsewhere). A bundle
+/// built for another platform is refused rather than half-installed.
+fn executables() -> [String; 3] {
+    let suffix = std::env::consts::EXE_SUFFIX;
+    ["wrongmemory", "wrongmemoryd", "wrongmemory-desktop"].map(|b| format!("bin/{b}{suffix}"))
+}
 fn resource(path: &str) -> bool {
     matches!(path, "README.md" | "LICENSE" | "THIRD_PARTY.json")
         || ["licenses/", "sources/"].iter().any(|p| {
@@ -55,17 +62,14 @@ fn manifest(root: &Path) -> io::Result<Manifest> {
             "Desktop bundle schema/version does not match this CLI",
         ));
     }
+    let executables = executables();
     let mut seen = std::collections::HashSet::new();
     for e in &m.files {
         let p = Path::new(&e.path);
         if !seen.insert(e.path.as_str())
             || e.path.contains(['\\', ':'])
             || p.components().any(|c| !matches!(c, Component::Normal(_)))
-            || !(resource(&e.path)
-                || matches!(
-                    e.path.as_str(),
-                    "bin/wrongmemory.exe" | "bin/wrongmemoryd.exe" | "bin/wrongmemory-desktop.exe"
-                ))
+            || !(resource(&e.path) || executables.contains(&e.path))
         {
             return Err(invalid("Invalid desktop manifest path"));
         }
@@ -83,14 +87,10 @@ fn manifest(root: &Path) -> io::Result<Manifest> {
             return Err(invalid("Desktop bundle integrity mismatch"));
         }
     }
-    for required in [
-        "README.md",
-        "LICENSE",
-        "THIRD_PARTY.json",
-        "bin/wrongmemory-desktop.exe",
-        "bin/wrongmemory.exe",
-        "bin/wrongmemoryd.exe",
-    ] {
+    for required in ["README.md", "LICENSE", "THIRD_PARTY.json"]
+        .into_iter()
+        .chain(executables.iter().map(String::as_str))
+    {
         if !seen.contains(required) {
             return Err(invalid("Incomplete desktop bundle"));
         }
@@ -98,89 +98,7 @@ fn manifest(root: &Path) -> io::Result<Manifest> {
     Ok(m)
 }
 
-#[cfg(all(test, windows))]
-mod tests {
-    use super::*;
-    fn bundle(root: &Path) {
-        std::fs::create_dir_all(root.join("bin")).unwrap();
-        std::fs::create_dir_all(root.join("licenses")).unwrap();
-        let files: Vec<_> = [
-            "README.md",
-            "LICENSE",
-            "THIRD_PARTY.json",
-            "licenses/notice.txt",
-            "bin/wrongmemory.exe",
-            "bin/wrongmemoryd.exe",
-            "bin/wrongmemory-desktop.exe",
-        ]
-        .iter()
-        .map(|name| {
-            let bytes = name.as_bytes();
-            std::fs::write(root.join(name), bytes).unwrap();
-            let hash: String = Sha256::digest(bytes)
-                .iter()
-                .map(|b| format!("{b:02x}"))
-                .collect();
-            serde_json::json!({"path":name,"bytes":bytes.len(),"sha256":hash})
-        })
-        .collect();
-        std::fs::write(root.join("MANIFEST.json"), serde_json::to_vec(&serde_json::json!({"schema":"wrongmemory/desktop-package@1","version":env!("CARGO_PKG_VERSION"),"files":files})).unwrap()).unwrap();
-    }
-    #[test]
-    fn admits_complete_bundle_and_refuses_tampering_before_replacement() {
-        let temp = tempfile::tempdir().unwrap();
-        let source = temp.path().join("source");
-        bundle(&source);
-        let prefix = temp.path().join("installed");
-        prepare(&source.join("bin"), &prefix).unwrap();
-        let resources = prefix.join("desktop-resources");
-        std::fs::write(resources.join("user-note.txt"), "keep").unwrap();
-        std::fs::write(source.join("bin/wrongmemory-desktop.exe"), "tampered").unwrap();
-        assert!(
-            prepare(&source.join("bin"), &prefix)
-                .unwrap_err()
-                .to_string()
-                .contains("integrity")
-        );
-        uninstall(&prefix).unwrap();
-        assert_eq!(
-            std::fs::read_to_string(resources.join("user-note.txt")).unwrap(),
-            "keep"
-        );
-        assert!(!resources.join("LICENSE").exists());
-        assert!(!temp.path().join("registry.db").exists());
-    }
-    #[test]
-    fn unsafe_ownership_and_bundle_paths_leave_external_files_intact() {
-        let temp = tempfile::tempdir().unwrap();
-        let resources = temp.path().join("desktop-resources");
-        std::fs::create_dir(&resources).unwrap();
-        let outside = temp.path().join("keep.txt");
-        std::fs::write(&outside, "keep").unwrap();
-        std::fs::write(resources.join("owned.json"), r#"["../keep.txt"]"#).unwrap();
-        assert!(uninstall(temp.path()).is_err());
-        assert_eq!(std::fs::read_to_string(outside).unwrap(), "keep");
-        let source = temp.path().join("source");
-        bundle(&source);
-        let mut m: serde_json::Value =
-            serde_json::from_slice(&std::fs::read(source.join("MANIFEST.json")).unwrap()).unwrap();
-        m["files"][0]["path"] = serde_json::json!("../keep.txt");
-        std::fs::write(
-            source.join("MANIFEST.json"),
-            serde_json::to_vec(&m).unwrap(),
-        )
-        .unwrap();
-        assert!(prepare(&source.join("bin"), &temp.path().join("new-install")).is_err());
-        assert!(!temp.path().join("new-install").exists());
-    }
-}
-
 pub fn prepare(src: &Path, prefix: &Path) -> io::Result<PathBuf> {
-    if !cfg!(windows) {
-        return Err(invalid(
-            "Desktop installation currently supports Windows only",
-        ));
-    }
     let root = src
         .parent()
         .ok_or_else(|| invalid("Desktop bundle root missing"))?;
@@ -260,4 +178,114 @@ pub fn uninstall(prefix: &Path) -> io::Result<()> {
     }
     let _ = std::fs::remove_dir(resources);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn desktop_exe() -> String {
+        format!("bin/wrongmemory-desktop{}", std::env::consts::EXE_SUFFIX)
+    }
+    fn bundle(root: &Path) {
+        std::fs::create_dir_all(root.join("bin")).unwrap();
+        std::fs::create_dir_all(root.join("licenses")).unwrap();
+        let names: Vec<String> = [
+            "README.md",
+            "LICENSE",
+            "THIRD_PARTY.json",
+            "licenses/notice.txt",
+        ]
+        .into_iter()
+        .map(String::from)
+        .chain(executables())
+        .collect();
+        let files: Vec<_> = names
+            .iter()
+            .map(|name| {
+                let bytes = name.as_bytes();
+                std::fs::write(root.join(name), bytes).unwrap();
+                let hash: String = Sha256::digest(bytes)
+                    .iter()
+                    .map(|b| format!("{b:02x}"))
+                    .collect();
+                serde_json::json!({"path":name,"bytes":bytes.len(),"sha256":hash})
+            })
+            .collect();
+        std::fs::write(root.join("MANIFEST.json"), serde_json::to_vec(&serde_json::json!({"schema":"wrongmemory/desktop-package@1","version":env!("CARGO_PKG_VERSION"),"files":files})).unwrap()).unwrap();
+    }
+    #[test]
+    fn admits_complete_bundle_and_refuses_tampering_before_replacement() {
+        let temp = tempfile::tempdir().unwrap();
+        let source = temp.path().join("source");
+        bundle(&source);
+        let prefix = temp.path().join("installed");
+        prepare(&source.join("bin"), &prefix).unwrap();
+        let resources = prefix.join("desktop-resources");
+        std::fs::write(resources.join("user-note.txt"), "keep").unwrap();
+        std::fs::write(source.join(desktop_exe()), "tampered").unwrap();
+        assert!(
+            prepare(&source.join("bin"), &prefix)
+                .unwrap_err()
+                .to_string()
+                .contains("integrity")
+        );
+        uninstall(&prefix).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(resources.join("user-note.txt")).unwrap(),
+            "keep"
+        );
+        assert!(!resources.join("LICENSE").exists());
+        assert!(!temp.path().join("registry.db").exists());
+    }
+    #[test]
+    fn a_bundle_for_another_platform_is_refused() {
+        let temp = tempfile::tempdir().unwrap();
+        let source = temp.path().join("source");
+        bundle(&source);
+        let foreign = if cfg!(windows) {
+            "bin/wrongmemory-desktop"
+        } else {
+            "bin/wrongmemory-desktop.exe"
+        };
+        let mut m: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(source.join("MANIFEST.json")).unwrap()).unwrap();
+        let files = m["files"].as_array_mut().unwrap();
+        let entry = files
+            .iter_mut()
+            .find(|f| f["path"] == desktop_exe().as_str())
+            .unwrap();
+        std::fs::rename(source.join(desktop_exe()), source.join(foreign)).unwrap();
+        entry["path"] = serde_json::json!(foreign);
+        std::fs::write(
+            source.join("MANIFEST.json"),
+            serde_json::to_vec(&m).unwrap(),
+        )
+        .unwrap();
+        assert!(prepare(&source.join("bin"), &temp.path().join("installed")).is_err());
+        assert!(!temp.path().join("installed").exists());
+    }
+
+    #[test]
+    fn unsafe_ownership_and_bundle_paths_leave_external_files_intact() {
+        let temp = tempfile::tempdir().unwrap();
+        let resources = temp.path().join("desktop-resources");
+        std::fs::create_dir(&resources).unwrap();
+        let outside = temp.path().join("keep.txt");
+        std::fs::write(&outside, "keep").unwrap();
+        std::fs::write(resources.join("owned.json"), r#"["../keep.txt"]"#).unwrap();
+        assert!(uninstall(temp.path()).is_err());
+        assert_eq!(std::fs::read_to_string(outside).unwrap(), "keep");
+        let source = temp.path().join("source");
+        bundle(&source);
+        let mut m: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(source.join("MANIFEST.json")).unwrap()).unwrap();
+        m["files"][0]["path"] = serde_json::json!("../keep.txt");
+        std::fs::write(
+            source.join("MANIFEST.json"),
+            serde_json::to_vec(&m).unwrap(),
+        )
+        .unwrap();
+        assert!(prepare(&source.join("bin"), &temp.path().join("new-install")).is_err());
+        assert!(!temp.path().join("new-install").exists());
+    }
 }

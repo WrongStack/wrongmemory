@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { manifestVersion, stagePackage } from './package.ts';
 import { verifyPackage } from './verify.ts';
+import { binaryNames, desktopPlatform } from './platform.ts';
 const scratch = mkdtempSync(join(tmpdir(), 'wm-desktop-package-'));
 afterAll(() => {
   const target = resolve(scratch);
@@ -15,9 +16,15 @@ test('manifest version is scoped to the requested Cargo section', () => {
   expect(manifestVersion('[workspace.dependencies]\na = {version="9.9.9"}\n[package]\nversion="0.1.12"\n', 'package')).toBe('0.1.12');
   expect(() => manifestVersion('[package]\nname="x"', 'package')).toThrow('version');
 });
-test.skipIf(process.platform !== 'win32')('package keeps bundled clients and never overwrites previous output', () => {
+test('platform table names archives and executables per host', () => {
+  expect(desktopPlatform('win32', 'x64')).toMatchObject({ id: 'windows-x64', exe: '.exe', archive: 'zip' });
+  expect(desktopPlatform('linux', 'x64')).toMatchObject({ id: 'linux-x64', exe: '', archive: 'tar.gz' });
+  expect(desktopPlatform('darwin', 'arm64')).toMatchObject({ id: 'macos-arm64', triple: 'aarch64-apple-darwin' });
+  expect(() => desktopPlatform('freebsd', 'x64')).toThrow('does not support');
+});
+test('package keeps bundled clients and never overwrites previous output', () => {
   const binaries: Record<string,string> = {};
-  for (const name of ['wrongmemory-desktop.exe', 'wrongmemory.exe', 'wrongmemoryd.exe']) {
+  for (const name of binaryNames(desktopPlatform())) {
     binaries[name] = join(scratch, name); writeFileSync(binaries[name]!, 'fixture:' + name);
   }
   const license = join(scratch, 'LICENSE'); writeFileSync(license, 'Fixture license');
@@ -39,4 +46,4 @@ test.skipIf(process.platform !== 'win32')('package keeps bundled clients and nev
   expect(createHash('sha256').update(readFileSync(result.archive)).digest('hex')).toBe(digest);
   writeFileSync(result.bare, 'modified binary');
   expect(() => verifyPackage(input.output)).toThrow('Checksum mismatch');
-}, 90000); // Three cold Windows native processes are part of this integration test.
+}, 90000); // Archive tools run as cold native processes, slowest on Windows.

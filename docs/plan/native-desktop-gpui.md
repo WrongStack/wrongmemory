@@ -1,7 +1,7 @@
 # Native desktop program - GPUI feasibility and product contract
 
 Date: 2026-11-11. Task: WM-800, with WM-801 and WM-604 acceptance dependencies.
-State: optional native Windows preview published in [v0.2.1](https://github.com/WrongStack/wrongmemory/releases/tag/v0.2.1); [release evidence](../releases/v0.2.1.md) records hosted CI, downloaded artifacts and fixture install/update/uninstall results. GPUI Kit is the selected framework. Existing WM-INV-01..16 and WM-ADR-001..013 remain binding; [WM-ADR-014](adr-014-native-desktop-workspace.md) records the independent desktop workspace/toolchain. Product targets below remain acceptance requirements, not blanket completion claims.
+State: optional native Windows preview published in [v0.2.1](https://github.com/WrongStack/wrongmemory/releases/tag/v0.2.1); [release evidence](../releases/v0.2.1.md) records hosted CI, downloaded artifacts and fixture install/update/uninstall results. v0.3.0 adds Linux x64 and macOS arm64 bundles from the same source (WM-ADR-014 addendum). GPUI Kit is the selected framework. Existing WM-INV-01..16 and WM-ADR-001..013 remain binding; [WM-ADR-014](adr-014-native-desktop-workspace.md) records the independent desktop workspace/toolchain. Product targets below remain acceptance requirements, not blanket completion claims.
 
 ## Product objective
 
@@ -136,3 +136,9 @@ The independent workspace pins Rust 1.99.1 and exact GPUI Kit 0.9.1; core contra
 Initial Windows library and relations rendering was observed against a disposable fixture in the earlier preview. Screen automation was stopped by the user. Subsequent settings/conflict controls are verified by code/tests only: their visual/keyboard behavior has not been rechecked. Native accessibility/IME/high-DPI, sustained frame/latency targets, GPU fallback, sleep/resume and installed lifecycle remain NOT RUN. Linux/macOS native builds remain NOT RUN. No live store was adopted and no installed client configuration changed.
 
 Still outside this slice: full immutable text history, automatic text merge/undo, batch review, saved text queries and kind/anchor filter controls, project creation/adoption UI, repair preview, cross-project search and automatic named-client installation. Do not infer these from the broader product target table. Drafts are memory-only; private presentation preference writes are asynchronous and are not a draft-recovery system.
+
+## 2026-11-14: cross-platform targets and visual pass
+
+The desktop now builds for Windows x64, Linux x64 and macOS arm64 from the same source ([WM-ADR-014 addendum](adr-014-native-desktop-workspace.md#addendum-2026-11-14-linux-and-macos-targets)). A visual pass replaced ad-hoc chips and raw JSON with shared primitives (`apps/desktop/src/app/ui.rs`): semantic tones that keep content status, evidence outcome, job state and connectivity distinct; centered wrapping empty states; label/value evidence fields; one-line copyable paths; tinted error/warning banners; platform-correct shortcut labels (Cmd on macOS); a command palette with views, actions and projects; a macOS application menu with Cmd+Q. Icons outside GPUI Kit's default embedded set (Key, Activity, Database and others) previously rendered as empty gaps; the app now embeds them and a unit test fails if any referenced icon has no SVG. On Linux, the UI font prefers families with static bold faces because GPUI cannot select a bold instance from a variable system font.
+
+Evidence and remaining NOT RUN items are in `docs/status.md`.
